@@ -1,0 +1,334 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper to check if request is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // Managerial / admin gate via Firebase Custom Claims only.
+    // Scheme: request.auth.token.managerial == true (set via Admin SDK / setManagerialClaim).
+    // Break-glass: execution/stamp_managerial_claims.py — NOT client-writable Firestore docs.
+    // users/1 has no security meaning.
+    function isAdmin() {
+      return isAuthenticated() && request.auth.token.managerial == true;
+    }
+
+    // Clients must never create/change the password field on users.
+    function passwordFieldNotTouched() {
+      return resource == null
+        ? !('password' in request.resource.data)
+        : !request.resource.data.diff(resource.data).affectedKeys().hasAny(['password']);
+    }
+
+    // Fields that escalate privileges — blocked on self-update.
+    function selfUpdateKeysAllowed() {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+        'email', 'isMigrated', 'updatedAt',
+        'fcmToken', 'fcmTokenUpdatedAt'
+      ]);
+    }
+
+    // Default deny rule
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Users collection:
+    // - Allow authenticated read/list for team view, or allow users to query/read profiles
+    // - Only claim-holders (isAdmin) can create or delete users.
+    // - Self-update: already-linked profile only; no uid/password/role/permission fields.
+    // - password field: never creatable/updatable from clients (use Auth + Admin SDK).
+    match /users/{userId} {
+      allow read: if isAuthenticated();
+      allow create: if isAdmin() && passwordFieldNotTouched();
+      allow delete: if isAdmin();
+      allow update: if passwordFieldNotTouched() && (
+        isAdmin() || (
+          isAuthenticated() &&
+          resource.data.uid == request.auth.uid &&
+          request.resource.data.uid == request.auth.uid &&
+          selfUpdateKeysAllowed()
+        )
+      );
+    }
+
+    match /userRoles/{uid} {
+      allow read: if isAuthenticated();
+      // Admins can create/update/delete any role mapping
+      allow update, delete: if isAdmin();
+      // Users can only create their own role mapping if it doesn't exist yet, and it must be non-managerial
+      allow create: if isAdmin() || (
+        isAuthenticated() &&
+        request.auth.uid == uid &&
+        exists(/databases/$(database)/documents/customRoles/$(request.resource.data.role)) &&
+        get(/databases/$(database)/documents/customRoles/$(request.resource.data.role)).data.isManagerial != true
+      );
+    }
+
+    match /customRoles/{roleId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
+
+    match /deletedUsers/{username} {
+      allow read, write: if isAdmin();
+    }
+
+    // Settings collection:
+    // - Read allowed for authenticated users EXCEPT for integrations_secrets (which is admin-only)
+    // - Write allowed only for admins
+    match /settings/{settingId} {
+      allow read: if isAuthenticated() && (settingId != 'integrations_secrets' || isAdmin());
+      allow write: if isAdmin();
+    }
+
+    // Projects:
+    // - Read allowed for authenticated users
+    // - Write allowed only for admins
+    match /projects/{projectId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
+
+    // Rosters:
+    // - Read allowed for authenticated users
+    // - Write allowed only for admins
+    match /rosters/{rosterId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
+
+    // Call Targets:
+    // - Read allowed for authenticated users
+    // - Write allowed only for admins
+    match /callTargets/{targetId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
+
+    // Audit Logs:
+    // - Read allowed only for admins/managers
+    // - Create allowed for authenticated users
+    // - Update/Delete disabled completely (immutable audit logs)
+    match /auditLogs/{logId} {
+      allow read: if isAdmin();
+      allow create: if isAuthenticated();
+      allow update, delete: if false;
+    }
+
+    // Leads:
+    // - Read allowed for authenticated users
+    // - Write allowed for admin, or if authenticated and document is/was assigned to self or unassigned
+    match /leads/{leadId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin() || (
+        isAuthenticated() && (
+          resource == null ||
+          resource.data.assignedTo == "" ||
+          (exists(/databases/$(database)/documents/users/$(resource.data.assignedTo)) &&
+           get(/databases/$(database)/documents/users/$(resource.data.assignedTo)).data.uid == request.auth.uid)
+        )
+      );
+
+      // Legacy WhatsApp messages (read-only compatibility; new writes go top-level)
+      match /whatsappMessages/{messageId} {
+        allow read: if isAuthenticated();
+        allow create, update: if isAuthenticated();
+        allow delete: if isAdmin();
+      }
+
+      match /whatsapp/{docId} {
+        allow read: if isAuthenticated();
+        allow write: if isAuthenticated();
+      }
+    }
+
+    // Canonical WhatsApp conversations (provider-agnostic)
+    match /whatsappConversations/{conversationId} {
+      allow read: if isAuthenticated();
+      allow create, update: if isAuthenticated();
+      allow delete: if isAdmin();
+    }
+
+    // Canonical WhatsApp messages (full bodies; not embedded on Lead)
+    match /whatsappMessages/{messageId} {
+      allow read: if isAuthenticated();
+      allow create, update: if isAuthenticated();
+      allow delete: if isAdmin();
+    }
+
+    // Canonical CRM activity stream — immutable after create
+    match /timelineEvents/{eventId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update, delete: if false;
+    }
+
+    // Archived Leads:
+    // - Only admin can read, write
+    match /archivedLeads/{leadId} {
+      allow read, write: if isAdmin();
+    }
+
+    // Productivity:
+    // - Reads allowed by authenticated users
+    // - Writes allowed for owner user matching userId field in document or admin
+    match /agentProductivity/{prodId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin() || (
+        isAuthenticated() &&
+        (resource == null || resource.data.userId == request.resource.data.userId) &&
+        exists(/databases/$(database)/documents/users/$(request.resource.data.userId)) &&
+        get(/databases/$(database)/documents/users/$(request.resource.data.userId)).data.uid == request.auth.uid
+      );
+    }
+
+    // Agent Status:
+    // - Reads allowed by authenticated users
+    // - Writes allowed for the owner of the status document or admin
+    match /agentStatus/{statusId} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated() && (
+        statusId == request.auth.uid ||
+        (exists(/databases/$(database)/documents/users/$(statusId)) &&
+         get(/databases/$(database)/documents/users/$(statusId)).data.uid == request.auth.uid) ||
+        isAdmin()
+      );
+    }
+
+    // Attendance:
+    // - Reads allowed by authenticated users
+    // - Writes allowed for the user matching the record's userId or admin
+    match /attendance/{attId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin() || (
+        isAuthenticated() &&
+        exists(/databases/$(database)/documents/users/$(request.resource.data.userId)) &&
+        get(/databases/$(database)/documents/users/$(request.resource.data.userId)).data.uid == request.auth.uid &&
+        (resource == null || resource.data.userId == request.resource.data.userId)
+      );
+    }
+
+    // Leave Requests:
+    // - Reads allowed by authenticated users
+    // - Create allowed for the user matching the request's userId
+    // - Status updates and deletes restricted to admins/managers
+    match /leaveRequests/{requestId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() &&
+        exists(/databases/$(database)/documents/users/$(request.resource.data.userId)) &&
+        get(/databases/$(database)/documents/users/$(request.resource.data.userId)).data.uid == request.auth.uid;
+      allow update, delete: if isAdmin();
+    }
+
+    // Notifications:
+    // - Reads allowed for recipient (or global broadcasts)
+    // - Create allowed for authenticated users
+    // - Update restricted to marking own notifications as read
+    // - Delete allowed only for admins
+    match /notifications/{notifId} {
+      allow read: if isAuthenticated() && (
+        !('userId' in resource.data) ||
+        resource.data.userId == null ||
+        resource.data.userId == "" ||
+        resource.data.userId == request.auth.uid ||
+        (exists(/databases/$(database)/documents/users/$(resource.data.userId)) &&
+         get(/databases/$(database)/documents/users/$(resource.data.userId)).data.uid == request.auth.uid)
+      );
+      allow create: if isAuthenticated();
+      allow delete: if isAdmin();
+      allow update: if isAuthenticated() && (
+        resource.data.userId == request.auth.uid ||
+        (exists(/databases/$(database)/documents/users/$(resource.data.userId)) &&
+         get(/databases/$(database)/documents/users/$(resource.data.userId)).data.uid == request.auth.uid) ||
+        isAdmin()
+      ) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read']);
+    }
+
+    // Themes:
+    // - Access restricted to owner or admin
+    match /themes/{themeId} {
+      allow read, write: if isAuthenticated() && (
+        themeId == request.auth.uid ||
+        (exists(/databases/$(database)/documents/users/$(themeId)) &&
+         get(/databases/$(database)/documents/users/$(themeId)).data.uid == request.auth.uid) ||
+        isAdmin()
+      );
+    }
+
+    // Dashboard Preferences:
+    // - Access restricted to owner or admin
+    match /dashboardPreferences/{prefId} {
+      allow read, write: if isAuthenticated() && (
+        prefId == request.auth.uid ||
+        (exists(/databases/$(database)/documents/users/$(prefId)) &&
+         get(/databases/$(database)/documents/users/$(prefId)).data.uid == request.auth.uid) ||
+        isAdmin()
+      );
+    }
+
+    // IVR Calls:
+    // - Access restricted to owner or admin
+    match /ivrCalls/{callId} {
+      allow read, write: if isAuthenticated() && (
+        callId == request.auth.uid ||
+        (exists(/databases/$(database)/documents/users/$(callId)) &&
+         get(/databases/$(database)/documents/users/$(callId)).data.uid == request.auth.uid) ||
+        isAdmin()
+      );
+    }
+
+    // Tasks:
+    // - Access restricted to owner or admin
+    match /tasks/{taskId} {
+      allow read: if isAuthenticated() && (
+        ('userId' in resource.data && resource.data.userId == request.auth.uid) ||
+        ('userId' in resource.data && exists(/databases/$(database)/documents/users/$(resource.data.userId)) &&
+         get(/databases/$(database)/documents/users/$(resource.data.userId)).data.uid == request.auth.uid) ||
+        isAdmin()
+      );
+      allow create: if isAuthenticated() &&
+        exists(/databases/$(database)/documents/users/$(request.resource.data.userId)) &&
+        get(/databases/$(database)/documents/users/$(request.resource.data.userId)).data.uid == request.auth.uid;
+      allow update, delete: if isAuthenticated() && (
+        ('userId' in resource.data && resource.data.userId == request.auth.uid) ||
+        ('userId' in resource.data && exists(/databases/$(database)/documents/users/$(resource.data.userId)) &&
+         get(/databases/$(database)/documents/users/$(resource.data.userId)).data.uid == request.auth.uid) ||
+        isAdmin()
+      );
+    }
+
+    // Teams:
+    // - Reads allowed by authenticated users
+    // - Writes restricted to admins
+    match /teams/{teamId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
+
+    // Smart Lists:
+    // - Access restricted to owner or admin
+    match /smartLists/{listId} {
+      allow read: if isAuthenticated() && (
+        !('userId' in resource.data) ||
+        resource.data.userId == null ||
+        resource.data.userId == "" ||
+        resource.data.userId == request.auth.uid ||
+        (exists(/databases/$(database)/documents/users/$(resource.data.userId)) &&
+         get(/databases/$(database)/documents/users/$(resource.data.userId)).data.uid == request.auth.uid) ||
+        isAdmin()
+      );
+      allow create: if isAuthenticated() &&
+        exists(/databases/$(database)/documents/users/$(request.resource.data.userId)) &&
+        get(/databases/$(database)/documents/users/$(request.resource.data.userId)).data.uid == request.auth.uid;
+      allow update, delete: if isAuthenticated() && (
+        ('userId' in resource.data && resource.data.userId == request.auth.uid) ||
+        ('userId' in resource.data && exists(/databases/$(database)/documents/users/$(resource.data.userId)) &&
+         get(/databases/$(database)/documents/users/$(resource.data.userId)).data.uid == request.auth.uid) ||
+        isAdmin()
+      );
+    }
+  }
+}

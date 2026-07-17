@@ -1,0 +1,891 @@
+@import "tailwindcss";
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  --font-sans: "Inter", system-ui, -apple-system, sans-serif;
+  --font-display: "Outfit", sans-serif;
+  --radius-theme: var(--radius);
+
+  /* Semantic theme tokens → Tailwind utilities (bg-theme-bg, text-theme-text, …) */
+  --color-theme-bg: var(--theme-bg);
+  --color-theme-surface: var(--theme-surface);
+  --color-theme-card: var(--theme-card);
+  --color-theme-text: var(--theme-text);
+  --color-theme-muted: var(--theme-muted);
+  --color-theme-border: var(--theme-border);
+  --color-theme-ring: var(--theme-ring);
+  --color-theme-overlay: var(--theme-overlay);
+  --color-theme-accent: var(--theme-accent);
+  --color-theme-accent-fg: var(--theme-accent-fg);
+  --color-theme-accent-muted: var(--theme-accent-muted);
+  --color-theme-danger: var(--theme-danger);
+  --color-theme-success: var(--theme-success);
+  --color-theme-warning: var(--theme-warning);
+  /* Legacy aliases used by premium CSS */
+  --color-theme-accent-text: var(--theme-accent);
+  --color-theme-accent-bg: var(--theme-accent-muted);
+
+  --color-slate-800: #131c2e;
+
+  /* ─── Contrast boost (light-mode forced) ──────────────────────────────────
+     Default slate-400 (#94a3b8) fails WCAG AA on white.
+     Remap each shade one step darker so all muted/secondary text is readable.
+     slate-300 → old-400, slate-400 → old-500, slate-500 → old-600, etc.        */
+  --color-slate-300: #94a3b8;   /* was #cbd5e1 */
+  --color-slate-400: #64748b;   /* was #94a3b8 */
+  --color-slate-500: #475569;   /* was #64748b */
+  --color-slate-600: #334155;   /* was #475569 — slightly crisper section labels */
+
+  /* Same treatment for gray utilities (used in some modals / drawers) */
+  --color-gray-300:  #9ca3af;   /* was #d1d5db */
+  --color-gray-400:  #6b7280;   /* was #9ca3af */
+  --color-gray-500:  #4b5563;   /* was #6b7280 */
+
+  /* ─── Intermediate shades ───────────────────────────────────────────────
+     Half-step shades used across 300+ component files.
+     Neutrals use calculated hex; branded palettes use nearest CSS variable.  */
+
+  /* Slate intermediates */
+  --color-slate-55:  #f5f7fa;   /* between 50 (#f8fafc) and 100 (#f1f5f9) */
+  --color-slate-350: #7c8da2;   /* between remapped 300 and 400             */
+  --color-slate-505: #415063;   /* between remapped 500 and 600             */
+  --color-slate-550: #3c4a5e;   /* midpoint of 500→600                     */
+  --color-slate-850: #0e1522;   /* between 800 (#131c2e) and 900           */
+  --color-slate-905: #0b1018;   /* between 900 and 950                     */
+
+  /* Gray intermediates */
+  --color-gray-55:  #f6f7f9;   /* between 50 (#f9fafb) and 100 (#f3f4f6) */
+  --color-gray-250: #d3d8e0;   /* between 200 (#e5e7eb) and remapped 300  */
+  --color-gray-305: #97a0ad;   /* just above remapped 300                 */
+  --color-gray-350: #838c9a;   /* between remapped 300 and 400            */
+  --color-gray-505: #465262;   /* between remapped 500 and 600            */
+  --color-gray-550: #404b5a;   /* midpoint of 500→600                     */
+  --color-gray-650: #364050;   /* between 600 and 700                     */
+  --color-gray-750: #262e3e;   /* between 700 and 800                     */
+  --color-gray-850: #191f2b;   /* between 800 and 900                     */
+
+  /* Indigo (Primary / Accent) mapping to dynamic branding variables */
+  --color-indigo-50: var(--primary-color-light);
+  --color-indigo-55: var(--primary-color-light);
+  --color-indigo-100: var(--primary-color-light);
+  --color-indigo-200: var(--primary-color-light);
+  --color-indigo-300: var(--primary-color-light);
+  --color-indigo-400: var(--primary-color);
+  --color-indigo-500: var(--primary-color);
+  --color-indigo-505: var(--primary-color);
+  --color-indigo-550: var(--primary-color);
+  --color-indigo-600: var(--primary-color);
+  --color-indigo-605: var(--primary-color);
+  --color-indigo-650: var(--primary-color-hover);
+  --color-indigo-700: var(--primary-color-hover);
+  --color-indigo-750: var(--primary-color-hover);
+  --color-indigo-800: var(--primary-color-dark);
+  --color-indigo-900: var(--primary-color-dark);
+  --color-indigo-950: var(--primary-color-dark);
+  --color-indigo-955: var(--primary-color-dark);
+
+  /* Success (Green & Emerald) mapping */
+  --color-green-50: var(--success-color-light);
+  --color-green-100: var(--success-color-light);
+  --color-green-200: var(--success-color-light);
+  --color-green-300: var(--success-color-light);
+  --color-green-400: var(--success-color);
+  --color-green-500: var(--success-color);
+  --color-green-600: var(--success-color-hover);
+  --color-green-650: var(--success-color-hover);
+  --color-green-700: var(--success-color-dark);
+  --color-green-750: var(--success-color-dark);
+  --color-green-800: var(--success-color-dark);
+  --color-green-900: var(--success-color-dark);
+  --color-green-955: var(--success-color-dark);
+
+  --color-emerald-50: var(--success-color-light);
+  --color-emerald-100: var(--success-color-light);
+  --color-emerald-200: var(--success-color-light);
+  --color-emerald-300: var(--success-color-light);
+  --color-emerald-400: var(--success-color);
+  --color-emerald-500: var(--success-color);
+  --color-emerald-600: var(--success-color-hover);
+  --color-emerald-650: var(--success-color-hover);
+  --color-emerald-700: var(--success-color-dark);
+  --color-emerald-800: var(--success-color-dark);
+  --color-emerald-900: var(--success-color-dark);
+  --color-emerald-955: var(--success-color-dark);
+
+  /* Warning (Yellow & Amber) mapping */
+  --color-yellow-50: var(--warning-color-light);
+  --color-yellow-100: var(--warning-color-light);
+  --color-yellow-200: var(--warning-color-light);
+  --color-yellow-300: var(--warning-color-light);
+  --color-yellow-400: var(--warning-color);
+  --color-yellow-500: var(--warning-color);
+  --color-yellow-600: var(--warning-color-hover);
+  --color-yellow-700: var(--warning-color-dark);
+  --color-yellow-800: var(--warning-color-dark);
+  --color-yellow-900: var(--warning-color-dark);
+  --color-yellow-955: var(--warning-color-dark);
+
+  --color-amber-50: var(--warning-color-light);
+  --color-amber-100: var(--warning-color-light);
+  --color-amber-200: var(--warning-color-light);
+  --color-amber-300: var(--warning-color-light);
+  --color-amber-400: var(--warning-color);
+  --color-amber-500: var(--warning-color);
+  --color-amber-600: var(--warning-color-hover);
+  --color-amber-700: var(--warning-color-dark);
+  --color-amber-800: var(--warning-color-dark);
+  --color-amber-900: var(--warning-color-dark);
+  --color-amber-955: var(--warning-color-dark);
+
+  /* Danger (Red & Rose) mapping */
+  --color-red-50: var(--danger-color-light);
+  --color-red-100: var(--danger-color-light);
+  --color-red-200: var(--danger-color-light);
+  --color-red-300: var(--danger-color-light);
+  --color-red-400: var(--danger-color);
+  --color-red-500: var(--danger-color);
+  --color-red-600: var(--danger-color-hover);
+  --color-red-650: var(--danger-color-hover);
+  --color-red-700: var(--danger-color-dark);
+  --color-red-750: var(--danger-color-dark);
+  --color-red-800: var(--danger-color-dark);
+  --color-red-900: var(--danger-color-dark);
+  --color-red-955: var(--danger-color-dark);
+
+  --color-rose-50: var(--danger-color-light);
+  --color-rose-100: var(--danger-color-light);
+  --color-rose-200: var(--danger-color-light);
+  --color-rose-300: var(--danger-color-light);
+  --color-rose-400: var(--danger-color);
+  --color-rose-500: var(--danger-color);
+  --color-rose-600: var(--danger-color-hover);
+  --color-rose-700: var(--danger-color-dark);
+  --color-rose-800: var(--danger-color-dark);
+  --color-rose-900: var(--danger-color-dark);
+  --color-rose-955: var(--danger-color-dark);
+
+  /* ─── Other palettes (non-branded) intermediates ─────────────────────── */
+  --color-sky-105:  #e1effe;   /* between sky-100 (#e0f2fe) and sky-200    */
+  --color-sky-305:  #5dacda;   /* between sky-300 (#7dd3fc) and sky-400    */
+  --color-sky-750:  #0a5381;   /* between sky-700 (#0369a1) and sky-800    */
+  --color-sky-955:  #04263d;   /* between sky-900 and sky-950              */
+
+  --color-blue-955: #17234e;   /* between blue-900 and blue-950            */
+
+  --color-purple-955: #2a1750; /* between purple-900 and purple-950        */
+
+  --color-teal-955: #052e2e;   /* between teal-900 and teal-950            */
+
+  --color-orange-955: #3b1406; /* between orange-900 and orange-950        */
+}
+
+/* Apply modern Outfit font to headings and metrics, and Inter to everything else */
+html,
+body {
+  font-family: var(--font-family, var(--font-sans));
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+.font-display {
+  font-family: var(--font-display, var(--font-family, "Outfit", sans-serif));
+}
+
+/* Global standard icon configuration */
+svg.lucide {
+  stroke-width: 2px !important;
+  transition:
+    transform 0.2s ease-in-out,
+    stroke 0.2s ease-in-out;
+}
+/* Micro-animations */
+.btn-hover-bounce:hover svg.lucide {
+  transform: scale(1.12);
+}
+.btn-hover-rotate:hover svg.lucide {
+  transform: rotate(15deg);
+}
+
+/* Semantic theme tokens — appearance writes structural; branding writes identity
+   Palette: deep green + warm gold (Golden Acres land / real-estate) */
+:root {
+  --font-family: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Outfit", ui-sans-serif, system-ui, sans-serif;
+  --radius: 12px;
+  --box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.04), 0 2px 4px -2px rgba(0, 0, 0, 0.03);
+  --elevation-sm: 0 1px 2px rgba(0, 0, 0, 0.04), 0 1px 3px rgba(0, 0, 0, 0.03);
+  --elevation-md: var(--box-shadow);
+
+  /* Brand identity defaults (overridden by useBrandingStore after auth) */
+  --theme-accent: #2E7D32;
+  --theme-accent-fg: #ffffff;
+  --theme-accent-muted: #C8E6C9;
+  --theme-danger: #ef4444;
+  --theme-success: #43A047;
+  --theme-warning: #c9a227;
+
+  /* Legacy branding bridge (indigo/green/red Tailwind remaps → brand green/gold) */
+  --primary-color: #2E7D32;
+  --primary-color-hover: #256A2A;
+  --primary-color-light: #C8E6C9;
+  --primary-color-dark: #1F5A24;
+
+  --secondary-color: #c9a227;
+  --secondary-color-hover: #b8921f;
+  --secondary-color-light: #f5e9c4;
+  --secondary-color-dark: #8a6e14;
+
+  --success-color: #43A047;
+  --success-color-hover: #388E3C;
+  --success-color-light: #F3FBF4;
+  --success-color-dark: #1F5A24;
+
+  --warning-color: #c9a227;
+  --warning-color-hover: #b8921f;
+  --warning-color-light: #f5e9c4;
+  --warning-color-dark: #8a6e14;
+
+  --danger-color: #ef4444;
+  --danger-color-hover: #dc2626;
+  --danger-color-light: #fee2e2;
+  --danger-color-dark: #991b1b;
+
+  /* Scrollbar */
+  --scrollbar-thumb: rgba(0, 0, 0, 0.2);
+  --scrollbar-thumb-hover: rgba(0, 0, 0, 0.35);
+  --scrollbar-track: transparent;
+
+  /* Structural tokens — light (sage-tinted canvas) */
+  --theme-bg: #f3f6f4;
+  --theme-surface: #e8efeb;
+  --theme-card: #ffffff;
+  --theme-text: #0f172a;
+  --theme-muted: #5a6b63;
+  --theme-border: #d5e0da;
+  --theme-ring: #b8d9d0;
+  --theme-overlay: rgba(11, 26, 22, 0.45);
+  --theme-canvas-gradient:
+    radial-gradient(ellipse 90% 60% at 0% 0%, rgba(15, 92, 76, 0.1), transparent 55%),
+    radial-gradient(ellipse 70% 50% at 100% 0%, rgba(201, 162, 39, 0.12), transparent 50%),
+    radial-gradient(ellipse 80% 60% at 50% 100%, rgba(15, 92, 76, 0.05), transparent 55%),
+    linear-gradient(180deg, #f3f6f4 0%, #eef3f0 100%);
+  --theme-sidebar-gradient: linear-gradient(180deg, #0b1a16 0%, #0f5c4c 55%, #0a4a3d 100%);
+  --theme-brand-gradient: linear-gradient(135deg, #0f5c4c 0%, #147a64 45%, #c9a227 100%);
+  /* Legacy aliases for premium CSS */
+  --theme-accent-text: var(--theme-accent);
+  --theme-accent-bg: var(--theme-accent-muted);
+}
+
+.dark {
+  --scrollbar-thumb: rgba(255, 255, 255, 0.16);
+  --scrollbar-thumb-hover: rgba(255, 255, 255, 0.3);
+  --scrollbar-track: transparent;
+
+  /* Structural tokens — dark forest slate */
+  --theme-bg: #0b1a16;
+  --theme-surface: #122821;
+  --theme-card: #143029;
+  --theme-text: #f3f6f4;
+  --theme-muted: #9bb0a6;
+  --theme-border: #1e3d34;
+  --theme-ring: #0f5c4c;
+  --theme-overlay: rgba(2, 12, 10, 0.7);
+  --theme-accent-muted: rgba(15, 92, 76, 0.28);
+  --theme-accent-text: var(--theme-accent);
+  --theme-accent-bg: var(--theme-accent-muted);
+  --theme-canvas-gradient:
+    radial-gradient(ellipse 90% 60% at 0% 0%, rgba(15, 92, 76, 0.35), transparent 55%),
+    radial-gradient(ellipse 70% 50% at 100% 0%, rgba(201, 162, 39, 0.14), transparent 50%),
+    radial-gradient(ellipse 80% 60% at 80% 100%, rgba(10, 74, 61, 0.25), transparent 55%),
+    linear-gradient(180deg, #0b1a16 0%, #0e221c 100%);
+  --theme-sidebar-gradient: linear-gradient(180deg, #06120f 0%, #0b1a16 40%, #0f5c4c 100%);
+  --theme-brand-gradient: linear-gradient(135deg, #0f5c4c 0%, #1a8a72 50%, #c9a227 100%);
+}
+
+/* ============================================================
+   GLOBAL ANIMATION SYSTEM — Golden Acres CRM
+   All durations: 200-400ms | GPU-friendly (transform + opacity only)
+   ============================================================ */
+
+/* --- Entrance animations --- */
+@keyframes fadeSlideUp {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeSlideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes scaleSpring {
+  from {
+    opacity: 0;
+    transform: scale(0.92);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* --- Skeleton shimmer --- */
+@keyframes shimmer {
+  0% {
+    background-position: -400px 0;
+  }
+  100% {
+    background-position: 400px 0;
+  }
+}
+
+.skeleton-shimmer {
+  background: linear-gradient(
+    90deg,
+    theme("colors.gray.200") 25%,
+    theme("colors.gray.100") 50%,
+    theme("colors.gray.200") 75%
+  );
+  background-size: 800px 100%;
+  animation: shimmer 1.4s ease-in-out infinite;
+}
+
+.dark .skeleton-shimmer {
+  background: linear-gradient(
+    90deg,
+    theme("colors.gray.700") 25%,
+    theme("colors.gray.600") 50%,
+    theme("colors.gray.700") 75%
+  );
+  background-size: 800px 100%;
+}
+
+/* --- Toast slide-in/out --- */
+@keyframes toastSlideIn {
+  from {
+    opacity: 0;
+    transform: translateX(110%);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes toastSlideOut {
+  from {
+    opacity: 1;
+    transform: translateX(0);
+    max-height: 80px;
+    margin-bottom: 0.5rem;
+  }
+  to {
+    opacity: 0;
+    transform: translateX(110%);
+    max-height: 0;
+    margin-bottom: 0;
+  }
+}
+
+.toast-enter {
+  animation: toastSlideIn 0.3s cubic-bezier(0.34, 1.4, 0.64, 1) forwards;
+}
+.toast-exit {
+  animation: toastSlideOut 0.25s ease-in forwards;
+}
+
+/* --- Notification badge pulse --- */
+@keyframes notifPulse {
+  0%,
+  100% {
+    transform: scale(1) translate(50%, -50%);
+  }
+  50% {
+    transform: scale(1.3) translate(50%, -50%);
+  }
+}
+.notif-badge-pulse {
+  animation: notifPulse 1.8s ease-in-out infinite;
+  transform-origin: center;
+}
+
+/* --- IVR / live call ring pulse --- */
+@keyframes ringPulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.55);
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgba(34, 197, 94, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(34, 197, 94, 0);
+  }
+}
+.call-ring-pulse {
+  animation: ringPulse 1.5s ease-out infinite;
+}
+
+/* --- Modal spring entrance --- */
+@keyframes modalSpring {
+  from {
+    opacity: 0;
+    transform: scale(0.93) translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+.modal-spring {
+  animation: modalSpring 0.25s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+/* --- Backdrop blur-in --- */
+@keyframes backdropIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+.backdrop-fadein {
+  animation: backdropIn 0.2s ease-out forwards;
+}
+
+/* --- Bottom sheet slide up --- */
+@keyframes sheetSlideUp {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+.animate-sheetSlideUp {
+  animation: sheetSlideUp 0.3s cubic-bezier(0.32, 0.94, 0.6, 1) forwards;
+}
+
+/* --- Lead card stagger helper --- */
+.lead-card-stagger {
+  animation: fadeSlideUp 0.25s ease-out both;
+}
+
+/* --- Premium tab switch & staggered grid entrance animations --- */
+.animate-fade-slide-up {
+  animation: fadeSlideUp 0.35s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.stagger-delay-50 {
+  animation-delay: 50ms;
+}
+.stagger-delay-100 {
+  animation-delay: 100ms;
+}
+.stagger-delay-150 {
+  animation-delay: 150ms;
+}
+.stagger-delay-200 {
+  animation-delay: 200ms;
+}
+.stagger-delay-250 {
+  animation-delay: 250ms;
+}
+.stagger-delay-300 {
+  animation-delay: 300ms;
+}
+
+/* --- Accessibility: Honour prefers-reduced-motion --- */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* --- Safe Area / Edge-to-Edge Support --- */
+header {
+  padding-top: env(safe-area-inset-top, 0px) !important;
+}
+
+/* Adjust mobile layout spacing for login header */
+.login-header-safe {
+  padding-top: env(safe-area-inset-top, 0px);
+}
+
+/* Safe-area bottom padding for bottom sheets and overlays */
+.pb-safe {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/* Mobile bottom nav safe area */
+@supports (padding-bottom: env(safe-area-inset-bottom)) {
+  nav.fixed.bottom-0 {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+}
+
+/* Hide scrollbar but keep scroll functionality (for mobile tab strips) */
+.scrollbar-none {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+
+/* Thin scrollbar for desktop tab strips */
+.scrollbar-thin {
+  scrollbar-width: thin;
+}
+.scrollbar-thin::-webkit-scrollbar {
+  height: 3px;
+}
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background-color: rgba(100, 116, 139, 0.3);
+  border-radius: 10px;
+}
+.scrollbar-thin::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* ============================================================
+   GLOBAL SCROLLBAR CUSTOMIZATION — SLEEK INTERACTIVE LOOK
+   ============================================================ */
+
+/* Standard Firefox Scrollbars */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+}
+
+/* Webkit Scrollbars (Chrome, Safari, Edge, Capacitor webview) */
+::-webkit-scrollbar {
+  width: 8px; /* For vertical scrollbars */
+  height: 8px; /* For horizontal scrollbars */
+}
+
+::-webkit-scrollbar-track {
+  background: var(--scrollbar-track);
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: var(--scrollbar-thumb);
+  border-radius: 9999px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background-color: var(--scrollbar-thumb-hover);
+}
+
+/* ============================================================
+   PREMIUM DESIGN SYSTEM UTILITIES — GOLDEN ACRES CRM
+   ============================================================ */
+
+/* --- Dynamic Aurora Background Glow --- */
+@keyframes auroraGlow {
+  0%, 100% {
+    filter: hue-rotate(0deg) brightness(1);
+  }
+  50% {
+    filter: hue-rotate(15deg) brightness(1.05);
+  }
+}
+.animate-auroraGlow {
+  animation: auroraGlow 8s ease-in-out infinite;
+}
+
+/* --- Premium Typography Tracking --- */
+.font-display-premium {
+  font-family: var(--font-display);
+  letter-spacing: -0.025em;
+  font-weight: 800;
+}
+
+/* --- Atmospheric canvas (page shell) --- */
+.app-canvas {
+  background-color: var(--theme-bg);
+  background-image: var(--theme-canvas-gradient);
+  background-attachment: fixed;
+}
+
+.sidebar-brand-rail {
+  background-image: var(--theme-sidebar-gradient);
+  color: #f3f6f4;
+}
+
+/* Nav chrome on the forest rail — always light text (independent of appearance) */
+.sidebar-brand-rail a,
+.sidebar-brand-rail button,
+.sidebar-brand-rail .text-theme-muted {
+  color: rgba(243, 246, 244, 0.72);
+}
+.sidebar-brand-rail .text-theme-text,
+.sidebar-brand-rail .hover\:text-theme-text:hover {
+  color: #f3f6f4;
+}
+.sidebar-brand-rail .text-theme-accent {
+  color: #e8c84a;
+}
+.sidebar-brand-rail .bg-theme-accent-muted {
+  background: rgba(201, 162, 39, 0.18);
+}
+.sidebar-brand-rail .hover\:bg-theme-surface\/70:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+.sidebar-brand-rail .border-theme-border,
+.sidebar-brand-rail .border-theme-border\/80 {
+  border-color: color-mix(in srgb, var(--theme-border) 55%, rgba(255, 255, 255, 0.18));
+}
+.sidebar-brand-rail .bg-theme-surface {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.bg-brand-gradient {
+  background-image: var(--theme-brand-gradient);
+}
+
+.text-brand-gradient {
+  background-image: var(--theme-brand-gradient);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.header-brand-strip {
+  background-image:
+    linear-gradient(90deg, color-mix(in srgb, var(--primary-color) 12%, transparent), transparent 40%),
+    linear-gradient(270deg, color-mix(in srgb, var(--secondary-color) 14%, transparent), transparent 35%);
+}
+
+/* --- Shared radius contract --- */
+.rounded-theme {
+  border-radius: var(--radius);
+}
+.rounded-b-theme {
+  border-bottom-left-radius: var(--radius);
+  border-bottom-right-radius: var(--radius);
+}
+.rounded-t-theme {
+  border-top-left-radius: var(--radius);
+  border-top-right-radius: var(--radius);
+}
+
+/* --- Shared typography (Wave 1 hierarchy) --- */
+.type-page-title {
+  font-weight: 700; /* Bold */
+  color: var(--theme-text);
+}
+.type-section-title {
+  font-weight: 600; /* Semibold */
+  color: var(--theme-text);
+}
+.type-card-title {
+  font-weight: 600; /* Medium/Semibold for card & widget titles */
+  color: var(--theme-text);
+}
+.type-label {
+  font-weight: 400; /* Regular */
+  color: var(--theme-muted);
+}
+.type-secondary {
+  font-weight: 400;
+  color: var(--theme-muted);
+}
+.type-kpi {
+  font-weight: 700; /* Bold numbers / KPIs */
+  color: var(--theme-text);
+  font-variant-numeric: tabular-nums;
+}
+
+/* --- Shared spacing (8pt rhythm helpers) --- */
+.space-widget {
+  padding: 1rem; /* 16px */
+}
+.space-widget-compact {
+  padding: 0.75rem; /* 12px */
+}
+.gap-widget {
+  gap: 0.75rem; /* 12px — grid / inner stacks */
+}
+.gap-widget-tight {
+  gap: 0.5rem; /* 8px */
+}
+
+/* --- Shared elevation (quiet; branding may override via --box-shadow) --- */
+.shadow-elevation-sm {
+  box-shadow: var(--elevation-sm);
+}
+.shadow-elevation-md {
+  box-shadow: var(--elevation-md);
+}
+.dark {
+  --elevation-sm: 0 1px 2px rgba(0, 0, 0, 0.2), 0 1px 3px rgba(0, 0, 0, 0.15);
+}
+
+/* --- Widget shell (Agent dashboard chrome) --- */
+.widget-shell {
+  border-radius: var(--radius);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+/* Quiet hover — no translate; light border only when standard bordered cards */
+.widget-shell:not(.border-transparent):hover {
+  border-color: color-mix(in srgb, var(--primary-color) 18%, var(--theme-border));
+}
+
+/* --- Glassmorphic Card Styling --- */
+/* Premium = elevation/hierarchy, NOT a larger radius — uses --radius */
+.card-premium {
+  background: var(--theme-card);
+  border: 1px solid var(--theme-border);
+  border-radius: var(--radius);
+  box-shadow: var(--elevation-sm);
+  transition: border-color 0.25s cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  backdrop-filter: var(--theme-backdropFilter, none);
+}
+.card-premium:hover {
+  box-shadow: var(--elevation-md);
+  border-color: color-mix(in srgb, var(--primary-color) 28%, var(--theme-border));
+}
+.dark .card-premium {
+  box-shadow: 0 4px 16px -4px rgba(0, 0, 0, 0.35), 0 1px 4px -1px rgba(0, 0, 0, 0.2);
+}
+.dark .card-premium:hover {
+  box-shadow: 0 8px 24px -6px rgba(0, 0, 0, 0.5), 0 1px 6px -2px rgba(0, 0, 0, 0.25);
+  border-color: color-mix(in srgb, var(--secondary-color) 35%, var(--theme-border));
+}
+
+/*
+ * --- Premium field bridge (Wave 4 Phase 2) ---
+ * Align `.input-premium` with shared Input / DLS v1.2 tokens (radius, surface, focus-visible).
+ * Consumers keep the className until Phase 3 migration — do not invent a second control language.
+ */
+.input-premium {
+  width: 100%;
+  background: var(--theme-surface);
+  border: 1px solid var(--theme-border);
+  border-radius: var(--radius);
+  padding: 0.5rem 0.75rem;
+  font-size: 0.875rem;
+  color: var(--theme-text);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+}
+.dark .input-premium {
+  background: var(--theme-surface);
+}
+.input-premium:focus {
+  outline: none;
+}
+.input-premium:focus-visible {
+  outline: none;
+  background: var(--theme-surface);
+  border-color: var(--theme-accent);
+  /* Wave 1.5 ring + quiet brand glow (additive, not a fork) */
+  box-shadow:
+    0 0 0 2px var(--theme-ring),
+    0 0 0 4px color-mix(in srgb, var(--primary-color) 18%, transparent);
+}
+.dark .input-premium:focus-visible {
+  box-shadow:
+    0 0 0 2px var(--theme-ring),
+    0 0 0 4px color-mix(in srgb, var(--primary-color) 28%, transparent);
+}
+.input-premium[aria-invalid="true"] {
+  border-color: var(--theme-danger);
+}
+.input-premium[aria-invalid="true"]:focus-visible {
+  border-color: var(--theme-danger);
+  box-shadow:
+    0 0 0 2px var(--theme-danger),
+    0 0 0 4px color-mix(in srgb, var(--theme-danger) 18%, transparent);
+}
+.input-premium:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* --- Interactive Premium Buttons --- */
+.btn-premium-primary {
+  background: var(--theme-brand-gradient);
+  color: #ffffff !important;
+  font-weight: 600;
+  font-size: 0.875rem;
+  padding: 0.75rem 1.5rem;
+  border-radius: 0.875rem;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 4px 14px -3px color-mix(in srgb, var(--primary-color) 40%, transparent);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  border: none;
+}
+.btn-premium-primary:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 22px -4px color-mix(in srgb, var(--primary-color) 50%, transparent);
+  filter: brightness(1.06);
+}
+.btn-premium-primary:active:not(:disabled) {
+  transform: translateY(0);
+}
+.btn-premium-primary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.btn-premium-secondary {
+  background: rgba(255, 255, 255, 0.6);
+  border: 1.5px solid var(--theme-border);
+  color: var(--theme-text);
+  font-weight: 600;
+  font-size: 0.875rem;
+  padding: 0.75rem 1.5rem;
+  border-radius: 0.875rem;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  backdrop-filter: var(--theme-backdropFilter, none);
+}
+.dark .btn-premium-secondary {
+  background: rgba(30, 41, 59, 0.35);
+}
+.btn-premium-secondary:hover:not(:disabled) {
+  background: var(--theme-card);
+  transform: translateY(-1.5px);
+  box-shadow: 0 8px 18px -4px rgba(0, 0, 0, 0.05);
+}
+.btn-premium-secondary:active:not(:disabled) {
+  transform: translateY(0);
+}
+.btn-premium-secondary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+

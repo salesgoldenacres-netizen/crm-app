@@ -1,0 +1,8 @@
+# Python dependencies for Golden Acres execution scripts
+
+firebase-admin>=6.5.0        # Firestore Admin SDK
+google-auth>=2.29.0          # Google OAuth
+google-auth-oauthlib>=1.2.0  # OAuth flow for installed apps
+google-auth-httplib2>=0.2.0
+google-api-python-client>=2.130.0  # Sheets, Drive APIs
+python-dotenv>=1.0.1         # Load .env files

@@ -1,0 +1,68 @@
+# === Secrets & credentials ===
+.env
+.env.*
+!.env.example
+!.env.*.example
+credentials.json
+token.json
+credentials/
+**/firebase-service-account*.json
+**/*serviceAccount*
+**/google-services.json
+**/GoogleService-Info.plist
+*.pem
+*.p12
+*.keystore
+serviceAccountKey.json
+
+# === Intermediate / temp ===
+.tmp/
+**/graphify-out/
+.firebase/
+*.local
+*.log
+logs/
+lint_output.txt
+theme_audit_results.txt
+
+# === Dependencies & build ===
+node_modules/
+dist/
+dist-ssr/
+build/
+.vite/
+*.egg-info/
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# === Mobile / artifacts ===
+*.apk
+telecaller-app-debug.apk
+*.aab
+*.ipa
+android/.gradle/
+android/app/build/
+ios/Pods/
+ios/build/
+
+# === Backup / PII dumps ===
+backups/
+
+# === OS / editor noise ===
+.DS_Store
+Thumbs.db
+Desktop.ini
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+*~
+
+# === Nested git archives (pre-monorepo) ===
+**/.git-archived-*/
+# === OTA / binary deliverables (regenerated; not source) ===
+**/public/updates/bundle-*.zip

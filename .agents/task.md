@@ -1,0 +1,35 @@
+# Tasks — Wave 8 Phase 2C: Analytics Service & KPI Foundation
+
+- `[x]` Analytics Contract & Error Definitions
+  - `[x]` Create `telecaller-app/src/shared/services/analytics/analyticsTypes.ts`
+  - `[x]` Create `telecaller-app/src/shared/services/analytics/analyticsErrors.ts`
+  - `[x]` Create `telecaller-app/src/shared/services/analytics/analyticsContracts.ts`
+- `[x]` Provider Tier Layer
+  - `[x]` Create `telecaller-app/src/shared/services/analytics/ClientAnalyticsProvider.ts`
+  - `[x]` Create `telecaller-app/src/shared/services/analytics/SummaryDocumentProvider.ts`
+  - `[x]` Create `telecaller-app/src/shared/services/analytics/FirestoreAggregationProvider.ts`
+- `[x]` Centralized Analytics Service
+  - `[x]` Create `telecaller-app/src/shared/services/analytics/AnalyticsService.ts`
+  - `[x]` Create `telecaller-app/src/shared/services/analytics/AnalyticsContext.tsx`
+- `[x]` Dashboard Widgets Refactoring
+  - `[x]` Refactor `CallsTodayWidget.tsx`
+  - `[x]` Refactor `BookingsTodayWidget.tsx`
+  - `[x]` Refactor `TeamGoalsWidget.tsx`
+  - `[x]` Update `WidgetGrid.tsx`
+- `[x]` Architectural Unit Tests
+  - `[x]` Create `telecaller-app/src/shared/services/analytics/analyticsService.test.ts`
+- `[x]` Documentation & Governance
+  - `[x]` Create `directives/wave8-phase2c-notes.md`
+  - `[x]` Create `directives/wave8-phase2c-validation.md`
+  - `[x]` Create `directives/analytics-architecture.md`
+  - `[x]` Create `directives/analytics-service-contract.md`
+  - `[x]` Create `directives/analytics-provider-contract.md`
+  - `[x]` Create `directives/analytics-cache-policy.md`
+  - `[x]` Create `directives/kpi-routing.md`
+- `[x]` Update Execution Plans and Memory
+  - `[x]` Update `memory.md`
+  - `[x]` Update `directives/wave8-execution-plan.md`
+- `[x]` Validation Checks
+  - `[x]` Run `npx tsc --noEmit`
+  - `[x]` Run `npm test`
+  - `[x]` Run `npm run build`

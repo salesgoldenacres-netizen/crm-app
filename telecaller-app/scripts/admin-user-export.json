@@ -1,0 +1,15 @@
+{
+  "users": [
+    {
+      "localId": "MyNP5NAVSJR1IgTnxKC5MmS8PvA2",
+      "email": "admin@goldenacres.app",
+      "emailVerified": false,
+      "passwordHash": "R6Oix3h6ypB2byGbzhIEJC/2ct6mB942yzM7Bft5OJTA8bq4kpib+vGds2QQLrNsXqIEuf76GgANxToAt3kCoA==",
+      "salt": "yvXrqsB0SQRxew==",
+      "lastSignedInAt": "1780669778335",
+      "createdAt": "1780669778335",
+      "disabled": false,
+      "providerUserInfo": []
+    }
+  ]
+}

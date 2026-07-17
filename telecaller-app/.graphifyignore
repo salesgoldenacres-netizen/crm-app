@@ -1,0 +1,42 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+node_modules/
+dist/
+dist-ssr/
+*.local
+
+# Editor directories and files
+.vscode/
+.idea/
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Firebase cache
+.firebase/
+
+# Android build outputs & configuration files
+android/
+
+# Build assets & artifacts
+graphify-out/
+.agents/
+.git/
+
+# Binaries/Bundles
+*.apk
+*.zip
+bundle_snippet.txt
+extracted_helpers.txt
+lint_output.txt
+users.json

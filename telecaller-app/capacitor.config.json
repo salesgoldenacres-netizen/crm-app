@@ -1,0 +1,10 @@
+{
+  "appId": "com.goldenacres.telecaller",
+  "appName": "Golden Acres",
+  "webDir": "dist",
+  "plugins": {
+    "CapacitorUpdater": {
+      "autoUpdate": false
+    }
+  }
+}
