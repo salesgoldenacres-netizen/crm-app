@@ -270,13 +270,44 @@ service cloud.firestore {
     }
 
     // IVR Calls:
-    // - Access restricted to owner or admin
+    // - Auto-ID docs owned via agentId field (legacy: doc id == agent/user id)
     match /ivrCalls/{callId} {
-      allow read, write: if isAuthenticated() && (
+      allow read: if isAuthenticated() && (
+        isAdmin() ||
         callId == request.auth.uid ||
         (exists(/databases/$(database)/documents/users/$(callId)) &&
          get(/databases/$(database)/documents/users/$(callId)).data.uid == request.auth.uid) ||
-        isAdmin()
+        (
+          'agentId' in resource.data && (
+            resource.data.agentId == request.auth.uid ||
+            (exists(/databases/$(database)/documents/users/$(resource.data.agentId)) &&
+             get(/databases/$(database)/documents/users/$(resource.data.agentId)).data.uid == request.auth.uid)
+          )
+        )
+      );
+      allow create: if isAuthenticated() && (
+        isAdmin() ||
+        (
+          'agentId' in request.resource.data && (
+            request.resource.data.agentId == request.auth.uid ||
+            (exists(/databases/$(database)/documents/users/$(request.resource.data.agentId)) &&
+             get(/databases/$(database)/documents/users/$(request.resource.data.agentId)).data.uid == request.auth.uid)
+          )
+        )
+      );
+      allow update, delete: if isAuthenticated() && (
+        isAdmin() ||
+        callId == request.auth.uid ||
+        (exists(/databases/$(database)/documents/users/$(callId)) &&
+         get(/databases/$(database)/documents/users/$(callId)).data.uid == request.auth.uid) ||
+        (
+          resource != null &&
+          'agentId' in resource.data && (
+            resource.data.agentId == request.auth.uid ||
+            (exists(/databases/$(database)/documents/users/$(resource.data.agentId)) &&
+             get(/databases/$(database)/documents/users/$(resource.data.agentId)).data.uid == request.auth.uid)
+          )
+        )
       );
     }
 

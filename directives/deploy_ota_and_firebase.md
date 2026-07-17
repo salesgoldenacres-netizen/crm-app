@@ -30,3 +30,15 @@ python execution/deploy_ota_and_firebase.py [--version <version_string>] [--only
 - A new OTA bundle zip file deployed on Firebase Hosting: `https://golden-acres-projects.web.app/updates/bundle-<version>.zip`
 - Updated live manifest: `https://golden-acres-projects.web.app/updates/manifest.json`
 - Synced Firebase components (Functions, Hosting files, and rules as specified).
+
+## Rollback notes
+
+If a bad OTA or Hosting deploy ships:
+
+1. **OTA (Capacitor clients):** Point `public/updates/manifest.json` (then redeploy hosting / run the deploy script) back to the last known-good `bundle-<version>.zip` that is still hosted under `/updates/`. Clients poll the manifest and will pull the previous zip.
+2. **Hosting SPA only:** Redeploy the previous Hosting release via Firebase Console → Hosting → Release history → **Rollback**, or rebuild the prior git tag/commit and `firebase deploy --only hosting`.
+3. **Cloud Functions:** Redeploy the previous functions revision from a known-good commit (`firebase deploy --only functions`). Callable/HTTP behavior returns with that code; there is no separate OTA for functions.
+4. **Firestore rules / indexes:** Only roll forward with a reviewed fix when possible. Rolling rules backward can re-open closed security holes — treat rules rollback as a security decision, not a routine DevOps step.
+5. **Failed mid-script deploy:** The deploy script restores `package.json` version on build/deploy failure. Confirm live `updates/manifest.json` version manually after any partial failure.
+
+GitHub `.github/workflows/deploy.yml` is a **manual stub** until `FIREBASE_TOKEN` (or WIF) is configured; prefer this directive’s local/agent path for production deploys.

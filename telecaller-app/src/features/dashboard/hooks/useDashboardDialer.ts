@@ -1,7 +1,15 @@
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback, type MutableRefObject } from "react";
 import { functions } from "@/shared/services/firebase";
 import { httpsCallable } from "firebase/functions";
 import { Lead, User } from "@/shared/types";
+
+function clearTimer(ref: MutableRefObject<ReturnType<typeof setTimeout> | ReturnType<typeof setInterval> | null>) {
+  if (ref.current != null) {
+    clearTimeout(ref.current as ReturnType<typeof setTimeout>);
+    clearInterval(ref.current as ReturnType<typeof setInterval>);
+    ref.current = null;
+  }
+}
 
 export function useDashboardDialer(
   user: User,
@@ -26,19 +34,40 @@ export function useDashboardDialer(
   const ringTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const connectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const ivrBridgeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  /** Keep duration readable on end-call without stale closure overwrite. */
+  const dialerSecondsRef = useRef(0);
+
+  useEffect(() => {
+    dialerSecondsRef.current = dialerSeconds;
+  }, [dialerSeconds]);
+
+  const clearAllDialerTimers = useCallback(() => {
+    clearTimer(dialerIntervalRef);
+    clearTimer(ringTimeoutRef);
+    clearTimer(connectTimeoutRef);
+    clearTimer(ivrBridgeTimeoutRef);
+  }, []);
 
   useEffect(() => {
     return () => {
-      if (dialerIntervalRef.current) clearInterval(dialerIntervalRef.current);
-      if (ringTimeoutRef.current) clearTimeout(ringTimeoutRef.current);
-      if (connectTimeoutRef.current) clearTimeout(connectTimeoutRef.current);
-      if (ivrBridgeTimeoutRef.current) clearTimeout(ivrBridgeTimeoutRef.current);
+      clearAllDialerTimers();
     };
+  }, [clearAllDialerTimers]);
+
+  const startActiveCallTicker = useCallback(() => {
+    clearTimer(dialerIntervalRef);
+    dialerIntervalRef.current = setInterval(() => {
+      setDialerSeconds((prev) => prev + 1);
+    }, 1000);
   }, []);
 
   const handleStartCall = useCallback((lead: Lead) => {
+    // Prevent stacked intervals/timeouts when starting a new call over an active one.
+    clearAllDialerTimers();
+
     setActiveDialerLead(lead);
     setDialerSeconds(0);
+    dialerSecondsRef.current = 0;
     setDialerMuted(false);
     setDialerSpeaker(false);
 
@@ -55,9 +84,7 @@ export function useDashboardDialer(
             setDialerStatus("Connecting customer...");
             ivrBridgeTimeoutRef.current = setTimeout(() => {
               setDialerStatus("Active Call");
-              dialerIntervalRef.current = setInterval(() => {
-                setDialerSeconds((prev) => prev + 1);
-              }, 1000);
+              startActiveCallTicker();
             }, 1500);
           }, 1500);
         }, 1200);
@@ -75,9 +102,7 @@ export function useDashboardDialer(
                 setDialerStatus("Connecting customer...");
                 ivrBridgeTimeoutRef.current = setTimeout(() => {
                   setDialerStatus("Active Call");
-                  dialerIntervalRef.current = setInterval(() => {
-                    setDialerSeconds((prev) => prev + 1);
-                  }, 1000);
+                  startActiveCallTicker();
                 }, 2000);
               }, 2000);
             } else {
@@ -100,21 +125,15 @@ export function useDashboardDialer(
 
       connectTimeoutRef.current = setTimeout(() => {
         setDialerStatus("Active Call");
-        dialerIntervalRef.current = setInterval(() => {
-          setDialerSeconds((prev) => prev + 1);
-        }, 1000);
+        startActiveCallTicker();
       }, 3500);
     }
-  }, [user, isManagerial, updateAgentStatus, ivrSettings]);
+  }, [user, isManagerial, updateAgentStatus, ivrSettings, clearAllDialerTimers, startActiveCallTicker]);
 
   const handleEndCall = useCallback((setCallLogForm: (updater: (prev: any) => any) => void) => {
-    if (dialerIntervalRef.current) clearInterval(dialerIntervalRef.current);
-    if (ringTimeoutRef.current) clearTimeout(ringTimeoutRef.current);
-    if (connectTimeoutRef.current) clearTimeout(connectTimeoutRef.current);
-    if (ivrBridgeTimeoutRef.current) clearTimeout(ivrBridgeTimeoutRef.current);
+    clearAllDialerTimers();
 
-    // Format duration
-    const totalSecs = dialerSeconds;
+    const totalSecs = dialerSecondsRef.current;
     const h = Math.floor(totalSecs / 3600).toString().padStart(2, "0");
     const m = Math.floor((totalSecs % 3600) / 60).toString().padStart(2, "0");
     const s = (totalSecs % 60).toString().padStart(2, "0");
@@ -129,7 +148,7 @@ export function useDashboardDialer(
       updateAgentStatus(user.id, "available", user.username);
     }
     setActiveDialerLead(null);
-  }, [dialerSeconds, user, isManagerial, updateAgentStatus]);
+  }, [user, isManagerial, updateAgentStatus, clearAllDialerTimers]);
 
   const handleAnswerIvrCall = useCallback(async () => {
     if (!activeIvrCall) return;
@@ -159,9 +178,11 @@ export function useDashboardDialer(
       setIsAddLeadModalOpen(true);
     }
 
+    clearAllDialerTimers();
     setActiveDialerLead(finalLead);
     setDialerStatus("Active Call");
     setDialerSeconds(0);
+    dialerSecondsRef.current = 0;
     setDialerMuted(false);
     setDialerSpeaker(false);
 
@@ -169,11 +190,8 @@ export function useDashboardDialer(
       await updateAgentStatus(user.id, "on-call", user.username);
     }
 
-    if (dialerIntervalRef.current) clearInterval(dialerIntervalRef.current);
-    dialerIntervalRef.current = setInterval(() => {
-      setDialerSeconds((prev) => prev + 1);
-    }, 1000);
-  }, [activeIvrCall, matchedIvrLead, clearActiveIvrCall, setActiveLeadId, setIsAddLeadModalOpen, setAddLeadForm, user, isManagerial, updateAgentStatus]);
+    startActiveCallTicker();
+  }, [activeIvrCall, matchedIvrLead, clearActiveIvrCall, setActiveLeadId, setIsAddLeadModalOpen, setAddLeadForm, user, isManagerial, updateAgentStatus, clearAllDialerTimers, startActiveCallTicker]);
 
   return {
     activeDialerLead,

@@ -24,9 +24,15 @@ Review the output to see the primary candidate (selected based on the number of 
 
 ### Performing the Merge Action
 To execute the merge and write updates to Firestore (which updates the primary lead and deletes secondary duplicates):
+
+1. Take a backup first: `python execution/backup_firestore.py`
+2. Run with explicit confirm + backup ack:
+
 ```bash
-python execution/dedup_leads.py --action merge
+python execution/dedup_leads.py --action merge --confirm MERGE --backup-ack
 ```
+
+Destructive merge is refused without `--confirm MERGE` and `--backup-ack`.
 
 ## Logic & Merge Strategy
 

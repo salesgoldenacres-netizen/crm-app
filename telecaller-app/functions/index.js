@@ -34,6 +34,14 @@ const {
   handleSetManagerialClaim,
   handleLinkUserProfile,
 } = require('./auth/claims');
+const { cleanLeadData } = require('./leads/cleanLeadData');
+const { determineAllocation } = require('./leads/allocation');
+const {
+  appendCallLog,
+  writeAuditLog,
+  claimIngestEvent,
+  isInvalidFcmTokenError,
+} = require('./helpers/firestoreWrites');
 
 admin.initializeApp();
 const db = admin.firestore();
@@ -47,97 +55,12 @@ async function getIntegrationSettings() {
   return loadIntegrationSettings(db);
 }
 
-// Helper function to clean and normalize inbound lead data
-function cleanLeadData(data) {
-  let name = data.name || '';
-  name = name.trim().replace(/\s+/g, ' ');
-  name = name.split(' ').map(word => {
-    if (!word) return '';
-    return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
-  }).join(' ');
-  if (!name) name = 'Unknown Customer';
-
-  let email = data.email || '';
-  email = email.trim().toLowerCase();
-
-  let phone = data.phone || '';
-  let cleanedPhone = phone.replace(/[^0-9]/g, '');
-  
-  if (cleanedPhone.length === 11 && cleanedPhone.startsWith('0')) {
-    cleanedPhone = '+91' + cleanedPhone.slice(1);
-  } else if (cleanedPhone.length === 10) {
-    cleanedPhone = '+91' + cleanedPhone;
-  } else if (cleanedPhone.length === 12 && cleanedPhone.startsWith('91')) {
-    cleanedPhone = '+' + cleanedPhone;
-  } else if (cleanedPhone.length > 0 && !cleanedPhone.startsWith('+')) {
-    cleanedPhone = '+' + cleanedPhone;
-  }
-  
-  return { name, email, phone: cleanedPhone };
+/** Round-robin via transactional cursor (settings/routing.roundRobinCursor). */
+async function allocateRoundRobin() {
+  return determineAllocation(db);
 }
 
-// Helper to determine round-robin telecaller allocation
-async function determineAllocation() {
-  let assignedTo = '';
-  let assignedToName = 'Unassigned';
-
-  try {
-    const routingSnap = await db.doc('settings/routing').get();
-    const routingSettings = routingSnap.exists ? routingSnap.data() : { enableRoundRobin: false, activeAgents: [] };
-
-    if (routingSettings.enableRoundRobin) {
-      const usersSnap = await db.collection('users').get();
-      const telecallers = [];
-      usersSnap.forEach(d => {
-        const u = d.data();
-        if (u.role === 'telecaller') {
-          telecallers.push(u);
-        }
-      });
-
-      const pool = (routingSettings.activeAgents && routingSettings.activeAgents.length > 0)
-        ? telecallers.filter(tc => routingSettings.activeAgents.includes(tc.id))
-        : telecallers;
-
-      if (pool.length > 0) {
-        // Query active statuses from agentStatus collection
-        const statusesSnap = await db.collection('agentStatus').get();
-        const activeAgentIds = new Set();
-        statusesSnap.forEach(d => {
-          const s = d.data();
-          if (s.status === 'available' || s.status === 'working_from_home') {
-            activeAgentIds.add(d.id);
-          }
-        });
-
-        // Filter pool to only include active/WFH agents
-        const activePool = pool.filter(tc => activeAgentIds.has(tc.id));
-
-        if (activePool.length > 0) {
-          const lastLeadSnap = await db.collection('leads').orderBy('createdAt', 'desc').limit(1).get();
-          let lastAgentId = '';
-          if (!lastLeadSnap.empty) {
-            lastAgentId = lastLeadSnap.docs[0].data().assignedTo || '';
-          }
-
-          const lastIndex = activePool.findIndex(tc => tc.id === lastAgentId);
-          const nextIndex = (lastIndex + 1) % activePool.length;
-          const targetAgent = activePool[nextIndex];
-          assignedTo = targetAgent.id;
-          assignedToName = targetAgent.username;
-        } else {
-          console.log("No active or WFH agents found in agentStatus. Lead will remain Unassigned.");
-        }
-      }
-    }
-  } catch (err) {
-    console.error("Error determining round-robin allocation: ", err);
-  }
-
-  return { assignedTo, assignedToName };
-}
-
-// Helper to send FCM notification
+// Helper to send FCM notification (prunes invalid tokens)
 async function sendFcm(userId, payload) {
   try {
     const userDoc = await db.doc(`users/${userId}`).get();
@@ -162,6 +85,16 @@ async function sendFcm(userId, payload) {
     console.log(`Successfully sent FCM notification to user ${userId}:`, response);
   } catch (err) {
     console.error(`Error sending FCM notification to user ${userId}:`, err);
+    if (isInvalidFcmTokenError(err)) {
+      try {
+        await db.doc(`users/${userId}`).update({
+          fcmToken: admin.firestore.FieldValue.delete(),
+        });
+        console.log(`Pruned invalid FCM token for user ${userId}`);
+      } catch (pruneErr) {
+        console.warn(`Failed to prune FCM token for user ${userId}:`, pruneErr);
+      }
+    }
   }
 }
 
@@ -228,6 +161,24 @@ const handlePostLeads = async (req, res) => {
             const leadgenId = change.value.leadgen_id;
             const formId = change.value.form_id;
 
+            // Idempotency after auth — create-once ingestEvents (no auth change).
+            if (leadgenId) {
+              const claim = await claimIngestEvent(
+                db,
+                `meta_leadgen_${leadgenId}`,
+                { type: 'meta_leadgen', leadgenId, formId: formId || null },
+              );
+              if (!claim.created) {
+                console.log(`Duplicate Meta leadgen ${leadgenId} — idempotent skip`);
+                return res.status(200).json({
+                  success: true,
+                  duplicate: true,
+                  action: 'idempotent_skip',
+                  leadgenId,
+                });
+              }
+            }
+
             const graphUrl = `https://graph.facebook.com/v18.0/${leadgenId}?access_token=${settings.metaAccessToken}`;
             const fbResponse = await axios.get(graphUrl);
             const fieldData = fbResponse.data.field_data || [];
@@ -280,6 +231,7 @@ const handlePostLeads = async (req, res) => {
 
     const duplicateRule = settings.duplicateHandlingRule || 'merge';
     let existingLead = null;
+    let existingLeadId = null;
 
     if (duplicateRule !== 'create') {
       const existingLeadsSnap = await db.collection('leads')
@@ -288,57 +240,46 @@ const handlePostLeads = async (req, res) => {
         .get();
 
       if (!existingLeadsSnap.empty) {
-        existingLead = existingLeadsSnap.docs[0].data();
+        existingLeadId = existingLeadsSnap.docs[0].id;
+        existingLead = { id: existingLeadId, ...existingLeadsSnap.docs[0].data() };
       }
     }
 
-    if (existingLead) {
+    if (existingLead && existingLeadId) {
       if (duplicateRule === 'skip') {
         console.log(`Duplicate lead found: ${phone}. Rule is set to 'skip'. Ingestion ignored.`);
-        
-        const auditId = 'audit-' + Date.now();
-        await db.collection('auditLogs').doc(auditId).set({
-          id: auditId,
-          timestamp: new Date().toISOString(),
+
+        await writeAuditLog(db, {
           action: isGoogle ? 'Duplicate Lead Skipped (Google Ads)' : 'Duplicate Lead Skipped (Meta/Generic)',
-          details: `Customer: ${name}, Phone: ${phone} matched existing lead ID: ${existingLead.id}. Ingestion skipped.`,
-          user: 'api_webhook'
+          details: `Customer: ${name}, Phone: ${phone} matched existing lead ID: ${existingLeadId}. Ingestion skipped.`,
+          user: 'api_webhook',
         });
 
-        return res.status(200).json({ success: true, leadId: existingLead.id, duplicate: true, action: 'skipped' });
+        return res.status(200).json({ success: true, leadId: existingLeadId, duplicate: true, action: 'skipped' });
       } else {
-        // default: merge
-        console.log(`Duplicate lead found: ${phone}. Rule is set to 'merge'. Merging notes into existing lead ID: ${existingLead.id}`);
+        // default: merge — arrayUnion avoids read-modify-write races
+        console.log(`Duplicate lead found: ${phone}. Rule is set to 'merge'. Merging notes into existing lead ID: ${existingLeadId}`);
 
-        const updatedLogs = existingLead.callLogs || [];
-        updatedLogs.push({
+        await appendCallLog(db, existingLeadId, {
           date: new Date().toISOString(),
           note: `Duplicate lead attempt detected via Webhook Ingestion. Notes merged: ${notes}`,
           status: existingLead.status || 'new',
-          agent: 'system'
+          agent: 'system',
         });
 
-        await db.collection('leads').doc(existingLead.id).update({
-          updatedAt: new Date().toISOString(),
-          callLogs: updatedLogs
-        });
-
-        const auditId = 'audit-' + Date.now();
-        await db.collection('auditLogs').doc(auditId).set({
-          id: auditId,
-          timestamp: new Date().toISOString(),
+        await writeAuditLog(db, {
           action: isGoogle ? 'Duplicate Lead Blocked (Google Ads)' : 'Duplicate Lead Blocked (Meta/Generic)',
-          details: `Customer: ${name}, Phone: ${phone} matched existing lead ID: ${existingLead.id}. Merged logs.`,
-          user: 'api_webhook'
+          details: `Customer: ${name}, Phone: ${phone} matched existing lead ID: ${existingLeadId}. Merged logs.`,
+          user: 'api_webhook',
         });
 
-        return res.status(200).json({ success: true, leadId: existingLead.id, duplicate: true, action: 'merged' });
+        return res.status(200).json({ success: true, leadId: existingLeadId, duplicate: true, action: 'merged' });
       }
     }
 
-    const { assignedTo, assignedToName } = await determineAllocation();
-
-    const newLeadId = 'lead-' + Date.now() + '-' + Math.floor(Math.random() * 1000);
+    // Leave unassigned — onLeadCreated is the single RR owner (avoids double-alloc).
+    const leadRef = db.collection('leads').doc();
+    const newLeadId = leadRef.id;
     const leadRecord = {
       id: newLeadId,
       name,
@@ -346,8 +287,8 @@ const handlePostLeads = async (req, res) => {
       email,
       projectId: '',
       plotId: '',
-      assignedTo,
-      assignedToName,
+      assignedTo: '',
+      assignedToName: 'Unassigned',
       status: 'raw',
       priority: 'warm',
       notes,
@@ -363,28 +304,13 @@ const handlePostLeads = async (req, res) => {
       ]
     };
 
-    await db.collection('leads').doc(newLeadId).set(leadRecord);
+    await leadRef.set(leadRecord);
 
-    const auditId = 'audit-' + Date.now();
-    await db.collection('auditLogs').doc(auditId).set({
-      id: auditId,
-      timestamp: new Date().toISOString(),
+    await writeAuditLog(db, {
       action: googleKey ? 'Ingest Lead (Google Ads)' : 'Ingest Lead (Meta/Generic)',
-      details: `Customer: ${name}, Phone: ${phone}, Allocated to: ${assignedToName}`,
-      user: 'api_webhook'
+      details: `Customer: ${name}, Phone: ${phone}. Awaiting onLeadCreated allocation.`,
+      user: 'api_webhook',
     });
-
-    if (assignedTo) {
-      await publishNotification(db, sendFcm, {
-        userId: assignedTo,
-        message: `📥 New Lead Assigned: ${name} (${phone})`,
-        type: 'lead_assigned',
-        title: '📥 New Lead Assigned',
-        body: `${name} (${phone})`,
-        leadId: newLeadId,
-        sendPush: false,
-      });
-    }
 
     return res.status(201).json({ success: true, leadId: newLeadId });
 
@@ -435,6 +361,7 @@ const handlePostBulkLeads = async (req, res) => {
 
         const duplicateRule = settings.duplicateHandlingRule || 'merge';
         let existingLead = null;
+        let existingLeadId = null;
 
         if (duplicateRule !== 'create') {
           const existingLeadsSnap = await db.collection('leads')
@@ -443,27 +370,21 @@ const handlePostBulkLeads = async (req, res) => {
             .get();
 
           if (!existingLeadsSnap.empty) {
-            existingLead = existingLeadsSnap.docs[0].data();
+            existingLeadId = existingLeadsSnap.docs[0].id;
+            existingLead = { id: existingLeadId, ...existingLeadsSnap.docs[0].data() };
           }
         }
 
-        if (existingLead) {
+        if (existingLead && existingLeadId) {
           if (duplicateRule === 'skip') {
             duplicateCount++;
             continue;
           } else {
-            // merge
-            const updatedLogs = existingLead.callLogs || [];
-            updatedLogs.push({
+            await appendCallLog(db, existingLeadId, {
               date: new Date().toISOString(),
               note: `Duplicate lead attempt merged from bulk upload. Notes: ${lead.notes || 'Bulk imported lead.'}`,
               status: existingLead.status || 'new',
-              agent: 'system'
-            });
-
-            await db.collection('leads').doc(existingLead.id).update({
-              updatedAt: new Date().toISOString(),
-              callLogs: updatedLogs
+              agent: 'system',
             });
 
             duplicateCount++;
@@ -471,16 +392,14 @@ const handlePostBulkLeads = async (req, res) => {
           }
         }
 
-        let assignedTo = lead.assignedTo || '';
-        let assignedToName = lead.assignedToName || 'Unassigned';
+        // Explicit assignee only — otherwise onLeadCreated owns RR.
+        const assignedTo = lead.assignedTo || '';
+        const assignedToName = assignedTo
+          ? (lead.assignedToName || 'Agent')
+          : 'Unassigned';
 
-        if (!assignedTo) {
-          const alloc = await determineAllocation();
-          assignedTo = alloc.assignedTo;
-          assignedToName = alloc.assignedToName;
-        }
-
-        const newLeadId = 'lead-' + Date.now() + '-' + Math.floor(Math.random() * 1000);
+        const leadRef = db.collection('leads').doc();
+        const newLeadId = leadRef.id;
         const leadRecord = {
           id: newLeadId,
           name: cleaned.name,
@@ -505,8 +424,9 @@ const handlePostBulkLeads = async (req, res) => {
           ]
         };
 
-        await db.collection('leads').doc(newLeadId).set(leadRecord);
+        await leadRef.set(leadRecord);
 
+        // Notification for pre-assigned bulk rows only; unassigned → onLeadCreated.
         if (assignedTo) {
           await publishNotification(db, sendFcm, {
             userId: assignedTo,
@@ -526,13 +446,10 @@ const handlePostBulkLeads = async (req, res) => {
       }
     }
 
-    const auditId = 'audit-' + Date.now();
-    await db.collection('auditLogs').doc(auditId).set({
-      id: auditId,
-      timestamp: new Date().toISOString(),
+    await writeAuditLog(db, {
       action: 'Bulk Upload Clean & Import',
       details: `Imported ${successCount} leads, merged ${duplicateCount} duplicates, failed ${errorCount} records.`,
-      user: req.body.operator || 'bulk_api_webhook'
+      user: req.body.operator || 'bulk_api_webhook',
     });
 
     return res.status(200).json({
@@ -579,6 +496,7 @@ const handlePostIvr = async (req, res) => {
     const normalizedCallerPhone = normalizedCaller.phone;
 
     let matchedLead = null;
+    let matchedLeadId = null;
     if (normalizedCallerPhone) {
       const leadsSnap = await db.collection('leads')
         .where('phone', '==', normalizedCallerPhone)
@@ -586,39 +504,39 @@ const handlePostIvr = async (req, res) => {
         .get();
 
       if (!leadsSnap.empty) {
-        matchedLead = leadsSnap.docs[0].data();
+        matchedLeadId = leadsSnap.docs[0].id;
+        matchedLead = { id: matchedLeadId, ...leadsSnap.docs[0].data() };
       }
     }
 
     if (matchedLead) {
       callerName = matchedLead.name;
-      leadId = matchedLead.id;
+      leadId = matchedLeadId || matchedLead.id || '';
       assignedTo = matchedLead.assignedTo || '';
     }
 
     let targetAgentId = req.body.ivrAgentId || req.query.ivrAgentId || assignedTo;
 
     if (!targetAgentId) {
-      const { assignedTo: rrAgent } = await determineAllocation();
+      const { assignedTo: rrAgent } = await allocateRoundRobin();
       targetAgentId = rrAgent;
     }
 
     if (!targetAgentId) {
-      const usersSnap = await db.collection('users').get();
-      usersSnap.forEach(d => {
-        const u = d.data();
-        if (u.role === 'admin' && !targetAgentId) {
-          targetAgentId = u.id;
-        }
-      });
+      const adminsSnap = await db.collection('users').where('role', '==', 'admin').limit(1).get();
+      if (!adminsSnap.empty) {
+        targetAgentId = adminsSnap.docs[0].id;
+      }
     }
 
     if (!targetAgentId) {
       return res.status(404).send('No available agent to route the call.');
     }
 
-    await db.collection('ivrCalls').doc(targetAgentId).set({
-      id: Date.now().toString(),
+    const ivrRef = db.collection('ivrCalls').doc();
+    await ivrRef.set({
+      id: ivrRef.id,
+      agentId: targetAgentId,
       timestamp: new Date().toISOString(),
       callerPhone,
       callerName,
@@ -626,16 +544,13 @@ const handlePostIvr = async (req, res) => {
       status: 'ringing'
     });
 
-    const auditId = 'audit-' + Date.now();
-    await db.collection('auditLogs').doc(auditId).set({
-      id: auditId,
-      timestamp: new Date().toISOString(),
+    await writeAuditLog(db, {
       action: 'Inbound IVR Call',
       details: `Caller: ${callerName} (${callerPhone}) routed to telecaller agent: ${targetAgentId}`,
-      user: 'ivr_webhook'
+      user: 'ivr_webhook',
     });
 
-    return res.status(200).json({ success: true, routedTo: targetAgentId });
+    return res.status(200).json({ success: true, routedTo: targetAgentId, callId: ivrRef.id });
 
   } catch (err) {
     console.error('Failed to trigger IVR Call: ', err);
@@ -982,7 +897,7 @@ exports.onLeadCreated = onDocumentCreated(
     let assignedToName = lead.assignedToName;
 
     if (!assignedTo || assignedTo === 'Unassigned') {
-      const alloc = await determineAllocation();
+      const alloc = await allocateRoundRobin();
       if (alloc.assignedTo) {
         assignedTo = alloc.assignedTo;
         assignedToName = alloc.assignedToName;
@@ -1127,30 +1042,42 @@ registerSlaBreachJobs({ db, sendFcm, exports });
 
 /**
  * 5. cleanupOldAuditLogs (Weekly Cron)
- * Deletes audit logs older than 90 days.
+ * Deletes audit logs older than 90 days in chunks (Firestore batch limit 500).
  */
 exports.cleanupOldAuditLogs = onSchedule(
   { schedule: '0 0 * * 0', timeZone: 'Asia/Kolkata', region: 'us-central1' },
   async () => {
     const ninetyDaysAgo = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString();
     console.log(`Cleaning audit logs older than: ${ninetyDaysAgo}`);
-    
-    const logsSnap = await db.collection('auditLogs')
-      .where('timestamp', '<', ninetyDaysAgo)
-      .get();
-      
-    if (logsSnap.empty) {
-      console.log('No old audit logs found to cleanup.');
-      return;
+
+    const BATCH_SIZE = 400;
+    let totalDeleted = 0;
+
+    // Paginate deletes — a single batch cannot exceed 500 ops.
+    // eslint-disable-next-line no-constant-condition
+    while (true) {
+      const logsSnap = await db.collection('auditLogs')
+        .where('timestamp', '<', ninetyDaysAgo)
+        .limit(BATCH_SIZE)
+        .get();
+
+      if (logsSnap.empty) break;
+
+      const batch = db.batch();
+      logsSnap.docs.forEach((docSnap) => {
+        batch.delete(docSnap.ref);
+      });
+      await batch.commit();
+      totalDeleted += logsSnap.size;
+
+      if (logsSnap.size < BATCH_SIZE) break;
     }
-    
-    const batch = db.batch();
-    logsSnap.docs.forEach(doc => {
-      batch.delete(doc.ref);
-    });
-    
-    await batch.commit();
-    console.log(`Successfully purged ${logsSnap.size} old audit log entries.`);
+
+    if (totalDeleted === 0) {
+      console.log('No old audit logs found to cleanup.');
+    } else {
+      console.log(`Successfully purged ${totalDeleted} old audit log entries.`);
+    }
   }
 );
 
@@ -1501,6 +1428,8 @@ exports.onLeadCallLogUpdated = onDocumentUpdated(
 
         if (!docSnap.exists) {
           transaction.set(docRef, {
+            // Canonical field for client/rules is userId; agentId kept as alias.
+            userId: agentId,
             agentId,
             agentName,
             date: dateStr,
@@ -1516,6 +1445,8 @@ exports.onLeadCallLogUpdated = onDocumentUpdated(
         } else {
           const data = docSnap.data();
           transaction.update(docRef, {
+            userId: data.userId || agentId,
+            agentId: data.agentId || agentId,
             totalCalls: (data.totalCalls || 0) + 1,
             totalTalkTimeSeconds: (data.totalTalkTimeSeconds || 0) + duration,
             lastActiveTime: nowStr,
@@ -1594,6 +1525,7 @@ exports.scheduledAgentIdleCheck = onSchedule(
           });
         } else {
           await prodRef.set({
+            userId: agentId,
             agentId,
             agentName: username,
             date: dateStr,
@@ -1609,13 +1541,10 @@ exports.scheduledAgentIdleCheck = onSchedule(
         }
 
         if (!alreadyWarned) {
-          const auditId = 'audit-' + Date.now() + '-' + Math.floor(Math.random() * 1000);
-          await db.collection('auditLogs').doc(auditId).set({
-            id: auditId,
-            timestamp: now.toISOString(),
+          await writeAuditLog(db, {
             action: 'Agent Idle Warning',
             details: `[System Warning] Telecaller ${username} is currently idle (no call activity for 45+ minutes).`,
-            user: 'system'
+            user: 'system',
           });
           console.log(`Flagged agent ${username} (${agentId}) as idle.`);
         }

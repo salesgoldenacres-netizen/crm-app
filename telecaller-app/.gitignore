@@ -29,3 +29,6 @@ dist-ssr
 # Build artifacts
 *.apk
 
+# Archived unused source (kept for reference, not bundled)
+.archive/
+

@@ -1,5 +1,16 @@
 import { useState, useEffect } from "react";
-import { doc, onSnapshot, setDoc, deleteDoc } from "firebase/firestore";
+import {
+  doc,
+  collection,
+  query,
+  where,
+  orderBy,
+  limit,
+  onSnapshot,
+  setDoc,
+  deleteDoc,
+  addDoc,
+} from "firebase/firestore";
 import { db } from "@/shared/services/firebase";
 
 export interface IVRSettings {
@@ -22,6 +33,7 @@ export interface IVRSettings {
 
 export interface IVRActiveCall {
   id: string;
+  agentId?: string;
   timestamp: string;
   callerPhone: string;
   callerName: string;
@@ -69,9 +81,18 @@ export function useIVRStore(userId: string | null | undefined) {
 
   useEffect(() => {
     if (!userId) return;
-    const unsubscribe = onSnapshot(doc(db, "ivrCalls", userId), (docSnap) => {
-      if (docSnap.exists()) {
-        setActiveIvrCall(docSnap.data() as IVRActiveCall);
+    // Auto-ID docs keyed by agentId field (not doc id === agent id).
+    const q = query(
+      collection(db, "ivrCalls"),
+      where("agentId", "==", userId),
+      where("status", "==", "ringing"),
+      orderBy("timestamp", "desc"),
+      limit(1)
+    );
+    const unsubscribe = onSnapshot(q, (snap) => {
+      if (!snap.empty) {
+        const d = snap.docs[0];
+        setActiveIvrCall({ id: d.id, ...(d.data() as Omit<IVRActiveCall, "id">) });
       } else {
         setActiveIvrCall(null);
       }
@@ -86,9 +107,9 @@ export function useIVRStore(userId: string | null | undefined) {
   };
 
   const clearActiveIvrCall = async () => {
-    if (!userId) return;
+    if (!activeIvrCall?.id) return;
     try {
-      await deleteDoc(doc(db, "ivrCalls", userId));
+      await deleteDoc(doc(db, "ivrCalls", activeIvrCall.id));
     } catch (err) {
       console.error("Error deleting ivrCall document: ", err);
     }
@@ -98,8 +119,8 @@ export function useIVRStore(userId: string | null | undefined) {
     targetUserId: string,
     callData: { callerPhone: string; callerName?: string; leadId?: string }
   ) => {
-    await setDoc(doc(db, "ivrCalls", targetUserId), {
-      id: Date.now().toString(),
+    await addDoc(collection(db, "ivrCalls"), {
+      agentId: targetUserId,
       timestamp: new Date().toISOString(),
       callerPhone: callData.callerPhone,
       callerName: callData.callerName ?? "Unknown Caller",

@@ -147,14 +147,17 @@ export function DatabaseProvider({
     } as User;
   }, [users, userId, userRole]);
 
-  const value = {
-    leads,
-    isLeadsLoaded,
-    projects,
-    isProjectsLoaded,
-    users,
-    isUsersLoaded,
-  };
+  const value = useMemo(
+    () => ({
+      leads,
+      isLeadsLoaded,
+      projects,
+      isProjectsLoaded,
+      users,
+      isUsersLoaded,
+    }),
+    [leads, isLeadsLoaded, projects, isProjectsLoaded, users, isUsersLoaded],
+  );
 
   return (
     <DatabaseContext.Provider value={value}>
@@ -209,6 +212,7 @@ function LeadsListener({
       orderField: "updatedAt",
       orderDirection: "desc",
       projectId: activeProjectId,
+      limit: 500,
     });
 
     const unsubscribe = onSnapshot(

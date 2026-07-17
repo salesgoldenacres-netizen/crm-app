@@ -1,5 +1,6 @@
 import { Award, User as UserIcon, Share2, Shield, Layout } from "lucide-react";
 import { User } from "@/shared/types";
+import { useToast } from "@/shared/components/Toast";
 
 interface Badge {
   id: string;
@@ -24,9 +25,10 @@ interface AgentProfileViewProps {
 }
 
 export default function AgentProfileView({ user, agentStats }: AgentProfileViewProps) {
+  const { toast } = useToast();
   const onCopyProfileLink = () => {
     navigator.clipboard.writeText(`https://goldenacres.app/agent/${user.username}`);
-    alert("Profile link copied to clipboard!");
+    toast("Profile link copied to clipboard!", "success");
   };
 
   return (

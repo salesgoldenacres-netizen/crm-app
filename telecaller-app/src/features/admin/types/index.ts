@@ -130,7 +130,11 @@ export interface TrainingData {
 }
 
 export interface DailyProductivity {
+  /** Canonical owner id (Firestore users doc id). */
   userId: string;
+  /** Alias written by server triggers for back-compat; prefer userId. */
+  agentId?: string;
+  agentName?: string;
   date: string;
   totalCalls: number;
   totalTalkTimeSeconds: number;
@@ -139,6 +143,7 @@ export interface DailyProductivity {
   bookedCount: number;
   interestedCount: number;
   updatedAt?: string;
+  createdAt?: string;
 }
 
 export interface NotificationItem {

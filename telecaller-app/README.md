@@ -72,7 +72,7 @@ src/
 ## 🛠️ Developer Setup & Setup
 
 ### Prerequisites
-* **Node.js**: `v18.x` or higher
+* **Node.js**: `v22.x` (see `engines` in `package.json`; Cloud Functions also require Node 22)
 * **Package Manager**: `npm`
 
 ### Environment Configurations
@@ -86,6 +86,8 @@ VITE_FIREBASE_STORAGE_BUCKET="your-project-id.appspot.com"
 VITE_FIREBASE_MESSAGING_SENDER_ID="your-sender-id"
 VITE_FIREBASE_APP_ID="your-app-id"
 VITE_FIREBASE_APP_CHECK_DEBUG_TOKEN="your-debug-token"
+# Optional: enable structured Sentry-ready capture in logger.ts
+# VITE_SENTRY_DSN="https://...@sentry.io/..."
 ```
 
 ### Setup Instructions
@@ -101,6 +103,18 @@ VITE_FIREBASE_APP_CHECK_DEBUG_TOKEN="your-debug-token"
    ```bash
    npm run build
    ```
+4. Run checks (same surface as CI):
+   ```bash
+   npm run lint
+   npm test
+   npm run test:coverage
+   cd functions && npm test
+   ```
+
+### Docs
+* [ARCHITECTURE.md](../ARCHITECTURE.md) — workspace + system map
+* [WEBHOOK_API.md](./WEBHOOK_API.md) — HTTP webhook routes and auth header names
+* [architecture_guide.md](./architecture_guide.md) — feature folder guide
 
 ---
 

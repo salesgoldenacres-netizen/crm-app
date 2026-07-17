@@ -61,14 +61,41 @@ def parse_iso_date(date_str):
 
 def main():
     parser = argparse.ArgumentParser(description="Firestore Lead Deduplication and Merging Tool.")
-    parser.add_argument("--action", choices=["dry-run", "merge"], default="dry-run", help="Action to perform.")
+    parser.add_argument(
+        "--action",
+        choices=["dry-run", "merge"],
+        default="dry-run",
+        help="Action to perform (default: dry-run).",
+    )
     parser.add_argument("--collections", default="leads", help="Firestore collection to de-duplicate.")
+    parser.add_argument(
+        "--confirm",
+        default="",
+        help='For --action merge, must be exactly "MERGE".',
+    )
+    parser.add_argument(
+        "--backup-ack",
+        action="store_true",
+        help="Acknowledge a Firestore backup exists before merge.",
+    )
     args = parser.parse_args()
-    
+
+    if args.action == "merge":
+        if args.confirm != "MERGE":
+            sys.exit(
+                'Refusing merge without --confirm MERGE '
+                "(and --backup-ack after backup_firestore.py)."
+            )
+        if not args.backup_ack:
+            sys.exit(
+                "Refusing merge without --backup-ack. "
+                "Run: python execution/backup_firestore.py first."
+            )
+
     db = get_firestore_client()
     leads_ref = db.collection(args.collections)
     
-    print("Fetching leads from database...")
+    print(f"Fetching leads from database... (action={args.action})")
     leads = list(leads_ref.stream())
     print(f"Retrieved {len(leads)} leads. Analyzing for duplicates...")
     

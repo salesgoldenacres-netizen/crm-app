@@ -12,6 +12,8 @@ import {
 } from "lucide-react";
 import { useCoachingTipStore, useEventsStore, useTrainingStore, useAuditLogsStore } from "@/features/admin/hooks/adminStores";
 import { User } from "@/shared/types";
+import { useToast } from "@/shared/components/Toast";
+import Dialog from "@/shared/components/ui/Dialog";
 
 interface AdminTrainingTabsProps {
   tab: "coaching" | "events" | "training";
@@ -26,7 +28,9 @@ export default function AdminTrainingTabs({
   const { events: calendarEvents, addEvent, deleteEvent } = useEventsStore();
   const { trainingData, updateTrainingData } = useTrainingStore();
   const { logAuditEvent } = useAuditLogsStore();
-
+  const { toast } = useToast();
+  const [deleteEventId, setDeleteEventId] = useState<string | null>(null);
+  const [deleteEventName, setDeleteEventName] = useState("");
   const [coachingTipDraft, setCoachingTipDraft] = useState(coachingTip || "");
   const [newEventForm, setNewEventForm] = useState({
     name: "",
@@ -78,7 +82,7 @@ export default function AdminTrainingTabs({
             <button
               onClick={async () => {
                 if (!coachingTipDraft.trim()) {
-                  alert("Please enter a tip text.");
+                  toast("Please enter a tip text.", "error");
                   return;
                 }
                 await updateCoachingTip(coachingTipDraft.trim());
@@ -87,7 +91,7 @@ export default function AdminTrainingTabs({
                   details: coachingTipDraft.trim(),
                   user: user.username,
                 });
-                alert("Coaching tip updated!");
+                toast("Coaching tip updated!", "success");
               }}
               className="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-xs font-semibold shadow cursor-pointer whitespace-nowrap"
             >
@@ -101,6 +105,7 @@ export default function AdminTrainingTabs({
 
   if (tab === "events") {
     return (
+    <>
       <div className="space-y-6 animate-fadeIn text-sm">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <div className="bg-theme-card rounded-xl border border-theme-border p-6 shadow-sm space-y-4">
@@ -167,11 +172,11 @@ export default function AdminTrainingTabs({
             <button
               onClick={async () => {
                 if (!newEventForm.name.trim() || !newEventForm.date.trim()) {
-                  alert("Name and Date are required.");
+                  toast("Name and Date are required.", "error");
                   return;
                 }
                 if (!/^\d{2}-\d{2}$/.test(newEventForm.date)) {
-                  alert("Date must be MM-DD format.");
+                  toast("Date must be MM-DD format.", "error");
                   return;
                 }
                 await addEvent(newEventForm);
@@ -181,7 +186,7 @@ export default function AdminTrainingTabs({
                   user: user.username,
                 });
                 setNewEventForm({ name: "", date: "", type: "birthday" });
-                alert("Event added!");
+                toast("Event added!", "success");
               }}
               className="w-full py-2 bg-rose-500 hover:bg-rose-600 text-white rounded-lg text-xs font-semibold shadow cursor-pointer"
             >
@@ -223,15 +228,9 @@ export default function AdminTrainingTabs({
                       </div>
                       <button
                         type="button"
-                        onClick={async () => {
-                          if (confirm(`Delete event for ${ev.name}?`)) {
-                            await deleteEvent(ev.id);
-                            await logAuditEvent({
-                              action: "Delete Client Event",
-                              details: `Deleted event for ${ev.name}`,
-                              user: user.username,
-                            });
-                          }
+                        onClick={() => {
+                          setDeleteEventId(ev.id);
+                          setDeleteEventName(ev.name);
                         }}
                         className="text-red-500 hover:text-red-700 p-1 cursor-pointer"
                       >
@@ -244,6 +243,30 @@ export default function AdminTrainingTabs({
           </div>
         </div>
       </div>
+      <Dialog
+        isOpen={!!deleteEventId}
+        onClose={() => {
+          setDeleteEventId(null);
+          setDeleteEventName("");
+        }}
+        title="Delete event"
+        description={`Delete event for ${deleteEventName}?`}
+        confirmLabel="Delete"
+        confirmVariant="danger"
+        onConfirm={async () => {
+          if (!deleteEventId) return;
+          await deleteEvent(deleteEventId);
+          await logAuditEvent({
+            action: "Delete Client Event",
+            details: `Deleted event for ${deleteEventName}`,
+            user: user.username,
+          });
+          setDeleteEventId(null);
+          setDeleteEventName("");
+          toast("Event deleted.", "success");
+        }}
+      />
+    </>
     );
   }
 

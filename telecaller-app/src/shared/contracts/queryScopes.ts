@@ -114,9 +114,9 @@ export function buildAgentLeadsQuery(
   }
   constraints.push(where("assignedTo", "==", uid));
   constraints.push(orderBy(orderField, direction));
-  if (options.limit != null) {
-    constraints.push(fsLimit(options.limit));
-  }
+  // Default bound — never mount an unbounded agent leads listener.
+  const lim = options.limit ?? 500;
+  constraints.push(fsLimit(lim));
   return query(leadsCollection(), ...constraints);
 }
 

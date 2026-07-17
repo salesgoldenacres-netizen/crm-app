@@ -1,8 +1,14 @@
-import React, { Fragment, useCallback } from "react";
+import React, {
+  Fragment,
+  useCallback,
+  useMemo,
+  useRef,
+} from "react";
 import { User, Lead, Project } from "@/shared/types";
 import LeadsTableRow from "./LeadsTableRow";
 import LeadListDesktopFilterRow from "./LeadListDesktopFilterRow";
 import { LeadListFilters } from "@/features/leads/config/leadListFilterConfig";
+import { useTanStackVirtualEngine } from "@/shared/services/performance/virtualization/TanStackVirtualEngine";
 
 interface LeadsDesktopTableProps {
   myLeads: Lead[];
@@ -35,6 +41,8 @@ interface LeadsDesktopTableProps {
 const HEADER_TH =
   "text-left type-label text-xs font-semibold text-theme-muted uppercase tracking-wider bg-theme-surface";
 
+const VIRTUALIZE_THRESHOLD = 40;
+
 function LeadsDesktopTable({
   myLeads,
   selectedLeadIds,
@@ -62,7 +70,8 @@ function LeadsDesktopTable({
   onSearch,
   onReset,
 }: LeadsDesktopTableProps) {
-  // Stable row toggle selection handler
+  const scrollParentRef = useRef<HTMLDivElement>(null);
+
   const handleToggleSelect = useCallback(
     (leadId: string, checked: boolean) => {
       if (typeof setSelectedLeadIds === "function") {
@@ -70,13 +79,33 @@ function LeadsDesktopTable({
           if (checked) {
             return prev.includes(leadId) ? prev : [...prev, leadId];
           } else {
-            return prev.filter((id) => id !== leadId);
+            return prev.filter((id: string) => id !== leadId);
           }
         });
       }
     },
     [setSelectedLeadIds]
   );
+
+  const estimateSize = useCallback(
+    () => (leadsViewMode === "compact" ? 44 : 56),
+    [leadsViewMode]
+  );
+
+  const shouldVirtualize =
+    leadsGrouping === "none" && myLeads.length >= VIRTUALIZE_THRESHOLD;
+
+  const virtualEngine = useTanStackVirtualEngine({
+    count: shouldVirtualize ? myLeads.length : 0,
+    estimateSize,
+    overscan: 12,
+    getScrollElement: () => scrollParentRef.current,
+  });
+
+  const virtualItems = shouldVirtualize ? virtualEngine.getVirtualItems() : [];
+  const totalSize = shouldVirtualize ? virtualEngine.getTotalSize() : 0;
+
+  const colSpan = leadsViewMode === "compact" ? 9 : 14;
 
   const renderRow = (lead: Lead) => {
     return (
@@ -102,94 +131,107 @@ function LeadsDesktopTable({
     );
   };
 
-  const groups =
-    leadsGrouping === "status"
-      ? [
-          {
-            id: "raw",
-            name: "Raw Leads",
-            filter: (l: Lead) => l.status === "raw" || !l.status,
-            color: "bg-purple-500",
-            headerBg: "bg-purple-50/50 dark:bg-purple-950/10",
-          },
-          {
-            id: "new",
-            name: "New Leads",
-            filter: (l: Lead) => l.status === "new",
-            color: "bg-blue-500",
-            headerBg: "bg-blue-50/50 dark:bg-blue-950/10",
-          },
-          {
-            id: "contacted",
-            name: "Contacted Leads",
-            filter: (l: Lead) => l.status === "contacted",
-            color: "bg-amber-500",
-            headerBg: "bg-amber-50/50 dark:bg-amber-950/10",
-          },
-          {
-            id: "interested",
-            name: "Interested Leads",
-            filter: (l: Lead) => l.status === "interested",
-            color: "bg-yellow-500",
-            headerBg: "bg-yellow-50/50 dark:bg-yellow-950/10",
-          },
-          {
-            id: "sitevisit_confirmed",
-            name: "Site Visit Confirmed",
-            filter: (l: Lead) => l.status === "sitevisit-confirmed",
-            color: "bg-orange-500",
-            headerBg: "bg-orange-50/50 dark:bg-orange-950/10",
-          },
-          {
-            id: "sitevisit_completed",
-            name: "Site Visit Completed",
-            filter: (l: Lead) => l.status === "sitevisit-completed",
-            color: "bg-teal-500",
-            headerBg: "bg-teal-50/50 dark:bg-teal-950/10",
-          },
-          {
-            id: "booked",
-            name: "Booked & Reserved",
-            filter: (l: Lead) => l.status === "booked" || l.status === "reserved",
-            color: "bg-emerald-500",
-            headerBg: "bg-emerald-50/50 dark:bg-emerald-950/10",
-          },
-          {
-            id: "not_interested",
-            name: "Not Interested",
-            filter: (l: Lead) => l.status === "not-interested",
-            color: "bg-rose-500",
-            headerBg: "bg-rose-50/50 dark:bg-rose-950/10",
-          },
-        ]
-      : [
-          {
-            id: "hot",
-            name: "Hot Priority",
-            filter: (l: Lead) => l.priority === "hot",
-            color: "bg-rose-500",
-            headerBg: "bg-rose-50/50 dark:bg-rose-950/10",
-          },
-          {
-            id: "warm",
-            name: "Warm Priority",
-            filter: (l: Lead) => l.priority === "warm" || !l.priority,
-            color: "bg-amber-500",
-            headerBg: "bg-amber-50/50 dark:bg-amber-950/10",
-          },
-          {
-            id: "cold",
-            name: "Cold Priority",
-            filter: (l: Lead) => l.priority === "cold",
-            color: "bg-blue-500",
-            headerBg: "bg-blue-50/50 dark:bg-blue-950/10",
-          },
-        ];
+  const groups = useMemo(
+    () =>
+      leadsGrouping === "status"
+        ? [
+            {
+              id: "raw",
+              name: "Raw Leads",
+              filter: (l: Lead) => l.status === "raw" || !l.status,
+              color: "bg-purple-500",
+              headerBg: "bg-purple-50/50 dark:bg-purple-950/10",
+            },
+            {
+              id: "new",
+              name: "New Leads",
+              filter: (l: Lead) => l.status === "new",
+              color: "bg-blue-500",
+              headerBg: "bg-blue-50/50 dark:bg-blue-950/10",
+            },
+            {
+              id: "contacted",
+              name: "Contacted Leads",
+              filter: (l: Lead) => l.status === "contacted",
+              color: "bg-amber-500",
+              headerBg: "bg-amber-50/50 dark:bg-amber-950/10",
+            },
+            {
+              id: "interested",
+              name: "Interested Leads",
+              filter: (l: Lead) => l.status === "interested",
+              color: "bg-yellow-500",
+              headerBg: "bg-yellow-50/50 dark:bg-yellow-950/10",
+            },
+            {
+              id: "sitevisit_confirmed",
+              name: "Site Visit Confirmed",
+              filter: (l: Lead) => l.status === "sitevisit-confirmed",
+              color: "bg-orange-500",
+              headerBg: "bg-orange-50/50 dark:bg-orange-950/10",
+            },
+            {
+              id: "sitevisit_completed",
+              name: "Site Visit Completed",
+              filter: (l: Lead) => l.status === "sitevisit-completed",
+              color: "bg-teal-500",
+              headerBg: "bg-teal-50/50 dark:bg-teal-950/10",
+            },
+            {
+              id: "booked",
+              name: "Booked & Reserved",
+              filter: (l: Lead) => l.status === "booked" || l.status === "reserved",
+              color: "bg-emerald-500",
+              headerBg: "bg-emerald-50/50 dark:bg-emerald-950/10",
+            },
+            {
+              id: "not_interested",
+              name: "Not Interested",
+              filter: (l: Lead) => l.status === "not-interested",
+              color: "bg-rose-500",
+              headerBg: "bg-rose-50/50 dark:bg-rose-950/10",
+            },
+          ]
+        : [
+            {
+              id: "hot",
+              name: "Hot Priority",
+              filter: (l: Lead) => l.priority === "hot",
+              color: "bg-rose-500",
+              headerBg: "bg-rose-50/50 dark:bg-rose-950/10",
+            },
+            {
+              id: "warm",
+              name: "Warm Priority",
+              filter: (l: Lead) => l.priority === "warm" || !l.priority,
+              color: "bg-amber-500",
+              headerBg: "bg-amber-50/50 dark:bg-amber-950/10",
+            },
+            {
+              id: "cold",
+              name: "Cold Priority",
+              filter: (l: Lead) => l.priority === "cold",
+              color: "bg-blue-500",
+              headerBg: "bg-blue-50/50 dark:bg-blue-950/10",
+            },
+          ],
+    [leadsGrouping]
+  );
 
   const pad = leadsViewMode === "compact" ? "px-3 py-2.5" : "px-6 py-4";
 
+  const paddingTop =
+    virtualItems.length > 0 ? virtualItems[0]!.start : 0;
+  const paddingBottom =
+    virtualItems.length > 0
+      ? totalSize - virtualItems[virtualItems.length - 1]!.start - virtualItems[virtualItems.length - 1]!.size
+      : 0;
+
   return (
-    <div className="hidden md:block w-full max-h-[min(78dvh,820px)] overflow-auto rounded-theme border-0 bg-theme-card transition-colors scrollbar-thin">
+    <div
+      ref={scrollParentRef}
+      className="hidden md:block w-full max-h-[min(78dvh,820px)] overflow-auto rounded-theme border-0 bg-theme-card transition-colors scrollbar-thin"
+    >
       <table className="w-full min-w-max divide-y divide-theme-border">
         <thead className="bg-theme-surface transition-colors sticky top-0 z-20 shadow-sm">
           <tr className="border-b border-theme-border">
@@ -257,7 +299,27 @@ function LeadsDesktopTable({
         </thead>
         <tbody className="bg-theme-card divide-y divide-theme-border transition-colors">
           {leadsGrouping === "none" ? (
-            myLeads.map(renderRow)
+            shouldVirtualize ? (
+              <>
+                {paddingTop > 0 && (
+                  <tr aria-hidden="true">
+                    <td colSpan={colSpan} style={{ height: paddingTop, padding: 0, border: 0 }} />
+                  </tr>
+                )}
+                {virtualItems.map((item) => {
+                  const lead = myLeads[item.index];
+                  if (!lead) return null;
+                  return renderRow(lead);
+                })}
+                {paddingBottom > 0 && (
+                  <tr aria-hidden="true">
+                    <td colSpan={colSpan} style={{ height: paddingBottom, padding: 0, border: 0 }} />
+                  </tr>
+                )}
+              </>
+            ) : (
+              myLeads.map(renderRow)
+            )
           ) : (
             groups.map((g) => {
               const groupLeads = myLeads.filter(g.filter);
@@ -267,7 +329,7 @@ function LeadsDesktopTable({
               return (
                 <Fragment key={g.id}>
                   <tr className={`${g.headerBg} border-y border-theme-border/60`}>
-                    <td colSpan={leadsViewMode === "compact" ? 9 : 14} className="px-4 py-2 text-left">
+                    <td colSpan={colSpan} className="px-4 py-2 text-left">
                       <div className="flex items-center justify-between">
                         <button
                           type="button"
@@ -297,7 +359,7 @@ function LeadsDesktopTable({
 
                   {!isCollapsed && (
                     <tr className="bg-theme-surface/40 text-[10px] text-theme-muted font-semibold border-b border-theme-border/50">
-                      <td colSpan={leadsViewMode === "compact" ? 9 : 14} className="px-6 py-2 text-right">
+                      <td colSpan={colSpan} className="px-6 py-2 text-right">
                         Group total count:{" "}
                         <span className="font-semibold text-theme-text">{groupLeads.length}</span> leads
                       </td>
@@ -313,5 +375,4 @@ function LeadsDesktopTable({
   );
 }
 
-// React.memo optimization to avoid re-renders when other sections of parent layout update
 export default React.memo(LeadsDesktopTable);

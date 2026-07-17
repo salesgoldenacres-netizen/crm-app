@@ -1,15 +1,19 @@
 {
   "name": "telecaller-app",
   "private": true,
-  "version": "0.0.56",
+  "version": "0.0.58",
   "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
   "scripts": {
     "dev": "vite",
     "build": "vite build",
     "build:ota": "node scripts/deploy-ota.js",
     "lint": "eslint .",
     "preview": "vite preview",
-    "test": "vitest run"
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage src/shared/utils/dateUtils.test.ts"
   },
   "dependencies": {
     "@capacitor/android": "^8.4.0",
@@ -39,6 +43,7 @@
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.1",
+    "@vitest/coverage-v8": "^4.1.10",
     "autoprefixer": "^10.5.0",
     "eslint": "^10.3.0",
     "eslint-plugin-react-hooks": "^7.1.1",

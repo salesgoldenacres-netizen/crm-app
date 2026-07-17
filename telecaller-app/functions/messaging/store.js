@@ -37,62 +37,44 @@ const TIMELINE_ICONS = {
  */
 function createMessagingStore(db) {
   async function findConversationByLead(leadId) {
+    // Fail loud if composite index missing — do not silently drop orderBy.
     const snap = await db
       .collection(CONVERSATIONS)
       .where("leadId", "==", leadId)
       .orderBy("lastMessageAt", "desc")
       .limit(1)
-      .get()
-      .catch(async () => {
-        // Index may not exist yet — fallback without orderBy
-        return db
-          .collection(CONVERSATIONS)
-          .where("leadId", "==", leadId)
-          .limit(25)
-          .get();
-      });
+      .get();
 
     if (snap.empty) return null;
-    let best = null;
-    snap.forEach((doc) => {
-      const row = { id: doc.id, ...doc.data() };
-      if (
-        !best ||
-        String(row.lastMessageAt || "") > String(best.lastMessageAt || "")
-      ) {
-        best = row;
-      }
-    });
-    return best;
+    const doc = snap.docs[0];
+    return { id: doc.id, ...doc.data() };
   }
 
   async function findConversationByPhone(phone) {
     const digits = digitsOnly(phone);
     if (!digits) return null;
-    const snap = await db
-      .collection(CONVERSATIONS)
-      .where("phoneNumber", "==", digits)
-      .limit(1)
-      .get()
-      .catch(() => null);
-    if (snap && !snap.empty) {
+
+    const tryEquality = async (field, value) => {
+      if (!value) return null;
+      const snap = await db
+        .collection(CONVERSATIONS)
+        .where(field, "==", value)
+        .limit(1)
+        .get();
+      if (snap.empty) return null;
       const doc = snap.docs[0];
       return { id: doc.id, ...doc.data() };
-    }
-    // Soft fallback for legacy/unnormalized conversation phones — capped scan.
+    };
+
+    // Prefer indexed equality lookups — no capped collection scan.
     const last10 = digits.length >= 10 ? digits.slice(-10) : digits;
-    const all = await db.collection(CONVERSATIONS).limit(50).get();
-    let match = null;
-    all.forEach((doc) => {
-      const p = digitsOnly(doc.data().phoneNumber || doc.data().waId || "");
-      if (
-        p &&
-        (p === digits || p.endsWith(last10) || digits.endsWith(p.slice(-10)))
-      ) {
-        match = { id: doc.id, ...doc.data() };
-      }
-    });
-    return match;
+    return (
+      (await tryEquality("phoneNumber", digits)) ||
+      (await tryEquality("phoneLast10", last10)) ||
+      (last10 !== digits ? await tryEquality("phoneNumber", last10) : null) ||
+      (await tryEquality("waId", digits)) ||
+      null
+    );
   }
 
   /**
@@ -110,13 +92,20 @@ function createMessagingStore(db) {
       (await findConversationByLead(leadId)) ||
       (phone ? await findConversationByPhone(phone) : null);
 
+    const phoneDigits = digitsOnly(phone) || "";
+    const last10 =
+      phoneDigits.length >= 10 ? phoneDigits.slice(-10) : phoneDigits;
+
     if (existing) {
       const patch = {
         leadId: existing.leadId || leadId,
         updatedAt: new Date().toISOString(),
       };
       if (waId) patch.waId = digitsOnly(waId);
-      if (phone) patch.phoneNumber = digitsOnly(phone) || existing.phoneNumber;
+      if (phone) {
+        patch.phoneNumber = phoneDigits || existing.phoneNumber;
+        if (last10) patch.phoneLast10 = last10;
+      }
       await db.collection(CONVERSATIONS).doc(existing.id).set(patch, { merge: true });
       return { ...existing, ...patch, id: existing.id };
     }
@@ -125,7 +114,8 @@ function createMessagingStore(db) {
     const ref = db.collection(CONVERSATIONS).doc();
     const row = {
       leadId,
-      phoneNumber: digitsOnly(phone) || normalizePhoneE164(phone),
+      phoneNumber: phoneDigits || normalizePhoneE164(phone),
+      phoneLast10: last10 || "",
       waId: digitsOnly(waId || phone) || "",
       provider: provider || "evolution",
       status: "open",

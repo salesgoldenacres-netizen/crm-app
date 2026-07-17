@@ -310,12 +310,15 @@ export default function DataTable<T>({
             ) : (
               paginatedData.map((row, rIdx) => {
                 const customRowClass = rowClassName ? rowClassName(row, rIdx) : "";
-                const id = getRowKey ? getRowKey(row) : (row as any).id || "";
+                const id = getRowKey
+                  ? getRowKey(row)
+                  : String((row as any).id ?? "");
+                const rowKey = id || `row-${rIdx}`;
                 const isChecked = selectedRowIds?.includes(id) || false;
 
                 return (
                   <tr
-                    key={rIdx}
+                    key={rowKey}
                     className={`${rowHeightClass} hover:bg-theme-surface/60 transition-colors ${
                       isChecked ? "bg-theme-accent-muted/40" : ""
                     } ${customRowClass}`}

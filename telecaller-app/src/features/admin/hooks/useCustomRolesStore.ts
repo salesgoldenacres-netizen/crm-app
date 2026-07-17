@@ -1,8 +1,8 @@
 import { useState, useEffect } from "react";
-import { onSnapshot } from "firebase/firestore";
 import { CustomRole } from "@/shared/types";
-import { customRolesRef } from "@/shared/services/firebase/converters";
 import { CustomRolesRepository } from "@/shared/services/firebase/repositories";
+import { subscribeSharedListener } from "@/shared/services/firebase/sharedListener";
+import { attachCustomRolesSnapshot } from "@/shared/services/firebase/sharedSnapshots";
 
 const PRESET_ROLES: CustomRole[] = [
   { id: "admin", name: "Admin", isManagerial: true, isPreset: true },
@@ -86,24 +86,22 @@ const PRESET_ROLES: CustomRole[] = [
   },
 ];
 
+const CUSTOM_ROLES_LISTENER_KEY = "customRoles";
+
 export function useCustomRolesStore() {
-  const [roles, setRoles] = useState<CustomRole[]>([]);
+  const [roles, setRoles] = useState<CustomRole[]>(PRESET_ROLES);
   const [isLoaded, setIsLoaded] = useState(false);
 
   useEffect(() => {
-    const unsubscribe = onSnapshot(customRolesRef, (snapshot) => {
-      if (snapshot.empty) {
-        // In-memory presets only — never auto-write roles into production Firestore.
-        setRoles(PRESET_ROLES);
-        setIsLoaded(true);
-        return;
-      }
-      const list: CustomRole[] = [];
-      snapshot.forEach((d) => list.push(d.data()));
-      setRoles(list);
-      setIsLoaded(true);
-    });
-    return () => unsubscribe();
+    return subscribeSharedListener<CustomRole[]>(
+      CUSTOM_ROLES_LISTENER_KEY,
+      PRESET_ROLES,
+      (emit) => attachCustomRolesSnapshot(emit, PRESET_ROLES),
+      ({ data, isLoaded: loaded }) => {
+        setRoles(data);
+        setIsLoaded(loaded);
+      },
+    );
   }, []);
 
   const addCustomRole = async (roleData: {

@@ -1,0 +1,27 @@
+name: Deploy (manual)
+
+# Firebase deploy needs a CI token / service account. Keep this as an explicit
+# manual stub so accidental pushes never deploy. Prefer local/agent deploy via
+# directives/deploy_ota_and_firebase.md until secrets are wired.
+
+on:
+  workflow_dispatch:
+    inputs:
+      targets:
+        description: "Firebase deploy targets (e.g. hosting,functions)"
+        required: false
+        default: "hosting,functions"
+
+jobs:
+  deploy-stub:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Deferred deploy notice
+        run: |
+          echo "Deploy is deferred until FIREBASE_TOKEN (or WIF) is configured."
+          echo "Requested targets: ${{ inputs.targets }}"
+          echo "Use locally: python execution/deploy_ota_and_firebase.py --only ${{ inputs.targets }}"
+          echo "See directives/deploy_ota_and_firebase.md (including rollback notes)."
+          exit 0

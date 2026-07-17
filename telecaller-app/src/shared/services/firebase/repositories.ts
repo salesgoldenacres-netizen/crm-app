@@ -63,9 +63,12 @@ export const LeadsRepository = {
     await deleteDoc(doc(leadsRef, id));
   },
   /**
-   * Persist a call/activity log entry.
+   * Persist a call/activity log entry via arrayUnion (race-safe append).
    * Does **not** overwrite profile `Lead.notes` (Wave 6 P0) — notes belong on
    * callLogs / timeline; profile notes are updated only via `updateLead`.
+   *
+   * DEFERRED: full callLogs extraction to a top-level `callLogs` collection
+   * (dual-write + cap embedded array). Keep arrayUnion until that migration.
    */
   async logCall(leadId: string, log: CallLog, status: string, followUpDate: string): Promise<void> {
     const leadDocRef = doc(leadsRef, leadId);
@@ -286,6 +289,7 @@ export const AgentProductivityRepository = {
       const date = parts[1];
       await setDoc(ref, {
         userId,
+        agentId: userId,
         date,
         totalCalls: callCount,
         totalTalkTimeSeconds: talkTime,

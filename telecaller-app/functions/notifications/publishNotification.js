@@ -69,7 +69,7 @@ async function publishNotification(db, sendFcm, input) {
     }
   }
   if (!id) {
-    id = `notif-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+    id = db.collection("notifications").doc().id;
   }
 
   const doc = {

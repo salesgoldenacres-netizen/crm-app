@@ -65,7 +65,11 @@ export async function publishInAppNotification(
   const message = buildMessage(input);
   if (!userId || !message) return null;
 
-  const id = input.id || `notif-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+  const id =
+    input.id ||
+    (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
+      ? crypto.randomUUID()
+      : `notif-${Date.now()}-${Math.floor(Math.random() * 1000)}`);
   const notification: NotificationItem = {
     id,
     userId,

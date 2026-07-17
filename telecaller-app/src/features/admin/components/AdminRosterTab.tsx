@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useRostersStore, useAuditLogsStore } from "@/features/admin/hooks/adminStores";
 import { User } from "@/shared/types";
 import DataTable, { ColumnDef } from "@/shared/components/DataTable";
+import { useToast } from "@/shared/components/Toast";
 
 interface AdminRosterTabProps {
   users: User[];
@@ -16,6 +17,7 @@ export default function AdminRosterTab({
 }: AdminRosterTabProps) {
   const { rosters, updateRoster } = useRostersStore();
   const { logAuditEvent } = useAuditLogsStore();
+  const { toast } = useToast();
 
   const [selectedRosterWeek, setSelectedRosterWeek] = useState("2026-W23");
   const [rosterEdits, setRosterEdits] = useState<Record<string, Record<string, string>>>({});
@@ -101,7 +103,7 @@ export default function AdminRosterTab({
               user: user.username,
             });
             setRosterEdits({});
-            alert("Roster saved successfully!");
+            toast("Roster saved successfully!", "success");
           }}
           className="px-2.5 h-8 bg-theme-accent hover:opacity-90 text-theme-accent-fg rounded-theme text-[11px] font-bold cursor-pointer border-0"
         >

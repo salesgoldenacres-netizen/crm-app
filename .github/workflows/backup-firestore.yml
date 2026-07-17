@@ -1,0 +1,58 @@
+name: Firestore backup (scheduled)
+
+# Optional offsite-ish backup via GitHub Actions artifacts.
+# Requires repo secret FIREBASE_SERVICE_ACCOUNT_JSON (raw JSON of the SA key).
+# If the secret is missing, the job fails closed with a clear message.
+# For a small team without GH secrets, use Windows Task Scheduler instead:
+#   execution/schedule_backup_windows.ps1
+
+on:
+  schedule:
+    # ~00:30 IST (19:00 UTC previous day)
+    - cron: "0 19 * * *"
+  workflow_dispatch:
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Check service account secret
+        id: sa
+        env:
+          SA_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON }}
+        run: |
+          if [ -z "$SA_JSON" ]; then
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+            echo "FIREBASE_SERVICE_ACCOUNT_JSON not set — skipping backup (use Windows Task Scheduler or add the secret)."
+          else
+            echo "configured=true" >> "$GITHUB_OUTPUT"
+            mkdir -p .tmp
+            printf '%s' "$SA_JSON" > .tmp/firebase-sa.json
+            echo "FIREBASE_SERVICE_ACCOUNT_JSON=.tmp/firebase-sa.json" >> "$GITHUB_ENV"
+          fi
+
+      - name: Install Python deps
+        if: steps.sa.outputs.configured == 'true'
+        run: pip install -r execution/requirements.txt
+
+      - name: Run Firestore backup
+        if: steps.sa.outputs.configured == 'true'
+        run: python execution/backup_firestore.py --action backup --retain 14
+
+      - name: Upload backup artifact
+        if: steps.sa.outputs.configured == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: firestore-backup-${{ github.run_id }}
+          path: backups/*.json
+          retention-days: 14
+
+      - name: Scrub SA file
+        if: always() && steps.sa.outputs.configured == 'true'
+        run: rm -f .tmp/firebase-sa.json

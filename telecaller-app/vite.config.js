@@ -32,6 +32,7 @@ export default defineConfig({
     globals: true,
     environment: 'jsdom',
     setupFiles: './src/test/setup.ts',
+    // Cloud Functions use their own node:test runner (see functions/package.json).
     exclude: [
       '**/node_modules/**',
       '**/dist/**',
@@ -39,6 +40,17 @@ export default defineConfig({
       '**/cypress/**',
       '**/.{idea,git,cache,output,temp}/**',
       '**/.tmp/**',
+      '**/.archive/**',
     ],
+    coverage: {
+      provider: 'v8',
+      // Light scoped gate — expand include list as suites mature.
+      include: ['src/shared/utils/dateUtils.ts'],
+      thresholds: {
+        lines: 70,
+        functions: 70,
+        statements: 70,
+      },
+    },
   },
 })

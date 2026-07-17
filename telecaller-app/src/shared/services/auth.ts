@@ -15,7 +15,7 @@ import {
   where,
   getDocs,
 } from "firebase/firestore";
-import { auth, db } from "./firebase";
+import { auth, db, firebaseConfig } from "./firebase";
 import { logger } from "@/shared/utils/logger";
 import { linkUserProfile } from "./claimsApi";
 
@@ -103,14 +103,6 @@ export const logout = async (): Promise<void> => {
  */
 export const createSecondaryUser = async (usernameOrEmail: string, password: string): Promise<FirebaseUser> => {
   const email = getEmailFromUsername(usernameOrEmail);
-  const firebaseConfig = {
-    apiKey: "AIzaSyBCmGr2081Eu1u6maFinvyrifdjvuafIuk",
-    authDomain: "golden-acres-projects.firebaseapp.com",
-    projectId: "golden-acres-projects",
-    storageBucket: "golden-acres-projects.firebasestorage.app",
-    messagingSenderId: "653663403052",
-    appId: "1:653663403052:web:e34f126235e1eb4c13a589",
-  };
 
   // Initialize a unique temporary app instance
   const tempAppName = `TempApp-${Date.now()}-${Math.floor(Math.random() * 1000)}`;

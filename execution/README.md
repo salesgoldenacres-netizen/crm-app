@@ -18,11 +18,25 @@ The agent reads a directive, then calls the appropriate script here with the rig
 3. Add a corresponding directive in `directives/<verb>_<noun>.md`
 4. Test it manually before the agent uses it
 
-## Dependencies
-All scripts use the shared virtual environment. Install with:
+## Safety rails (destructive scripts)
+
+Destructive scripts default to **dry-run**. Apply modes require explicit confirm tokens:
+
 ```bash
-pip install -r requirements.txt
+# Dedup (merge deletes secondary leads)
+python execution/backup_firestore.py
+python execution/dedup_leads.py --action merge --confirm MERGE --backup-ack
+
+# Cleanup orphaned Auth / userRoles
+python execution/backup_firestore.py
+python execution/cleanup_database.py --apply --confirm DELETE --backup-ack
 ```
+
+## Backups
+- `backup_firestore.py` — JSON backup/restore with `--retain` pruning
+- `schedule_backup_windows.ps1` — register a daily Windows Task Scheduler job
+
+See `directives/backup_firestore.md`.
 
 ## Security / Phase 0 one-shots
 

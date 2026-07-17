@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { doc, getDoc, setDoc, onSnapshot } from "firebase/firestore";
 import { db } from "@/shared/services/firebase";
 import { User, Lead, AuditLog } from "@/shared/types";
+import { useToast } from "@/shared/components/Toast";
 
 interface UseIntegrationsSettingsProps {
   user: User;
@@ -22,6 +23,7 @@ export function useIntegrationsSettings({
   isManagerial,
   simulateIncomingIvrCall,
 }: UseIntegrationsSettingsProps) {
+  const { toast } = useToast();
   const [integrationSettings, setIntegrationSettings] = useState({
     googleWebhookKey: "",
     metaVerifyToken: "",
@@ -248,11 +250,11 @@ export function useIntegrationsSettings({
         details: "Updated API & Voice integration configurations.",
         user: user.username,
       });
-      alert("Settings and routing configurations saved successfully!");
+      toast("Settings and routing configurations saved successfully!", "success");
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
       console.error("Error saving settings: ", err);
-      alert("Failed to save settings: " + msg);
+      toast("Failed to save settings: " + msg, "error");
     }
   };
 
@@ -272,11 +274,14 @@ export function useIntegrationsSettings({
         details: JSON.stringify(remoteSettings),
         user: user.username,
       });
-      alert("Remote Configuration saved successfully! Live devices will receive the new configuration.");
+      toast(
+        "Remote Configuration saved successfully! Live devices will receive the new configuration.",
+        "success",
+      );
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
       console.error("Failed to save Remote Config settings:", err);
-      alert("Failed to save Remote Config settings: " + msg);
+      toast("Failed to save Remote Config settings: " + msg, "error");
     }
   };
 
