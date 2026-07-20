@@ -75,7 +75,7 @@ This document is the master execution blueprint and program governance plan to r
 | **Phase 2D — Analytics** | **PARTIAL** | `AggregateUnavailable` correct until Reports / summary-doc wiring |
 | **Phase 3A — LeadDetails** | **PARTIAL** | Hooks extracted (`useLeadData`, `useLeadDialer`, `useLeadCallLog`); page ~447 LOC (target ≤ 250) |
 | **Phase 3B — Theme** | **PARTIAL** | Semantic tokens on extracted files incomplete |
-| **Phase 3C — Type safety** | **PARTIAL** | `@typescript-eslint/no-explicit-any` still `off` in `eslint.config.js` |
+| **Phase 3C — Type safety** | **PARTIAL** | Increment 1 complete (2026-07-20): `no-explicit-any` → `warn`; Priority 1 typed. See [`phase-3c-type-safety-increment-1.md`](./phase-3c-type-safety-increment-1.md). **182** warnings remain — `error` mode not enabled |
 
 **Doc sign-off pending:** Phase 1 is **complete in code**; formal Phase 1 exit report and Review Board checkbox remain open until §15 gates close.
 
@@ -569,14 +569,15 @@ Recommended capture window: immediately after **Production Sign-off** (post manu
 - **Scope:** Files created/modified during Phase 3 decomposition.  
 - **Remaining:** Full semantic `bg-theme-*` / `text-theme-*` + `dark:` parity on extracted files.  
 
-#### 3C. Type Safety Prioritization & Strict Lint Rollout — **AUTHORIZED 2026-07-20**
+#### 3C. Type Safety Prioritization & Strict Lint Rollout — **IN PROGRESS** (increment 1 ✓)
 
 - **Prerequisite:** **Baseline Freeze complete** — artifact linked per [`baseline-freeze-sop.md`](./baseline-freeze-sop.md) **(met 2026-07-20)**
-- **Current:** `@typescript-eslint/no-explicit-any: 'off'` in `eslint.config.js`.  
-- **Rollout:** warn → fix → error.  
-- **Priority 1:** `repositories.ts`, `ListenerManager.ts`, `ModalRegistryContext.tsx`  
-- **Priority 2:** Analytics providers  
-- **Priority 3:** Feature pages & UI  
+- **Current:** `@typescript-eslint/no-explicit-any: 'warn'` in `eslint.config.js` (182 warnings; 0 errors).
+- **Increment 1:** [`phase-3c-type-safety-increment-1.md`](./phase-3c-type-safety-increment-1.md) — Priority 1 repos/listener/modal registry typed; catch-block sample in `CallAuditRatingModal.tsx`.
+- **Rollout:** warn → fix → error (error blocked until Priority 1 paths at zero warnings).
+- **Priority 1:** `repositories.ts`, `ListenerManager.ts`, `ModalRegistryContext.tsx` ✓
+- **Priority 2:** Analytics providers (reference pattern ✓); feature catch blocks ⧗
+- **Priority 3:** Feature pages & UI
 
 #### Phase 3 workstream details
 
@@ -584,7 +585,7 @@ Recommended capture window: immediately after **Production Sign-off** (post manu
 |------------|-----------|--------|-------|
 | 1 — LeadDetails decomposition | Architecture + Frontend | **PARTIAL** | Hooks ✓ → thin page ⧗ |
 | 2 — Touched-files theme | Design System Agent | **PARTIAL** | Semantic tokens incomplete |
-| 3 — Type safety & linting | Type Safety Agent | **AUTHORIZED** | Warn mode → repositories → error mode |
+| 3 — Type safety & linting | Type Safety Agent | **IN PROGRESS** | Warn mode ✓ → Priority 1 ✓ → error mode ⧗ |
 
 **Removed (stale):** "Phase 3 Workstream 3 step 2 requires Phase 1B" — generics already exist on `ListenerManager.subscribe<T>()`.
 
@@ -594,7 +595,7 @@ Recommended capture window: immediately after **Production Sign-off** (post manu
 |-------------|--------------|-----------------|--------|
 | LeadDetails refactoring | `npm test` + manual profiling | Page LOC ≤ 250; render count regression = 0 | **PARTIAL** (~447 LOC) |
 | Theme / A11y | Keyboard traversal + Lighthouse | Focus trapping; contrast ≥ 4.5:1 | **PARTIAL** |
-| Type safety & lint | `npm run lint` + `tsc --noEmit` | Zero ESLint errors; zero new `any` | **NOT STARTED** |
+| Type safety & lint | `npm run lint` + `tsc --noEmit` | Zero ESLint errors; zero new `any` | **IN PROGRESS** (increment 1: 0 errors, 182 `any` warnings) |
 | Performance | `npm run build` + memory logs | Bundle ≤ +0.5%; reads unchanged vs §12 | **Pending §12** |
 
 #### Phase 3 exit criteria
