@@ -39,10 +39,11 @@ export default function CallAuditRatingModal({
         description: "Call log rated successfully!",
         confirmVariant: "success",
       });
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const errMsg = err instanceof Error ? err.message : "Unknown error";
       setFeedbackDialog({
         title: "Rating failed",
-        description: "Failed to rate call: " + err.message,
+        description: "Failed to rate call: " + errMsg,
         confirmVariant: "danger",
       });
     }

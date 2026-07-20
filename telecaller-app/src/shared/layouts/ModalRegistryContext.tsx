@@ -2,15 +2,28 @@ import React, { createContext, useContext } from "react";
 import { User, Lead, Project, CallLog } from "@/shared/types";
 import { IVRActiveCall, IVRSettings } from "@/features/calls/hooks/useIVRStore";
 
+/** Template Center modal pre-fill payload (AppShell → TemplateCenterModal). */
+export interface TemplateModalContext {
+  clientName: string;
+  phone: string;
+  projectName: string;
+  plotNumber: string;
+}
+
+/** Dialer overlay connection states. */
+export type DialerStatus =
+  | "Dialing..."
+  | "Ringing..."
+  | "Connecting IVR..."
+  | "Ringing agent..."
+  | "Connecting customer..."
+  | "Active Call";
+
 export interface ModalRegistry {
   TemplateCenterModal?: React.ComponentType<{
     isOpen: boolean;
     onClose: () => void;
-    clientName: string;
-    phone: string;
-    projectName: string;
-    plotNumber: string;
-  }>;
+  } & TemplateModalContext>;
   DialPadDrawer?: React.ComponentType<{
     isOpen: boolean;
     onClose: () => void;
@@ -21,7 +34,7 @@ export interface ModalRegistry {
   }>;
   DialerOverlay?: React.ComponentType<{
     activeDialerLead: Lead | null;
-    dialerStatus: string;
+    dialerStatus: DialerStatus;
     dialerSeconds: number;
     dialerMuted: boolean;
     setDialerMuted: (muted: boolean) => void;

@@ -745,7 +745,11 @@ export const AttendanceRepository = {
       key,
       (dispatch) => {
         return onSnapshot(doc(attendanceRef, docId), (docSnap) => {
-          dispatch(docSnap.exists() ? docSnap.data() : null);
+          dispatch(
+            docSnap.exists()
+              ? ({ ...docSnap.data(), id: docSnap.id } as AttendanceRecord)
+              : null,
+          );
         });
       },
       callback
@@ -791,7 +795,7 @@ export const SettingsRepository = {
   async setGoals(goals: Goals): Promise<void> {
     await setDoc(doc(db, "settings", "goals"), goals);
   },
-  async setEvents(events: unknown[]): Promise<void> {
+  async setEvents(events: EventLog[]): Promise<void> {
     await setDoc(doc(db, "settings", "events"), { list: events });
   },
   async setCustomFields(fields: CustomField[]): Promise<void> {

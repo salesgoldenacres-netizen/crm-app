@@ -1,10 +1,11 @@
 import { createContext, useContext } from "react";
 import { User, Lead } from "@/shared/types";
+import type { TemplateModalContext } from "@/shared/layouts/ModalRegistryContext";
 
 export interface AppShellContextType {
   openTemplates: () => void;
   openShortcuts: () => void;
-  setTemplateContext: (context: unknown) => void;
+  setTemplateContext: (context: Partial<TemplateModalContext>) => void;
   user: User | null;
   startCall: (lead: Lead) => void;
   activeDialerLead: Lead | null;

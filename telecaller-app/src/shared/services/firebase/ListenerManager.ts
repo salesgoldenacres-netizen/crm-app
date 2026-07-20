@@ -3,16 +3,16 @@
  * centralized stateless ref-counting manager for Firestore snapshot subscriptions.
  * Prevents multiple active listeners on identical query scopes or document references.
  */
+
+interface ListenerEntry<T = unknown> {
+  unsubscribe: () => void;
+  refCount: number;
+  callbacks: Set<(data: T) => void>;
+  lastEmitted: T | null;
+}
+
 export class ListenerManager {
-  private static listeners = new Map<
-    string,
-    {
-      unsubscribe: () => void;
-      refCount: number;
-      callbacks: Set<(data: unknown) => void>;
-      lastEmitted: unknown | null;
-    }
-  >();
+  private static listeners = new Map<string, ListenerEntry<unknown>>();
 
   /**
    * Subscribes a callback to a shared listener key.
@@ -27,14 +27,14 @@ export class ListenerManager {
     createListener: (dispatch: (data: T) => void) => () => void,
     callback: (data: T) => void
   ): () => void {
-    let listener = this.listeners.get(key);
+    let listener = this.listeners.get(key) as ListenerEntry<T> | undefined;
 
     if (!listener) {
-      const callbacks = new Set<(data: unknown) => void>();
-      callbacks.add(callback as (data: unknown) => void);
+      const callbacks = new Set<(data: T) => void>();
+      callbacks.add(callback);
 
       const dispatch = (data: T) => {
-        const active = this.listeners.get(key);
+        const active = this.listeners.get(key) as ListenerEntry<T> | undefined;
         if (active) {
           active.lastEmitted = data;
           // Safeguard: Copy Set to prevent mutation bugs if unsubscribed during dispatch
@@ -57,14 +57,14 @@ export class ListenerManager {
         callbacks,
         lastEmitted: null,
       };
-      this.listeners.set(key, listener);
+      this.listeners.set(key, listener as ListenerEntry<unknown>);
     } else {
       listener.refCount++;
-      listener.callbacks.add(callback as (data: unknown) => void);
+      listener.callbacks.add(callback);
       // Replay the last emitted data immediately to new subscribers (similar to BehaviorSubject)
       if (listener.lastEmitted !== null) {
         try {
-          callback(listener.lastEmitted as T);
+          callback(listener.lastEmitted);
         } catch (err) {
           console.error(`ListenerManager immediate replay error for key: ${key}`, err);
         }
@@ -72,10 +72,10 @@ export class ListenerManager {
     }
 
     return () => {
-      const active = this.listeners.get(key);
+      const active = this.listeners.get(key) as ListenerEntry<T> | undefined;
       if (!active) return;
 
-      active.callbacks.delete(callback as (data: unknown) => void);
+      active.callbacks.delete(callback);
       active.refCount--;
 
       if (active.refCount <= 0) {

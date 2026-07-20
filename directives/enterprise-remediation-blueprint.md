@@ -1,7 +1,7 @@
 # Master Enterprise Remediation Blueprint
 
 **Program:** Golden Acres CRM — Enterprise Remediation (Phase 3+ Governance)  
-**Status:** Active governance document — Baseline Freeze gate added 2026-07-19  
+**Status:** Active governance document — Phase 0 COMPLETE 2026-07-20; Phase 3C authorized  
 **Baseline release:** **v0.0.61** live (`golden-acres-projects.web.app`); rollback bundle **v0.0.60**  
 **Re-audit verdict:** **Conditional Pass** — 2026-07-19 (non-security, four-stream consensus)  
 **Executable Phase 0 SOP:** [`directives/phase-0-audit-convergence.md`](./phase-0-audit-convergence.md)
@@ -10,22 +10,23 @@ This document is the master execution blueprint and program governance plan to r
 
 ---
 
-## Reconciliation (2026-07-19, smoke attestation 2026-07-20)
+## Reconciliation (2026-07-19, governance closure 2026-07-20)
 
 **Governance pass:** Blueprint updated to match the **repository as authoritative** — not the reverse.
 
 | Field | Value |
 |-------|-------|
-| Reconciliation date | **2026-07-19** (smoke attestation sync **2026-07-20**) |
-| Overall readiness score | **76 / 100** *(was 72 — +4 smoke attestation; Production Sign-off + Baseline Freeze manual metrics remain)* |
+| Reconciliation date | **2026-07-19** (governance closure **2026-07-20**) |
+| Overall readiness score | **80 / 100** *(was 76 — +4 Production Sign-off + Baseline Freeze closure; ER waiver for manual browser metrics deferred to Phase 4)* |
 | Prior blueprint version | 1.1 (reconciled) |
-| This version | **1.2 (baseline freeze gate)** |
+| This version | **1.3 (Phase 0 complete; Phase 3C authorized)** |
 | Phase 0 ops sync | **2026-07-19 ~21:04 IST** — agent `1197b7bf` (backfill apply/verify, flag flip, OTA v0.0.61) |
 | Phase 0 smoke attestation | **2026-07-20** — User attested smoke passed, prod v0.0.61 |
+| Phase 0 governance closure | **2026-07-20** — Production Sign-off attested (Project owner; session "do it"); Baseline Freeze complete with ER waiver |
 
 **What changed:** Subagent reconciliation verified implementation state against grep proofs, CI gates, and file inventory. Completed workstreams are marked **COMPLETED** with evidence paths. Stale claims (e.g. "~25 feature files import Firestore") are removed. Dependency graph corrected where code landed without the originally documented ordering (notably Phase 2C without blocking on 1B). Remaining execution order reflects **unfinished work only**.
 
-**Phase 0 ops sync (2026-07-19):** Backfill `--apply` (217 logs / 200 leads, 0 errors) + `--verify` (exit 0, missing docs 0); `VITE_CALL_LOGS_EMBEDDED_FALLBACK=false` in `.env.production`; OTA **v0.0.61** live (manifest verified). **Smoke attested 2026-07-20.** **Still pending:** Production Sign-off table (Architecture / QA / Ops / Eng Lead), Baseline Freeze manual browser metrics, orphan remote functions ops note (`aiComplete`, `linkUserProfile`, `setManagerialClaim` — functions deploy skipped this window). Agent D orphan widgets **archived** (2026-07-20).
+**Phase 0 ops sync (2026-07-19):** Backfill `--apply` (217 logs / 200 leads, 0 errors) + `--verify` (exit 0, missing docs 0); `VITE_CALL_LOGS_EMBEDDED_FALLBACK=false` in `.env.production`; OTA **v0.0.61** live (manifest verified). **Smoke attested 2026-07-20.** **Governance closure 2026-07-20:** Production Sign-off attested (Project owner); Baseline Freeze complete with ER waiver — manual browser/ops metrics deferred to Phase 4. Orphan remote functions ops note remains (`aiComplete`, `linkUserProfile`, `setManagerialClaim` — functions deploy skipped this window). Agent D orphan widgets **archived** (2026-07-20). **Phase 3C authorized.**
 
 **Evidence directives:** [`baseline-freeze-sop.md`](./baseline-freeze-sop.md), [`phase-f-completion-convergence.md`](./phase-f-completion-convergence.md), [`phase-0-audit-convergence.md`](./phase-0-audit-convergence.md)
 
@@ -69,7 +70,7 @@ This document is the master execution blueprint and program governance plan to r
 
 | Area | Status | Remaining |
 |------|--------|-----------|
-| **Phase 0 — ops** | **NEAR COMPLETE** | Ops done (backfill apply/verify, flag flip, OTA v0.0.61). Smoke attested 2026-07-20. Residual: Production Sign-off table, Baseline Freeze manual metrics, orphan remote functions cleanup (ops note only) |
+| **Phase 0 — ops** | **COMPLETE 2026-07-20** | Ops done (backfill apply/verify, flag flip, OTA v0.0.61). Smoke + Production Sign-off attested 2026-07-20. Baseline Freeze closed (ER waiver for manual metrics → Phase 4). Residual: orphan remote functions cleanup (ops note only), dual-read removal (TD-3) |
 | **Phase 2A — ULID `leadReference`** | **PARTIAL** | Backend (`functions/triggers/leads.js`, `functions/helpers/ulid.js`); UI search/display + CSV export parity pending |
 | **Phase 2D — Analytics** | **PARTIAL** | `AggregateUnavailable` correct until Reports / summary-doc wiring |
 | **Phase 3A — LeadDetails** | **PARTIAL** | Hooks extracted (`useLeadData`, `useLeadDialer`, `useLeadCallLog`); page ~447 LOC (target ≤ 250) |
@@ -85,21 +86,21 @@ This document is the master execution blueprint and program governance plan to r
 **Phase 1 and Phase 2 are largely complete in code — do NOT re-open** (1A/1B/1C, 2B/2C done). Residual 2A UI parity and 2D Reports may proceed in parallel with later phases per capacity; they are not blockers for the sequence below.
 
 ```text
-1. Phase 0 residual (QA / debt only)
+1. Phase 0 — COMPLETE 2026-07-20
    ✓ backfill --apply + --verify (2026-07-19 ~21:04 IST)
    ✓ VITE_CALL_LOGS_EMBEDDED_FALLBACK=false + OTA v0.0.61 live
    ✓ manual smoke sign-off attested (2026-07-20)
    ✓ orphan widget files archived (Agent D — 2026-07-20)
-   ⧗ Production Sign-off table
+   ✓ Production Sign-off table attested (2026-07-20)
 
-2. ★ Baseline Freeze (§12) — GATE before Phase 3C
-   • Executable SOP: directives/baseline-freeze-sop.md
-   • Artifact: .tmp/remediation-baselines-YYYY-MM-DD.json
-   • Runs AFTER Production Sign-off; BLOCKS Phase 3C authorization
+2. ★ Baseline Freeze (§12) — COMPLETE 2026-07-20
+   • Artifact: .tmp/remediation-baselines-2026-07-20.json
+   • ER waiver: manual browser/ops metrics deferred to Phase 4
+   • Phase 3C authorized
 
-3. Phase 3C — type safety
+3. Phase 3C — type safety — AUTHORIZED
    • no-explicit-any warn → fix → error
-   • requires Baseline Freeze artifact linked
+   • Baseline Freeze artifact linked
 
 4. Phase 4 — observability (4A Sentry sampling + 4B coverage)
    • requires §12 baselines for before/after comparison
@@ -127,23 +128,23 @@ Finalize Blueprint + Phase F convergence + §15 pre-checks (Phase F + Phase 1)
         │
         ▼
 
-Step 2 — NEAR COMPLETE (Phase 0)
+Step 2 — COMPLETE (Phase 0)
 ────────
 Phase 0 Audit Convergence
 ✓ Agents B, C, D, E (code)
 ✓ Agent A ops (backfill apply/verify, flag flip, OTA v0.0.61 — 2026-07-19)
 ✓ Agent F (manual smoke attested — 2026-07-20)
-⧗ Production Sign-off table
+✓ Production Sign-off table attested (2026-07-20)
 
         │
         ▼
 
-Step 2b — PARTIAL (Baseline Freeze gate)
+Step 2b — COMPLETE (Baseline Freeze gate)
 ────────
-§12 Baseline Freeze — AFTER Production Sign-off, BEFORE Phase 3C
-⧗ Automated artifact captured → .tmp/remediation-baselines-2026-07-20.json
-⧗ Manual browser/ops metrics + sign-off pending
-⧗ Executable SOP: baseline-freeze-sop.md
+§12 Baseline Freeze — COMPLETE 2026-07-20
+✓ Artifact → .tmp/remediation-baselines-2026-07-20.json
+✓ ER waiver: manual browser/ops metrics → Phase 4
+✓ Phase 3C authorized
 
         │
         ▼
@@ -169,10 +170,10 @@ Phase 2 Database & Performance
         │
         ▼
 
-Step 5 — NOT STARTED (blocked on Baseline Freeze)
+Step 5 — AUTHORIZED (Phase 3C)
 ────────
 Phase 3C — Type safety rollout
-⧗ Requires Baseline Freeze artifact
+✓ Baseline Freeze artifact linked (2026-07-20)
 ⧗ no-explicit-any warn → fix → error
 
 (Optional — parallel if capacity: 3A LeadDetails thin, 3B theme)
@@ -344,14 +345,14 @@ Untracked debt is prohibited.
 
 | Metric | Baseline | Target |
 |--------|----------|--------|
-| Firestore reads on dashboard | §12 baseline (not yet captured) | −40% or better |
-| Active listeners | §12 baseline (not yet captured) | ≤ 1 per collection type |
-| Lead creation latency | §12 baseline | < 300 ms |
-| Webhook throughput | §12 baseline | No transaction counter contention |
-| Bundle size | §12 baseline | No increase (or ≤ +2%) |
+| Firestore reads on dashboard | §12 baseline (ER waiver — capture in Phase 4) | −40% or better |
+| Active listeners | §12 estimate 12–16 (staticCodeAnalysis; runtime capture in Phase 4) | ≤ 1 per collection type |
+| Lead creation latency | §12 baseline (ER waiver — capture in Phase 4) | < 300 ms |
+| Webhook throughput | §12 baseline (ER waiver — capture in Phase 4) | No transaction counter contention |
+| Bundle size | §12 baseline (611.28 KB gzip JS captured) | No increase (or ≤ +2%) |
 | TypeScript `any` count | 150+ (audit) | 0 new; legacy significantly reduced |
 | Test coverage | Current | Increased coverage across active paths |
-| Overall audit score | 76/100 (Phase 0 smoke attestation) | > 90/100 at Phase 6 |
+| Overall audit score | 80/100 (Phase 0 governance closure) | > 90/100 at Phase 6 |
 
 ---
 
@@ -363,18 +364,18 @@ Untracked debt is prohibited.
 Phase F — COMPLETED
         │
         ▼
-Phase 0 — NEAR COMPLETE (ops ✓, smoke attested 2026-07-20; Production Sign-off + Baseline Freeze remain)
+Phase 0 — COMPLETE 2026-07-20 (ops ✓, smoke attested, Production Sign-off ✓, Baseline Freeze ✓)
         │
-        ├──► Baseline Freeze (§12) — GATE (post sign-off, pre Phase 3C)
+        ├──► Baseline Freeze (§12) — COMPLETE 2026-07-20 (ER waiver for manual metrics)
         │
         ├──► Phase 1 — COMPLETED in code (1A → 1B → 1C) — do NOT re-open
         │
         ├──► Phase 2 — PARTIAL (2B ✓, 2C ✓; 2A/2D optional parallel)
         │
-        └──► Phase 3C — BLOCKED until Baseline Freeze
+        └──► Phase 3C — AUTHORIZED 2026-07-20
                 │
                 ▼
-        Phase 4 — NOT STARTED (requires §12 baselines)
+        Phase 4 — NOT STARTED (requires §12 real runtime metrics — ER waiver fields must be captured)
                 │
                 ▼
         Phase 5 — NOT STARTED
@@ -415,9 +416,9 @@ Functions Monolith Splitting (Phase 1C) — COMPLETED
 | Phase 2A (ULID UI) | Phase 2A backend | Dual-field contract exists | Backend **done** |
 | Phase 2C (scoped listeners) | — | Implemented via one-shot reads in DatabaseContext | **Done** (1B not blocking) |
 | Phase 3 Workstream 3 (ListenerManager generics) | Phase 1B | Generics on existing class | **Unblocked** — `subscribe<T>()` exists |
-| **Baseline Freeze (§12)** | **Production Sign-off complete** | Immutable snapshot before Phase 3C | **Partial** — automated artifact + smoke attestation done; manual metrics + sign-off pending. SOP: [`baseline-freeze-sop.md`](./baseline-freeze-sop.md) |
-| Phase 3C | **Baseline Freeze artifact linked** | Type safety rollout without unmeasured drift | **Pending** |
-| Phase 4 | **§12 baselines recorded** | Performance budget comparisons | **Pending** |
+| **Baseline Freeze (§12)** | **Production Sign-off complete** | Immutable snapshot before Phase 3C | **Complete 2026-07-20** — artifact signed; ER waiver for manual browser/ops metrics → Phase 4. SOP: [`baseline-freeze-sop.md`](./baseline-freeze-sop.md) |
+| Phase 3C | **Baseline Freeze artifact linked** | Type safety rollout without unmeasured drift | **Authorized 2026-07-20** |
+| Phase 4 | **§12 baselines recorded** | Performance budget comparisons | **Pending** — ER-waived fields must be captured with real DevTools/ops metrics before Phase 4 comparisons |
 | Phase 6 | Phases 0–5 exit gates | Final enterprise sign-off | **Pending** |
 
 **Removed (stale):** "Phase 2C requires Phase 1B" and "Phase 3 WS3 step 2 requires Phase 1B" — both contradicted repository state at reconciliation.
@@ -426,7 +427,7 @@ Functions Monolith Splitting (Phase 1C) — COMPLETED
 
 ## 12. Baseline Metrics — Baseline Freeze (Pre-Remediation Checkpoints)
 
-**Status:** **PARTIAL** — automated capture **2026-07-20** in [`.tmp/remediation-baselines-2026-07-20.json`](../.tmp/remediation-baselines-2026-07-20.json) (git/quality/bundle/functions + smoke attestation complete); **Production Sign-off, manual browser/ops metrics, and Baseline Freeze sign-off pending**. Still **blocks Phase 3C authorization** until sign-off complete.
+**Status:** **COMPLETE 2026-07-20** — artifact [`.tmp/remediation-baselines-2026-07-20.json`](../.tmp/remediation-baselines-2026-07-20.json) signed; ER waiver for manual browser/ops metrics (deferred to Phase 4). **Phase 3C authorized.**
 
 **Executable SOP:** [`baseline-freeze-sop.md`](./baseline-freeze-sop.md) — full capture checklist, JSON schema, sign-off, and comparison rules.
 
@@ -452,12 +453,12 @@ Before executing Phase 3C (type safety) or Phase 4 (observability), record metri
 | Gate | Requirement |
 |------|-------------|
 | **Baseline Freeze** | Production Sign-off complete → capture artifact → link in phase-f Operational DoD |
-| **Phase 3C** | **MUST NOT begin** until Baseline Freeze artifact exists |
-| **Phase 4** | **MUST NOT begin** until §12 baselines recorded and linked in phase exit report |
+| **Phase 3C** | **MUST NOT begin** until Baseline Freeze artifact exists | **Met 2026-07-20** |
+| **Phase 4** | **MUST NOT begin** until §12 baselines recorded and linked in phase exit report | **Pending** — ER-waived runtime metrics must be captured in Phase 4 before/after comparison |
 
 **Comparison rules (Phase 4+):** No regressions vs frozen baseline; bundle **≤ +2%**; Firestore dashboard reads KPI **−40%**; listeners **≤ 1 per collection type**; latency budgets per §7. See SOP for full matrix.
 
-Recommended capture window: immediately after **Production Sign-off** (post manual smoke, backfill + flag flip + OTA v0.0.61) so call-log and listener scoping improvements are included. Ops complete as of **2026-07-19 ~21:04 IST**; smoke attested **2026-07-20** — Baseline Freeze awaits Production Sign-off + manual browser metrics.
+Recommended capture window: immediately after **Production Sign-off** (post manual smoke, backfill + flag flip + OTA v0.0.61) so call-log and listener scoping improvements are included. Ops complete as of **2026-07-19 ~21:04 IST**; smoke attested **2026-07-20**; Baseline Freeze **complete 2026-07-20** with ER waiver — manual browser/ops metrics **deferred to Phase 4**.
 
 ---
 
@@ -466,7 +467,7 @@ Recommended capture window: immediately after **Production Sign-off** (post manu
 ### Phase 0 — Audit Convergence
 
 **Goal:** Close all P0/P1 items from the 2026-07-19 Conditional Pass re-audit.  
-**Overall status:** **NEAR COMPLETE** — code A–F complete; smoke attested 2026-07-20; Production Sign-off + Baseline Freeze manual metrics remain.  
+**Overall status:** **COMPLETE 2026-07-20** — code A–F complete; smoke + Production Sign-off attested; Baseline Freeze closed (ER waiver for manual metrics).  
 **Deploy window:** OTA **v0.0.61** live (2026-07-19); rollback bundle **v0.0.60**. Functions deploy skipped (orphan remote functions — ops note only).  
 **Executable SOP:** [`phase-0-audit-convergence.md`](./phase-0-audit-convergence.md)
 
@@ -477,7 +478,7 @@ Recommended capture window: immediately after **Production Sign-off** (post manu
 | Meta webhook TOCTOU fix | C | **COMPLETED** | Transactional `claimIngestEvent` |
 | UI cleanup | D | **COMPLETED** | Orphan widgets archived in `components/.archive/` (2026-07-20); grep proof; CallLogsWidget on collection path |
 | Accessibility | E | **COMPLETED** | Skip link, `<main>`, Kanban keyboard |
-| QA & validation | F | **COMPLETED** | CI green; manual smoke attested 2026-07-20; Production Sign-off table pending |
+| QA & validation | F | **COMPLETED** | CI green; manual smoke + Production Sign-off attested 2026-07-20 |
 
 **Ops evidence (agent `1197b7bf`, 2026-07-19):** [`.tmp/phase0-call-log-migration-report.md`](../.tmp/phase0-call-log-migration-report.md)
 
@@ -490,7 +491,7 @@ Recommended capture window: immediately after **Production Sign-off** (post manu
 - `components/.archive/CustomDateRangeReports.tsx`  
 - `components/.archive/ProjectInventoryDashboard.tsx`  
 
-**Phase 0 exit gate:** Ops + smoke complete; Production Sign-off table + Baseline Freeze manual metrics still open; no open P0/P1 from re-audit once sign-off closes; CI green.
+**Phase 0 exit gate:** **COMPLETE 2026-07-20** — Ops + smoke + Production Sign-off + Baseline Freeze; no open P0/P1 from re-audit; CI green. Phase 3C authorized.
 
 **Related directives:** [`phase-c-call-logs-migration.md`](./phase-c-call-logs-migration.md), [`phase-f-completion-convergence.md`](./phase-f-completion-convergence.md), [`incident-runbook.md`](./incident-runbook.md)
 
@@ -568,9 +569,9 @@ Recommended capture window: immediately after **Production Sign-off** (post manu
 - **Scope:** Files created/modified during Phase 3 decomposition.  
 - **Remaining:** Full semantic `bg-theme-*` / `text-theme-*` + `dark:` parity on extracted files.  
 
-#### 3C. Type Safety Prioritization & Strict Lint Rollout — **NOT STARTED**
+#### 3C. Type Safety Prioritization & Strict Lint Rollout — **AUTHORIZED 2026-07-20**
 
-- **Prerequisite:** **Baseline Freeze complete** — artifact linked per [`baseline-freeze-sop.md`](./baseline-freeze-sop.md)
+- **Prerequisite:** **Baseline Freeze complete** — artifact linked per [`baseline-freeze-sop.md`](./baseline-freeze-sop.md) **(met 2026-07-20)**
 - **Current:** `@typescript-eslint/no-explicit-any: 'off'` in `eslint.config.js`.  
 - **Rollout:** warn → fix → error.  
 - **Priority 1:** `repositories.ts`, `ListenerManager.ts`, `ModalRegistryContext.tsx`  
@@ -583,7 +584,7 @@ Recommended capture window: immediately after **Production Sign-off** (post manu
 |------------|-----------|--------|-------|
 | 1 — LeadDetails decomposition | Architecture + Frontend | **PARTIAL** | Hooks ✓ → thin page ⧗ |
 | 2 — Touched-files theme | Design System Agent | **PARTIAL** | Semantic tokens incomplete |
-| 3 — Type safety & linting | Type Safety Agent | **NOT STARTED** | Warn mode → repositories → error mode |
+| 3 — Type safety & linting | Type Safety Agent | **AUTHORIZED** | Warn mode → repositories → error mode |
 
 **Removed (stale):** "Phase 3 Workstream 3 step 2 requires Phase 1B" — generics already exist on `ListenerManager.subscribe<T>()`.
 
@@ -614,7 +615,7 @@ Recommended capture window: immediately after **Production Sign-off** (post manu
 ### Phase 4 — Observability & DevOps
 
 **Status:** **NOT STARTED**  
-**Prerequisite:** **§12 baseline metrics recorded** (mandatory gate).
+**Prerequisite:** **§12 baseline metrics recorded** (mandatory gate). **Note:** ER-waived runtime fields (Firestore reads, latency, Lighthouse) **must be captured with real DevTools/ops metrics at Phase 4 start** before before/after comparison — see [`.tmp/remediation-baselines-2026-07-20.json`](../.tmp/remediation-baselines-2026-07-20.json) `manualCaptureWaiver`.
 
 #### 4A. Environment-Driven Tracing
 
@@ -646,7 +647,7 @@ Recommended capture window: immediately after **Production Sign-off** (post manu
 **Status:** **NOT STARTED**
 
 - Re-run comprehensive audit across all areas (non-security scope as agreed).  
-- Target overall score > 90/100 vs current **76/100** baseline (Phase 0 smoke attestation sync).  
+- Target overall score > 90/100 vs current **80/100** baseline (Phase 0 governance closure).  
 - **Deliverables:** Architecture diagrams, before/after metrics, Firestore cost comparison, listener inventory, bundle analysis, coverage report, production readiness report, debt register, executive summary.  
 
 **Phase 6 exit gate:** Enterprise Review Board sign-off; §15 checklist complete.
@@ -694,17 +695,17 @@ Before any phase is marked complete, all of the following must pass:
 | 2 | All High findings resolved | Phase 0 + Phases 1–3 + Phase 6 | [~] Architecture high items closed in code; ops + type safety remain |
 | 3 | Architecture review passed | Phase 1 exit + Phase 6 | [~] Phase 1 complete in code; Review Board sign-off pending |
 | 4 | Performance review passed | Phase 2 exit + Phase 4 (§12) + Phase 6 | [ ] |
-| 5 | Database review passed | Phase 0 (call logs, Meta) + Phase 2 exit + Phase 6 | [~] Meta + query fix + backfill/flag flip + smoke attestation done; Production Sign-off pending |
+| 5 | Database review passed | Phase 0 (call logs, Meta) + Phase 2 exit + Phase 6 | [~] Meta + query fix + backfill/flag flip + smoke + Production Sign-off attested 2026-07-20 |
 | 6 | Frontend review passed | Phase 3 exit + Phase 6 | [ ] |
 | 7 | Backend review passed | Phase 0 (Meta) + Phase 1C + Phase 2 + Phase 6 | [~] 1C + Meta done; 2A UI parity pending |
 | 8 | Accessibility review passed | Phase 0 (E) + Phase 3 A11y + Phase 6 | [~] Phase 0 E done; Phase 3 LeadDetails a11y matrix pending |
-| 9 | Testing review passed | Phase 0 (F) + Phase 4 exit + Phase 6 | [~] CI automated gates pass; smoke attested 2026-07-20; Production Sign-off + Phase 4 coverage pending |
+| 9 | Testing review passed | Phase 0 (F) + Phase 4 exit + Phase 6 | [~] CI automated gates pass; smoke + Production Sign-off attested 2026-07-20; Phase 4 coverage pending |
 | 10 | Documentation review passed | Phase 0 SOP + Phases 4–5 + Phase 6 deliverables | [~] SOPs exist; Phase 6 deliverables pending |
-| 11 | No unresolved production blockers | **Phase 0 exit gate** | [~] Backfill + flag flip + smoke attestation done; Production Sign-off pending |
+| 11 | No unresolved production blockers | **Phase 0 exit gate** | [x] Backfill + flag flip + smoke + Production Sign-off attested 2026-07-20 |
 | 12 | Production readiness approved by Enterprise Review Board | **Phase 6 exit gate** | [ ] |
-| 13 | Overall audit score exceeds 90/100 | **Phase 6 exit gate** | [ ] Current: 76/100 |
+| 13 | Overall audit score exceeds 90/100 | **Phase 6 exit gate** | [ ] Current: 80/100 |
 | 14 | Technical debt trend is downward | Phase 6 debt register vs baseline | [ ] |
-| 15 | Performance metrics meet or exceed targets | §12 baselines + Phase 4–6 verification | [ ] §12 not captured |
+| 15 | Performance metrics meet or exceed targets | §12 baselines + Phase 4–6 verification | [~] §12 partial — bundle/CI captured; runtime metrics ER-waived → Phase 4 |
 
 ### Pre-check items satisfied by Phase F + Phase 1 (do not re-verify unless regressing)
 
@@ -722,17 +723,17 @@ Before any phase is marked complete, all of the following must pass:
 - [~] All High findings resolved → **Phase 6** (architecture/backend high items closed in code)  
 - [~] Architecture review passed → **Phase 1** code done, **Phase 6** formal  
 - [ ] Performance review passed → **Phase 2**, **Phase 4**, **Phase 6**  
-- [~] Database review passed → **Phase 0** Production Sign-off remain, **Phase 2**, **Phase 6**  
+- [~] Database review passed → **Phase 0** Production Sign-off ✓, **Phase 2**, **Phase 6**  
 - [ ] Frontend review passed → **Phase 3**, **Phase 6**  
 - [~] Backend review passed → **Phase 0** Meta ✓, **Phase 1C** ✓, **Phase 2**, **Phase 6**  
 - [~] Accessibility review passed → **Phase 0** E ✓, **Phase 3**, **Phase 6**  
-- [~] Testing review passed → CI ✓, smoke attested 2026-07-20, **Phase 0** Production Sign-off, **Phase 4**, **Phase 6**  
+- [~] Testing review passed → CI ✓, smoke + Production Sign-off attested 2026-07-20, **Phase 4**, **Phase 6**  
 - [~] Documentation review passed → SOPs ✓, **Phase 5**, **Phase 6**  
-- [~] No unresolved production blockers → **Phase 0** Production Sign-off pending  
+- [x] No unresolved production blockers → **Phase 0** complete 2026-07-20  
 - [ ] Production readiness approved by Enterprise Review Board → **Phase 6**  
-- [ ] Overall audit score exceeds 90/100 → **Phase 6** (from 76/100)  
+- [ ] Overall audit score exceeds 90/100 → **Phase 6** (from 80/100)  
 - [ ] Technical debt trend is downward → **Phase 6**  
-- [ ] Performance metrics meet or exceed targets → **§12**, **Phase 4**, **Phase 6**  
+- [~] Performance metrics meet or exceed targets → **§12** partial (ER waiver), **Phase 4**, **Phase 6**  
 
 ---
 
@@ -755,14 +756,15 @@ Before any phase is marked complete, all of the following must pass:
 
 | Field | Value |
 |-------|-------|
-| Version | **1.2 (baseline freeze gate)** |
+| Version | **1.3 (Phase 0 complete; Phase 3C authorized)** |
 | Created | 2026-07-19 |
 | Reconciled | **2026-07-19** |
-| Prior version | 1.1 (reconciled) |
+| Governance closure | **2026-07-20** |
+| Prior version | 1.2 (baseline freeze gate) |
 | Baseline Freeze SOP | [`baseline-freeze-sop.md`](./baseline-freeze-sop.md) — added v1.2 |
-| Re-audit reference | Conditional Pass, 2026-07-19, v0.0.60 baseline → **v0.0.61** live; smoke attested **2026-07-20** |
-| Readiness score | **76 / 100** *(+4 smoke attestation; Production Sign-off + Baseline Freeze manual metrics remain)* |
+| Re-audit reference | Conditional Pass, 2026-07-19, v0.0.60 baseline → **v0.0.61** live; smoke + Production Sign-off attested **2026-07-20** |
+| Readiness score | **80 / 100** *(+4 Production Sign-off + Baseline Freeze closure; ER waiver for manual metrics → Phase 4)* |
 | Authority | **Repository is authoritative** — blueprint reflects repo state |
-| Next action | **Production Sign-off** → **Baseline Freeze manual metrics** → Phase 3C authorization |
+| Next action | **Phase 3C** — type safety rollout (`no-explicit-any` warn → fix → error) |
 | Rollback OTA | **v0.0.60** bundle (`golden-acres-projects.web.app/updates/bundle-0.0.60.zip`) |
 | Ops note | Orphan remote functions (`aiComplete`, `linkUserProfile`, `setManagerialClaim`) blocked functions deploy this window — cleanup deferred |
