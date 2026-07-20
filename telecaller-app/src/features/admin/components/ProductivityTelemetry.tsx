@@ -1,4 +1,4 @@
-import { PhoneCall, Phone, Clock, Activity } from "lucide-react";
+﻿import { PhoneCall, Phone, Clock, Activity } from "lucide-react";
 import { User } from "@/shared/types";
 
 interface ProductivityTelemetryProps {
@@ -112,7 +112,7 @@ export default function ProductivityTelemetry({
   );
 
   return (
-    <div className="rounded-xl border border-theme-border bg-theme-card overflow-hidden">
+    <div className="rounded-theme border border-theme-border bg-theme-card overflow-hidden">
       <div className="px-3 py-2.5 border-b border-theme-border flex flex-col sm:flex-row sm:items-center justify-between gap-2">
         <div className="flex items-center gap-2 min-w-0">
           <div className="p-1.5 rounded-lg bg-theme-accent text-theme-accent-fg shrink-0">
@@ -248,7 +248,7 @@ export default function ProductivityTelemetry({
                         {getRelativeTime(tc.lastActiveTime)}
                       </span>
                       {tc.idleWarning && liveStatus !== "offline" && (
-                        <span className="inline-flex px-1 py-0.5 rounded text-[8px] font-extrabold uppercase bg-theme-danger/15 text-theme-danger border border-theme-danger/30 animate-pulse">
+                        <span className="inline-flex px-1 py-0.5 rounded text-[8px] font-bold uppercase bg-theme-danger/15 text-theme-danger border border-theme-danger/30 animate-pulse">
                           Idle 45m+
                         </span>
                       )}
@@ -259,17 +259,17 @@ export default function ProductivityTelemetry({
             })}
             <tr className="bg-theme-surface border-t border-theme-border">
               <td className="px-3 py-2 whitespace-nowrap" colSpan={2}>
-                <span className="text-[10px] font-black text-theme-text uppercase tracking-wider">
+                <span className="text-[10px] font-bold text-theme-text uppercase tracking-wider">
                   Grand Total
                 </span>
               </td>
               <td className="px-3 py-2 whitespace-nowrap">
-                <span className="text-[11px] font-black text-theme-accent tabular-nums">
+                <span className="text-[11px] font-bold text-theme-accent tabular-nums">
                   {grandTotalCalls}
                 </span>
               </td>
               <td className="px-3 py-2 whitespace-nowrap">
-                <span className="text-[11px] font-mono font-black text-theme-success tabular-nums">
+                <span className="text-[11px] font-mono font-bold text-theme-success tabular-nums">
                   {formatTalktime(grandTotalTalktime)}
                 </span>
               </td>
@@ -281,7 +281,7 @@ export default function ProductivityTelemetry({
                 </span>
               </td>
               <td className="px-3 py-2 whitespace-nowrap">
-                <div className="flex items-center gap-1.5 text-[10px] font-black">
+                <div className="flex items-center gap-1.5 text-[10px] font-bold">
                   <span className="text-theme-success tabular-nums">
                     {grandTotalBookings} booked
                   </span>

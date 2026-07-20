@@ -19,6 +19,7 @@ import {
   sidebarSubItem,
   sidebarSubTree,
 } from "./sidebarNavStyles";
+import { NAV_LABELS } from "@/shared/constants/navTaxonomy";
 
 interface CRMSubmenuProps {
   isSidebarCollapsed: boolean;
@@ -47,17 +48,18 @@ export default function CRMSubmenu({
         <Link
           to="/?tab=leads"
           className={sidebarGroupLink(isSidebarCollapsed)}
-          title="Leads CRM"
+          title={NAV_LABELS.leads}
+          aria-label={isSidebarCollapsed ? NAV_LABELS.leads : undefined}
         >
-          <FolderOpen className={sidebarIcon("leads")} />
-          {!isSidebarCollapsed && <span className="truncate">Leads CRM</span>}
+          <FolderOpen className={sidebarIcon("leads")} aria-hidden="true" />
+          {!isSidebarCollapsed && <span className="truncate">{NAV_LABELS.leads}</span>}
         </Link>
         {!isSidebarCollapsed && (
           <button
             type="button"
             onClick={() => setIsLeadsOpen((o) => !o)}
             className={sidebarGroupToggle()}
-            aria-label="Toggle Leads CRM menu"
+            aria-label={`Toggle ${NAV_LABELS.leads} menu`}
           >
             <ChevronDown
               className={`${sidebarChevronClass} ${isLeadsOpen ? "rotate-180" : ""}`}

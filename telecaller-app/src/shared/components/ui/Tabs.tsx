@@ -28,7 +28,7 @@ export default function Tabs({
       className={twMerge(
         clsx(
           "flex space-x-1 border-theme-border transition-colors duration-300",
-          variant === "line" ? "border-b" : "bg-theme-surface p-1 rounded-xl"
+          variant === "line" ? "border-b" : "bg-theme-surface p-1 rounded-theme"
         ),
         className
       )}

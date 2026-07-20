@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+﻿import React, { useMemo, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   BarChart3,
@@ -16,14 +16,18 @@ import { isManagerial } from "@/shared/utils/roleUtils";
 import { useAuthorization } from "@/shared/services/AuthorizationContext";
 import { safeFormatDateTime } from "@/shared/utils/dateUtils";
 import { useLeadsStore } from "../hooks/useLeadsStore";
+import { useLeadQuery } from "../hooks/useLeadQuery";
 import { useAppShell } from "@/shared/layouts/AppShellContext";
 import { useCustomRolesStore } from "@/features/admin/hooks/adminStores";
+import { useProjectScope } from "@/shared/services/ProjectScopeContext";
+import { createDefaultLeadQuerySpec } from "@/shared/services/leads";
+import { DEFAULT_PAGE_SIZE } from "@/shared/services/performance/pagination/contracts/paginationConstants";
+import { mapLeadListFiltersToQuery } from "../utils/mapLeadListFiltersToQuery";
 
 // Direct domain store imports
 import { useProjectsStore } from "@/features/plots/hooks/useProjectsStore";
 import { useUsersStore } from "@/features/employees/hooks/useUsersStore";
 import { Lead, User } from "@/shared/types";
-import { useLeadsFiltering } from "../hooks/useLeadsFiltering";
 import { useLeadListFilters } from "../hooks/useLeadListFilters";
 import { planStatusTransition } from "@/shared/contracts";
 
@@ -34,6 +38,18 @@ interface LeadsTabProps {
   onStartCall: (lead: Lead) => void;
   onStartWhatsApp: (lead: Lead) => void;
   dashboardSlot?: React.ReactNode;
+}
+
+function isLeadIdle(lead: Lead) {
+  if (!lead.updatedAt) return false;
+  const lastUpdate = new Date(lead.updatedAt);
+  const threeDaysAgo = new Date();
+  threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
+  return (
+    lastUpdate < threeDaysAgo &&
+    lead.status !== "booked" &&
+    lead.status !== "not-interested"
+  );
 }
 
 export default function LeadsTab({
@@ -48,10 +64,9 @@ export default function LeadsTab({
   const { openCallLogModal } = useAppShell();
   const { toast } = useToast();
   const todayStr = new Date().toISOString().split("T")[0];
+  const { activeProjectId } = useProjectScope();
 
-  // Fetch from custom hooks
   const {
-    leads,
     addLead,
     updateLead,
     logCall,
@@ -68,6 +83,7 @@ export default function LeadsTab({
     }
     return isManagerial(roleCode || "", customRoles);
   };
+  const managerial = checkIsManagerial(user.role);
 
   // Local UI states for Leads tab
   const [leadsViewMode, setLeadsViewMode] = useState<"compact" | "normal">("normal");
@@ -90,8 +106,38 @@ export default function LeadsTab({
   const leadsGrouping = "none" as const;
   const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>({});
 
+  const querySpec = useMemo(() => {
+    const { server, client } = mapLeadListFiltersToQuery(appliedFilters, {
+      activeProjectId,
+      todayStr,
+      pushAssignedToServer: managerial,
+    });
+    return createDefaultLeadQuerySpec(user.id, user.role || "telecaller", {
+      pageSize: DEFAULT_PAGE_SIZE,
+      server,
+      client,
+      prefetchNext: true,
+    });
+  }, [appliedFilters, activeProjectId, todayStr, managerial, user.id, user.role]);
+
+  const {
+    items: pageLeads,
+    isLoading: leadsLoading,
+    isRefreshing,
+    error: leadsError,
+    hasNextPage,
+    hasPreviousPage,
+    nextPage,
+    previousPage,
+    refresh,
+  } = useLeadQuery(user, customRoles, querySpec);
+
+  // One page → group/virtualize (no per-group cursors). Same page feeds list + kanban.
+  const myLeads = pageLeads;
+  const kanbanLeads = pageLeads;
+
   const handleKanbanDrop = async (leadId: string, targetStatus: string) => {
-    const leadToUpdate = leads.find((l) => l.id === leadId);
+    const leadToUpdate = pageLeads.find((l) => l.id === leadId);
     if (!leadToUpdate) return;
 
     const plan = planStatusTransition({
@@ -107,6 +153,7 @@ export default function LeadsTab({
     }
 
     await updateLead(leadId, plan.leadPatch);
+    refresh();
   };
 
   const touchStartRef = useRef({ x: 0, y: 0 });
@@ -125,38 +172,24 @@ export default function LeadsTab({
     const diffX = touchEndX - touchStartRef.current.x;
     const diffY = touchEndY - touchStartRef.current.y;
 
-    // Check if horizontal swipe is prominent and meets minimum threshold of 85px
     if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > 85) {
       if (diffX > 0) {
-        // Swiped Right -> Call Lead
         if (onStartCall) onStartCall(lead);
         toast(`Calling ${lead.name}...`, "info");
       } else {
-        // Swiped Left -> Navigate to details page
         navigate(`/lead/${lead.id}`);
         toast(`Opening details for ${lead.name}...`, "info");
       }
     }
   };
 
-  const { myLeads, isLeadIdle } = useLeadsFiltering(
-    leads,
-    user,
-    appliedFilters,
-    projects,
-    todayStr
-  );
-
   const shouldHideEmail = !!user.roleRestrictions?.hideEmail;
   const shouldHideLeadSource = !!user.roleRestrictions?.hideLeadSource;
-
-  const kanbanLeads = myLeads; // Same filtered set for kanban
 
   return (
     <div className="space-y-3">
       {/* Sub-tabs header */}
       <div className="border-b border-theme-border pb-2 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 md:border-b-0 md:pb-0 md:justify-end">
-        {/* Mobile Select Picker for Leads Sub-Tabs */}
         <div className="block sm:hidden w-full">
           <select
             value={leadsSubTab}
@@ -164,7 +197,7 @@ export default function LeadsTab({
               const val = e.target.value;
               setLeadsSubTab(val);
             }}
-            className="w-full bg-theme-card border border-theme-border rounded-xl px-3 py-2 text-xs font-bold text-theme-text focus:outline-none focus:ring-1 focus:ring-theme-ring cursor-pointer"
+            className="w-full bg-theme-card border border-theme-border rounded-theme px-3 py-2 text-xs font-bold text-theme-text focus:outline-none focus:ring-1 focus:ring-theme-ring cursor-pointer"
           >
             <option value="dashboard">Dashboard Overview</option>
             <option value="list">Leads List</option>
@@ -227,7 +260,6 @@ export default function LeadsTab({
 
       {leadsSubTab === "dashboard" && dashboardSlot}
 
-      {/* Leads List Sub-tab */}
       {leadsSubTab === "list" && (
         <LeadsWorkspace
           user={user}
@@ -271,6 +303,14 @@ export default function LeadsTab({
           todayStr={todayStr}
           logCall={logCall}
           archiveLeads={archiveLeads}
+          isLoading={leadsLoading}
+          isRefreshing={isRefreshing}
+          loadError={leadsError}
+          hasNextPage={hasNextPage}
+          hasPreviousPage={hasPreviousPage}
+          onNextPage={nextPage}
+          onPreviousPage={previousPage}
+          onRefreshPage={refresh}
         />
       )}
 
@@ -286,17 +326,45 @@ export default function LeadsTab({
       )}
 
       {leadsSubTab === "kanban" && (
-        <LeadsKanbanBoard
-          kanbanLeads={kanbanLeads}
-          projects={projects}
-          handleKanbanDrop={handleKanbanDrop}
-          handleTouchStart={handleTouchStart}
-          handleTouchEnd={handleTouchEnd}
-          onStartCall={onStartCall}
-          onStartWhatsApp={onStartWhatsApp}
-          todayStr={todayStr}
-          navigate={navigate}
-        />
+        <div className="space-y-2">
+          {(leadsLoading || isRefreshing) && (
+            <p className="text-[11px] text-theme-muted px-1">
+              {leadsLoading ? "Loading pipeline…" : "Refreshing…"}
+            </p>
+          )}
+          {leadsError && (
+            <p className="text-[11px] text-theme-danger px-1">{leadsError}</p>
+          )}
+          <LeadsKanbanBoard
+            kanbanLeads={kanbanLeads}
+            projects={projects}
+            handleKanbanDrop={handleKanbanDrop}
+            handleTouchStart={handleTouchStart}
+            handleTouchEnd={handleTouchEnd}
+            onStartCall={onStartCall}
+            onStartWhatsApp={onStartWhatsApp}
+            todayStr={todayStr}
+            navigate={navigate}
+          />
+          <div className="flex items-center justify-between gap-2 px-1">
+            <button
+              type="button"
+              disabled={!hasPreviousPage || leadsLoading}
+              onClick={previousPage}
+              className="min-h-11 px-3 py-1.5 rounded-theme border border-theme-border bg-theme-surface text-[11px] font-semibold text-theme-text disabled:opacity-40 cursor-pointer"
+            >
+              Previous
+            </button>
+            <button
+              type="button"
+              disabled={!hasNextPage || leadsLoading}
+              onClick={nextPage}
+              className="min-h-11 px-3 py-1.5 rounded-theme border border-theme-border bg-theme-surface text-[11px] font-semibold text-theme-text disabled:opacity-40 cursor-pointer"
+            >
+              Next page
+            </button>
+          </div>
+        </div>
       )}
 
       {leadsSubTab === "bin" && (user?.role === "admin" || user?.role === "manager") && (

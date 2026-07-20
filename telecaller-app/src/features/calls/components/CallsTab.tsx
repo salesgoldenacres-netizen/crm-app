@@ -2,12 +2,12 @@ import { useState, useEffect, useRef, useMemo } from "react";
 import { MessageCircle, PhoneCall } from "lucide-react";
 
 import { useLeadsStore } from "@/features/leads/hooks/useLeadsStore";
+import { useAgentOpenLeads } from "@/features/leads/hooks/useAgentOpenLeads";
 import { useNotificationsStore } from "@/features/dashboard/hooks/useNotificationsStore";
 import { useProjectsStore } from "@/features/plots/hooks/useProjectsStore";
 import { useAppShell } from "@/shared/layouts/AppShell";
 import { useCustomRolesStore } from "@/features/admin/hooks/adminStores";
 import { isManagerial } from "@/shared/utils/roleUtils";
-// safeFormatDateTime removed – not used in this file
 
 import { usePowerDialer } from "@/features/calls/hooks/usePowerDialer";
 import PowerDialerWidget from "@/features/calls/components/PowerDialerWidget";
@@ -41,7 +41,8 @@ export default function CallsTab({
   setSimulatedWaLeadId,
   onOpenCallLogModal,
 }: CallsTabProps) {
-  const { leads, logCall } = useLeadsStore();
+  const { logCall } = useLeadsStore();
+  const { openLeads: leads } = useAgentOpenLeads();
   const { notifications, addNotification } = useNotificationsStore();
   const { projects } = useProjectsStore();
   const { startCall, activeDialerLead, isCallLogModalOpen } = useAppShell();

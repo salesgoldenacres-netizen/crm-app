@@ -24,14 +24,15 @@ import {
   DeletedUserRecord,
   AgentStatusRecord,
   NotificationItem,
+  CallLogDocument,
 } from "@/shared/types";
 
 // Generic Firestore Data Converter
 export const genericConverter = <T extends object>(): FirestoreDataConverter<T> => ({
   toFirestore(model: T): DocumentData {
-    const data = { ...model } as any;
+    const data = { ...model } as Record<string, unknown>;
     delete data.id;
-    return data;
+    return data as DocumentData;
   },
   fromFirestore(snapshot: QueryDocumentSnapshot): T {
     const data = snapshot.data();
@@ -51,6 +52,7 @@ export const getCollectionRef = <T extends object>(
 
 // Strongly typed Collection References
 export const leadsRef = getCollectionRef<Lead>(COLLECTIONS.LEADS);
+export const callLogsRef = getCollectionRef<CallLogDocument>(COLLECTIONS.CALL_LOGS);
 export const archivedLeadsRef = getCollectionRef<Lead>(COLLECTIONS.ARCHIVED_LEADS);
 export const usersRef = getCollectionRef<User>(COLLECTIONS.USERS);
 export const customRolesRef = getCollectionRef<CustomRole>(COLLECTIONS.CUSTOM_ROLES);

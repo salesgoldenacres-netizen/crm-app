@@ -77,10 +77,12 @@ service cloud.firestore {
     }
 
     // Settings collection:
-    // - Read allowed for authenticated users EXCEPT for integrations_secrets (which is admin-only)
+    // - branding is public-read so login / boot screens can theme before auth
+    // - other settings: authenticated read EXCEPT integrations_secrets (admin-only)
     // - Write allowed only for admins
     match /settings/{settingId} {
-      allow read: if isAuthenticated() && (settingId != 'integrations_secrets' || isAdmin());
+      allow read: if settingId == 'branding'
+        || (isAuthenticated() && (settingId != 'integrations_secrets' || isAdmin()));
       allow write: if isAdmin();
     }
 
@@ -164,6 +166,19 @@ service cloud.firestore {
       allow read: if isAuthenticated();
       allow create: if isAuthenticated();
       allow update, delete: if false;
+    }
+
+    // Phase C — top-level call log events (not embedded on Lead)
+    match /callLogs/{callLogId} {
+      allow read: if isAuthenticated();
+      allow create, update: if isAuthenticated();
+      allow delete: if isAdmin();
+    }
+
+    // Phase C — create-once productivity markers (Cloud Functions write via Admin SDK)
+    match /productivityEvents/{callLogId} {
+      allow read: if isAuthenticated();
+      allow create, update, delete: if false;
     }
 
     // Archived Leads:

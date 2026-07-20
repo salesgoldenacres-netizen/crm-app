@@ -24,6 +24,7 @@ import {
   FIELD_CONTROL_CLASS,
   FIELD_LABEL_CLASS,
 } from "@/shared/components/ui/formField";
+import InteractionDialog from "@/shared/components/ui/InteractionDialog";
 
 const ACCORDION_BTN =
   "w-full flex justify-between items-center px-4 py-3 bg-theme-surface border-b border-theme-border text-sm font-semibold text-theme-text cursor-pointer border-0 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-theme-ring";
@@ -82,6 +83,8 @@ export default function BrandingSettingsTab({
     handleExportJSON,
     handleImportJSON,
     handleReset,
+    interaction,
+    clearInteraction,
   } = useBrandingSettings({
     branding,
     brandingLoaded,
@@ -118,7 +121,7 @@ export default function BrandingSettingsTab({
             Theme & Branding Customizer
           </h1>
           <p className="text-xs text-theme-muted mt-1">
-            Org brand identity (logo, accent, fonts). Light / Dark / System is controlled by Appearance in the header.
+            Full color access for light and dark. Appearance (header) only chooses which palette is active.
           </p>
         </div>
 
@@ -168,15 +171,24 @@ export default function BrandingSettingsTab({
         </div>
       </div>
 
-      <div className="rounded-xl border border-theme-border bg-theme-accent-muted/40 px-4 py-3 text-[11px] text-theme-text leading-relaxed">
-        <strong className="font-semibold text-theme-accent">What Go Live applies:</strong> company name, logo, primary/secondary/accent,
-        status colors, typography, radius, and custom CSS. Page backgrounds and surfaces follow each user’s Appearance
-        setting — not the color pickers below for sidebar/header (those are mockup-only).
+      <div className="rounded-theme border border-theme-border bg-theme-accent-muted/40 px-4 py-3 text-[11px] text-theme-text leading-relaxed space-y-1.5">
+        <p>
+          <strong className="font-semibold text-theme-accent">What Go Live applies:</strong> company name,
+          logo, tagline, primary/secondary/accent, light &amp; dark surfaces (background, card, text, border,
+          sidebar), status colors, typography, radius, and custom CSS. Each user still picks Light / Dark /
+          System under Appearance — your dark palette is used whenever dark mode is active.
+        </p>
+        <p>
+          <strong className="font-semibold text-theme-accent">Login &amp; loading:</strong> no extra
+          fields — Primary/Secondary drive accents &amp; rail glows; Surfaces drive page canvas &amp; card;
+          Sidebar colors the login hero panel; company name/logo/tagline appear on the login screen and
+          boot spinner. Change a color → Go Live → log out to verify.
+        </p>
       </div>
 
       {/* Library of Saved Themes */}
       {savedThemes.length > 0 && (
-        <div className="bg-theme-surface border border-theme-border p-4 rounded-xl">
+        <div className="bg-theme-surface border border-theme-border p-4 rounded-theme">
           <h3 className="type-label font-semibold uppercase tracking-wider text-theme-muted mb-3">
             Saved Theme Layout Library ({savedThemes.length})
           </h3>
@@ -263,7 +275,7 @@ export default function BrandingSettingsTab({
         {/* Left Side: Theme Configuration Accordion */}
         <div className="lg:col-span-5 space-y-4">
           {/* Card 1: Brand Identity */}
-          <div className="bg-theme-card rounded-xl border border-theme-border shadow-sm overflow-hidden">
+          <div className="bg-theme-card rounded-theme border border-theme-border shadow-sm overflow-hidden">
             <button
               type="button"
               onClick={() => toggleSection("identity")}
@@ -321,7 +333,7 @@ export default function BrandingSettingsTab({
           </div>
 
           {/* Card 2: Theme Presets */}
-          <div className="bg-theme-card rounded-xl border border-theme-border shadow-sm overflow-hidden">
+          <div className="bg-theme-card rounded-theme border border-theme-border shadow-sm overflow-hidden">
             <button
               type="button"
               onClick={() => toggleSection("presets")}
@@ -377,25 +389,26 @@ export default function BrandingSettingsTab({
             )}
           </div>
 
-          {/* Card 3: Colors */}
-          <div className="bg-theme-card rounded-xl border border-theme-border shadow-sm overflow-hidden">
+          {/* Card 3: Brand colors */}
+          <div className="bg-theme-card rounded-theme border border-theme-border shadow-sm overflow-hidden">
             <button
               type="button"
               onClick={() => toggleSection("colors")}
               className={ACCORDION_BTN}
               aria-expanded={openSections.colors}
             >
-              <span>3. Color Scheme</span>
+              <span>3. Brand Colors</span>
               {openSections.colors ? <ChevronUp className="w-4 h-4" aria-hidden="true" /> : <ChevronDown className="w-4 h-4" aria-hidden="true" />}
             </button>
             {openSections.colors && (
               <div className="p-4 space-y-3.5">
                 <p className="text-[10px] text-theme-muted">
-                  These map to live brand tokens (`--theme-accent*`). Surfaces stay on Appearance.
+                  Identity accents apply in both light and dark (including login &amp; boot screens).
+                  Primary = CTAs / spinner / canvas glows; Secondary = sidebar rail gold &amp; login checkmarks.
                 </p>
                 {[
-                  { label: "Primary Accent", key: "primaryColor" },
-                  { label: "Secondary Accent", key: "secondaryColor" },
+                  { label: "Primary", key: "primaryColor" },
+                  { label: "Secondary", key: "secondaryColor" },
                   { label: "Accent Highlight", key: "accentColor" },
                 ].map((colorItem) => (
                   <div key={colorItem.key} className="flex items-center justify-between gap-4">
@@ -406,7 +419,11 @@ export default function BrandingSettingsTab({
                       <input
                         type="color"
                         aria-label={colorItem.label}
-                        value={String(brandingForm[colorItem.key] ?? "")}
+                        value={
+                          /^#[0-9A-Fa-f]{6}$/.test(String(brandingForm[colorItem.key] ?? ""))
+                            ? String(brandingForm[colorItem.key])
+                            : "#000000"
+                        }
                         onChange={(e) => updateState({ [colorItem.key]: e.target.value })}
                         className={COLOR_SWATCH}
                       />
@@ -424,8 +441,95 @@ export default function BrandingSettingsTab({
             )}
           </div>
 
+          {/* Card 3b: Surfaces — light & dark */}
+          <div className="bg-theme-card rounded-theme border border-theme-border shadow-sm overflow-hidden">
+            <button
+              type="button"
+              onClick={() => toggleSection("surfaces")}
+              className={ACCORDION_BTN}
+              aria-expanded={openSections.surfaces}
+            >
+              <span>3b. Surfaces (Light &amp; Dark)</span>
+              {openSections.surfaces ? <ChevronUp className="w-4 h-4" aria-hidden="true" /> : <ChevronDown className="w-4 h-4" aria-hidden="true" />}
+            </button>
+            {openSections.surfaces && (
+              <div className="p-4 space-y-5">
+                <p className="text-[10px] text-theme-muted">
+                  These write live `--theme-*` tokens for the whole app — dashboard, login canvas/card, and
+                  loading screens. Dark values unlock the forest canvas — change them freely. Sidebar colors
+                  the login hero rail via `--theme-sidebar-gradient`.
+                </p>
+                {(
+                  [
+                    {
+                      title: "Light appearance",
+                      fields: [
+                        { label: "Background", key: "backgroundColor" },
+                        { label: "Surface", key: "surfaceColor" },
+                        { label: "Card", key: "cardBackground" },
+                        { label: "Border", key: "borderColor" },
+                        { label: "Ring / Focus", key: "ringColor" },
+                        { label: "Text", key: "textPrimary" },
+                        { label: "Muted text", key: "textSecondary" },
+                        { label: "Sidebar", key: "sidebarColor" },
+                        { label: "Header", key: "headerColor" },
+                      ],
+                    },
+                    {
+                      title: "Dark appearance",
+                      fields: [
+                        { label: "Background", key: "darkBackgroundColor" },
+                        { label: "Surface", key: "darkSurfaceColor" },
+                        { label: "Card", key: "darkCardBackground" },
+                        { label: "Border", key: "darkBorderColor" },
+                        { label: "Ring / Focus", key: "darkRingColor" },
+                        { label: "Text", key: "darkTextPrimary" },
+                        { label: "Muted text", key: "darkTextSecondary" },
+                        { label: "Sidebar", key: "darkSidebarColor" },
+                        { label: "Header", key: "darkHeaderColor" },
+                      ],
+                    },
+                  ] as const
+                ).map((group) => (
+                  <div key={group.title} className="space-y-3">
+                    <h4 className="type-label font-semibold uppercase tracking-wider text-theme-muted">
+                      {group.title}
+                    </h4>
+                    {group.fields.map((colorItem) => (
+                      <div key={colorItem.key} className="flex items-center justify-between gap-4">
+                        <span className="text-xs font-semibold text-theme-muted w-1/3 truncate">
+                          {colorItem.label}
+                        </span>
+                        <div className="flex items-center gap-2 w-2/3">
+                          <input
+                            type="color"
+                            aria-label={`${group.title} ${colorItem.label}`}
+                            value={
+                              /^#[0-9A-Fa-f]{6}$/.test(String(brandingForm[colorItem.key] ?? ""))
+                                ? String(brandingForm[colorItem.key])
+                                : "#000000"
+                            }
+                            onChange={(e) => updateState({ [colorItem.key]: e.target.value })}
+                            className={COLOR_SWATCH}
+                          />
+                          <input
+                            type="text"
+                            aria-label={`${group.title} ${colorItem.label} hex`}
+                            value={String(brandingForm[colorItem.key] ?? "")}
+                            onChange={(e) => updateState({ [colorItem.key]: e.target.value })}
+                            className={COLOR_HEX}
+                          />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
           {/* Card 4: Status Colors */}
-          <div className="bg-theme-card rounded-xl border border-theme-border shadow-sm overflow-hidden">
+          <div className="bg-theme-card rounded-theme border border-theme-border shadow-sm overflow-hidden">
             <button
               type="button"
               onClick={() => toggleSection("status")}
@@ -462,7 +566,11 @@ export default function BrandingSettingsTab({
                       <input
                         type="color"
                         aria-label={colorItem.label}
-                        value={String(brandingForm[colorItem.key] ?? "")}
+                        value={
+                          /^#[0-9A-Fa-f]{6}$/.test(String(brandingForm[colorItem.key] ?? ""))
+                            ? String(brandingForm[colorItem.key])
+                            : "#000000"
+                        }
                         onChange={(e) => updateState({ [colorItem.key]: e.target.value })}
                         className={COLOR_SWATCH}
                       />
@@ -481,7 +589,7 @@ export default function BrandingSettingsTab({
           </div>
 
           {/* Card 5: Typography */}
-          <div className="bg-theme-card rounded-xl border border-theme-border shadow-sm overflow-hidden">
+          <div className="bg-theme-card rounded-theme border border-theme-border shadow-sm overflow-hidden">
             <button
               type="button"
               onClick={() => toggleSection("typography")}
@@ -551,7 +659,7 @@ export default function BrandingSettingsTab({
           </div>
 
           {/* Card 6: Layout Options */}
-          <div className="bg-theme-card rounded-xl border border-theme-border shadow-sm overflow-hidden">
+          <div className="bg-theme-card rounded-theme border border-theme-border shadow-sm overflow-hidden">
             <button
               type="button"
               onClick={() => toggleSection("layout")}
@@ -594,7 +702,7 @@ export default function BrandingSettingsTab({
           </div>
 
           {/* Card 7: Advanced CSS */}
-          <div className="bg-theme-card rounded-xl border border-theme-border shadow-sm overflow-hidden">
+          <div className="bg-theme-card rounded-theme border border-theme-border shadow-sm overflow-hidden">
             <button
               type="button"
               onClick={() => toggleSection("advanced")}
@@ -637,7 +745,7 @@ export default function BrandingSettingsTab({
       </div>
 
       {/* Footer Settings Actions */}
-      <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center bg-theme-surface border border-theme-border p-4 rounded-xl gap-4">
+      <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center bg-theme-surface border border-theme-border p-4 rounded-theme gap-4">
         <div className="flex items-center gap-2">
           <Button type="button" variant="outline" size="sm" onClick={handleSaveTheme}>
             <Plus className="w-3.5 h-3.5 mr-1.5" aria-hidden="true" /> Save to Theme Library
@@ -653,6 +761,8 @@ export default function BrandingSettingsTab({
           </Button>
         </FormActions>
       </div>
+
+      <InteractionDialog state={interaction} onClose={clearInteraction} />
     </div>
   );
 }

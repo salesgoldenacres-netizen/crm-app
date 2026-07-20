@@ -1,7 +1,5 @@
 import { useState, useEffect } from "react";
-import { onSnapshot } from "firebase/firestore";
 import { SmartList } from "@/shared/types";
-import { smartListsRef } from "@/shared/services/firebase/converters";
 import { SmartListsRepository } from "@/shared/services/firebase/repositories";
 
 export function useSmartListsStore(userId?: string) {
@@ -10,14 +8,7 @@ export function useSmartListsStore(userId?: string) {
 
   useEffect(() => {
     if (!userId) return;
-    const unsubscribe = onSnapshot(smartListsRef, (snapshot) => {
-      const lists: SmartList[] = [];
-      snapshot.forEach((d) => {
-        const data = d.data();
-        if (data.userId === userId || !data.userId)
-          lists.push(data);
-      });
-      lists.sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
+    const unsubscribe = SmartListsRepository.subscribeUserLists(userId, (lists) => {
       setSmartLists(lists);
       setIsLoaded(true);
     });

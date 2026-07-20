@@ -355,6 +355,7 @@ export default function BulkLeadImportModal({
         isOpen={showImport}
         onClose={onClose}
         title="Bulk Import Customer Leads"
+        variant="sheet"
         size="lg"
         footer={
           <FormActions>

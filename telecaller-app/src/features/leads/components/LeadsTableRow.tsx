@@ -99,7 +99,7 @@ function LeadsTableRow({
           leadsViewMode === "compact" ? "px-3 py-2 text-xs" : "px-6 py-4 text-sm"
         } whitespace-nowrap text-theme-muted`}
       >
-        {lead.leadNumber || "—"}
+        {lead.leadReference ? lead.leadReference.substring(0, 10) + "..." : lead.leadNumber || "—"}
       </td>
       {leadsViewMode !== "compact" && (
         <td className="px-6 py-4 whitespace-nowrap text-xs text-theme-muted">
@@ -204,7 +204,7 @@ function LeadsTableRow({
           leadsViewMode === "compact" ? "px-3 py-2 text-center text-xs" : "px-6 py-4 text-center text-sm"
         } whitespace-nowrap text-theme-muted`}
       >
-        {lead.callLogs ? lead.callLogs.length : 0}
+        {lead.callCount ?? lead.callLogs?.length ?? 0}
       </td>
       {/* Primary: follow-up */}
       <td className={`${leadsViewMode === "compact" ? "px-3 py-2" : "px-6 py-4"} whitespace-nowrap`}>
@@ -345,7 +345,8 @@ export default React.memo(LeadsTableRow, (prevProps, nextProps) => {
     prevProps.lead.updatedAt === nextProps.lead.updatedAt &&
     prevProps.lead.assignedTo === nextProps.lead.assignedTo &&
     Boolean(prevProps.lead.siteVisit) === Boolean(nextProps.lead.siteVisit) &&
-    (prevProps.lead.callLogs?.length || 0) === (nextProps.lead.callLogs?.length || 0) &&
+    (prevProps.lead.callCount ?? prevProps.lead.callLogs?.length ?? 0) ===
+      (nextProps.lead.callCount ?? nextProps.lead.callLogs?.length ?? 0) &&
     prevProps.projects === nextProps.projects &&
     prevProps.user.id === nextProps.user.id
   );

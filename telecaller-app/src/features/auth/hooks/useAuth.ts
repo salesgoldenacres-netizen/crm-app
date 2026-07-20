@@ -1,14 +1,7 @@
 import { useState, useEffect } from "react";
 import { onAuthStateChanged } from "firebase/auth";
-import {
-  collection,
-  query,
-  where,
-  onSnapshot,
-  getDocs,
-  Unsubscribe,
-} from "firebase/firestore";
-import { auth, db } from "@/shared/services/firebase";
+import { auth } from "@/shared/services/firebase";
+import { UsersRepository } from "@/shared/services/firebase/repositories";
 import { logout as apiLogout } from "@/shared/services/auth";
 import { User } from "@/shared/types";
 
@@ -28,7 +21,7 @@ export function useAuth() {
       });
     }, 10000);
 
-    let unsubscribeUserDoc: Unsubscribe | null = null;
+    let unsubscribeUserDoc: (() => void) | null = null;
 
     const unsubscribeAuth = onAuthStateChanged(auth, async (firebaseUser) => {
       // Clean up previous user document subscription if any
@@ -44,39 +37,26 @@ export function useAuth() {
       }
 
       // Query user doc by UID first
-      const usersRef = collection(db, "users");
-      const qUid = query(usersRef, where("uid", "==", firebaseUser.uid));
-
-      // Let's set up a listener on the matching user document
-      unsubscribeUserDoc = onSnapshot(
-        qUid,
-        async (snapshot) => {
-          if (!snapshot.empty) {
-            const docSnap = snapshot.docs[0];
+      unsubscribeUserDoc = UsersRepository.subscribeByUid(
+        firebaseUser.uid,
+        async (dbUser) => {
+          if (dbUser) {
             setUser({
-              id: docSnap.id, // Critical: preserve original doc ID (e.g., '1', '2') for lead assignments
+              ...dbUser,
               uid: firebaseUser.uid,
-              email: firebaseUser.email || "",
-              ...(docSnap.data() as Omit<User, "id" | "uid" | "email">),
+              email: firebaseUser.email || dbUser.email || "",
             });
             setLoading(false);
           } else {
             // Fallback 1: Query by email (for Google sign-in or JIT migration in progress)
             try {
               if (firebaseUser.email) {
-                const qEmail = query(
-                  usersRef,
-                  where("email", "==", firebaseUser.email.toLowerCase())
-                );
-                const emailSnapshot = await getDocs(qEmail);
-
-                if (!emailSnapshot.empty) {
-                  const docSnap = emailSnapshot.docs[0];
+                const emailUser = await UsersRepository.getByEmail(firebaseUser.email);
+                if (emailUser) {
                   setUser({
-                    id: docSnap.id,
+                    ...emailUser,
                     uid: firebaseUser.uid,
                     email: firebaseUser.email,
-                    ...(docSnap.data() as Omit<User, "id" | "uid" | "email">),
                   });
                   setLoading(false);
                   return;
@@ -86,19 +66,12 @@ export function useAuth() {
                 const usernameFromEmail = firebaseUser.email
                   .split("@")[0]
                   .toLowerCase();
-                const qUsername = query(
-                  usersRef,
-                  where("username", "==", usernameFromEmail)
-                );
-                const usernameSnapshot = await getDocs(qUsername);
-
-                if (!usernameSnapshot.empty) {
-                  const docSnap = usernameSnapshot.docs[0];
+                const usernameUser = await UsersRepository.getByUsername(usernameFromEmail);
+                if (usernameUser) {
                   setUser({
-                    id: docSnap.id,
+                    ...usernameUser,
                     uid: firebaseUser.uid,
                     email: firebaseUser.email,
-                    ...(docSnap.data() as Omit<User, "id" | "uid" | "email">),
                   });
                   setLoading(false);
                   return;

@@ -3,7 +3,9 @@ import { useState, useRef, useEffect, useMemo } from "react";
 interface Stage {
   label: string;
   status: string;
-  color: string;
+  /** Dot color class only — chrome uses theme surfaces. */
+  dot: string;
+  text: string;
 }
 
 interface SegmentedStageTrackerProps {
@@ -15,40 +17,42 @@ const stages: Stage[] = [
   {
     label: "Inbox",
     status: "new",
-    color:
-      "bg-purple-500 text-purple-700 dark:text-purple-300 border-purple-200 dark:border-purple-900/50",
+    dot: "bg-theme-accent",
+    text: "text-theme-accent",
   },
   {
     label: "Engaged",
     status: "interested",
-    color:
-      "bg-amber-500 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-900/50",
+    dot: "bg-theme-warning",
+    text: "text-theme-warning",
   },
   {
     label: "Visit",
     status: "site-visit-confirmed",
-    color:
-      "bg-blue-500 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-900/50",
+    dot: "bg-theme-accent",
+    text: "text-theme-accent",
   },
   {
     label: "Booked",
     status: "booked",
-    color:
-      "bg-emerald-500 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-900/50",
+    dot: "bg-theme-success",
+    text: "text-theme-success",
   },
   {
     label: "Lost",
     status: "not-interested",
-    color:
-      "bg-rose-500 text-rose-700 dark:text-rose-300 border-rose-200 dark:border-rose-900/50",
+    dot: "bg-theme-danger",
+    text: "text-theme-danger",
   },
 ];
+
+const chromeBase =
+  "w-full flex items-center px-2 py-1 text-[9px] font-semibold uppercase tracking-wider rounded-theme border border-theme-border bg-theme-card select-none";
 
 export default function SegmentedStageTracker({ status, onChange }: SegmentedStageTrackerProps) {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement | null>(null);
 
-  // Close dropdown on click outside
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
@@ -64,20 +68,20 @@ export default function SegmentedStageTracker({ status, onChange }: SegmentedSta
       case "raw":
       case "new":
       case "not-attempted":
-        return 0; // Inbox / New
+        return 0;
       case "contacted":
       case "re-engaged":
       case "interested":
       case "rnr":
-        return 1; // Engaged / Working
+        return 1;
       case "site-visit-confirmed":
       case "site-visit-completed":
-        return 2; // Site Visit
+        return 2;
       case "booked":
       case "reserved":
-        return 3; // Booked / Closed Won
+        return 3;
       case "not-interested":
-        return -1; // Lost
+        return -1;
       default:
         return 0;
     }
@@ -106,11 +110,12 @@ export default function SegmentedStageTracker({ status, onChange }: SegmentedSta
         <button
           type="button"
           onClick={() => setIsOpen(!isOpen)}
-          className={`w-full flex items-center justify-between px-2 py-1 text-[9px] font-black uppercase tracking-wider rounded border transition-all duration-200 shadow-sm cursor-pointer select-none bg-white dark:bg-gray-800 ${currentStage.color.split(" ")[1]} ${currentStage.color.split(" ")[2]} border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none`}
+          className={`${chromeBase} justify-between transition-colors cursor-pointer hover:bg-theme-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-theme-ring ${currentStage.text}`}
         >
           <span className="flex items-center gap-1.5 truncate">
             <span
-              className={`w-1.5 h-1.5 rounded-full shrink-0 ${currentStage.color.split(" ")[0]}`}
+              className={`w-1.5 h-1.5 rounded-full shrink-0 ${currentStage.dot}`}
+              aria-hidden
             />
             <span className="truncate">{currentStage.label}</span>
           </span>
@@ -120,6 +125,7 @@ export default function SegmentedStageTracker({ status, onChange }: SegmentedSta
             stroke="currentColor"
             strokeWidth="2.5"
             viewBox="0 0 24 24"
+            aria-hidden
           >
             <path
               strokeLinecap="round"
@@ -129,18 +135,17 @@ export default function SegmentedStageTracker({ status, onChange }: SegmentedSta
           </svg>
         </button>
       ) : (
-        <div
-          className={`w-full flex items-center px-2 py-1 text-[9px] font-black uppercase tracking-wider rounded border bg-white dark:bg-gray-800 ${currentStage.color.split(" ")[1]} ${currentStage.color.split(" ")[2]} border-gray-200 dark:border-gray-700 select-none`}
-        >
+        <div className={`${chromeBase} ${currentStage.text}`}>
           <span
-            className={`w-1.5 h-1.5 rounded-full mr-1.5 shrink-0 ${currentStage.color.split(" ")[0]}`}
+            className={`w-1.5 h-1.5 rounded-full mr-1.5 shrink-0 ${currentStage.dot}`}
+            aria-hidden
           />
           <span className="truncate">{currentStage.label}</span>
         </div>
       )}
 
       {isOpen && (
-        <div className="origin-top-left absolute left-0 mt-1 w-36 rounded-md shadow-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 z-50 py-1 transition-all">
+        <div className="origin-top-left absolute left-0 mt-1 w-36 rounded-theme shadow-elevation-md bg-theme-card border border-theme-border z-50 py-1">
           {stages.map((stage) => {
             const isSelected = stage.status === currentStage.status;
             return (
@@ -148,32 +153,23 @@ export default function SegmentedStageTracker({ status, onChange }: SegmentedSta
                 key={stage.status}
                 type="button"
                 onClick={() => handleSelect(stage.status)}
-                className={`w-full flex items-center justify-between px-2.5 py-1.5 text-[9px] font-bold uppercase tracking-wider text-left transition-colors cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50 ${
+                className={`w-full flex items-center justify-between px-2.5 py-1.5 text-[9px] font-semibold uppercase tracking-wider text-left transition-colors cursor-pointer hover:bg-theme-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-theme-ring ${
                   isSelected
-                    ? "text-indigo-600 dark:text-indigo-400 bg-indigo-50/30 dark:bg-indigo-950/20"
-                    : "text-gray-700 dark:text-gray-300"
+                    ? "text-theme-accent bg-theme-accent-muted"
+                    : "text-theme-text"
                 }`}
               >
                 <span className="flex items-center gap-1.5">
                   <span
-                    className={`w-1.5 h-1.5 rounded-full ${stage.color.split(" ")[0]}`}
+                    className={`w-1.5 h-1.5 rounded-full ${stage.dot}`}
+                    aria-hidden
                   />
                   {stage.label}
                 </span>
                 {isSelected && (
-                  <svg
-                    className="w-3 h-3 text-indigo-600 dark:text-indigo-400"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2.5"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      d="M4.5 12.75l6 6 9-13.5"
-                    />
-                  </svg>
+                  <span className="text-theme-accent" aria-hidden>
+                    ✓
+                  </span>
                 )}
               </button>
             );

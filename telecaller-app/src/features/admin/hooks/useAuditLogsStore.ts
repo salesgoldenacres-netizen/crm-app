@@ -1,9 +1,7 @@
 import { useState, useEffect } from "react";
-import { onSnapshot } from "firebase/firestore";
 import { logger } from "@/shared/utils/logger";
 import { AuditLog } from "@/shared/types";
 import { AuditLogsRepository } from "@/shared/services/firebase/repositories";
-import { buildAuditLogsListQuery } from "@/shared/contracts";
 
 export interface UseAuditLogsStoreOptions {
   /**
@@ -33,22 +31,9 @@ export function useAuditLogsStore(options: UseAuditLogsStoreOptions = {}) {
       return;
     }
 
-    const listQuery = buildAuditLogsListQuery(
+    const unsubscribe = AuditLogsRepository.subscribeList(
       listLimit != null ? { limit: listLimit } : {},
-    );
-
-    const unsubscribe = onSnapshot(
-      listQuery,
-      (snapshot) => {
-        if (snapshot.empty) {
-          setAuditLogs([]);
-          setIsLoaded(true);
-          return;
-        }
-        const logs: AuditLog[] = [];
-        snapshot.forEach((d) =>
-          logs.push({ id: d.id, ...d.data() } as AuditLog),
-        );
+      (logs) => {
         // Query orders by timestamp desc; keep client fallback sort
         logs.sort(
           (a, b) =>

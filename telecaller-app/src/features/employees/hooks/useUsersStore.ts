@@ -1,14 +1,13 @@
 import { useState, useEffect } from "react";
-import { onSnapshot } from "firebase/firestore";
+
 import { createSecondaryUser } from "@/shared/services/auth";
 import { useDatabase } from "@/shared/services/DatabaseContext";
 import { User, DeletedUserRecord } from "@/shared/types";
-import { UsersRepository } from "@/shared/services/firebase/repositories";
-import { deletedUsersRef } from "@/shared/services/firebase/converters";
+import { LeadsRepository, UsersRepository } from "@/shared/services/firebase/repositories";
 import { useCustomRolesStore } from "@/features/admin/hooks/useCustomRolesStore";
 
 export function useUsersStore() {
-  const { users, isUsersLoaded: isLoaded, leads } = useDatabase();
+  const { users, isUsersLoaded: isLoaded } = useDatabase();
   const { roles } = useCustomRolesStore();
 
   const addUser = async (user: Omit<User, "id"> & { password?: string }): Promise<void> => {
@@ -24,7 +23,7 @@ export function useUsersStore() {
       throw new Error("Password is required to create a Firebase Auth account.");
     }
 
-    let authUid = "";
+    let authUid: string;
     try {
       const authUser = await createSecondaryUser(email, authPassword);
       authUid = authUser.uid;
@@ -34,6 +33,7 @@ export function useUsersStore() {
     }
 
     // Never persist password to Firestore — Auth holds credentials.
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars -- strip password from profile
     const { password: _authOnly, ...profile } = user;
     const newUser: User = {
       ...profile,
@@ -92,9 +92,8 @@ export function useUsersStore() {
       deletedAt: new Date().toISOString(),
     };
 
-    const leadIdsToUnassign = leads
-      .filter((l) => l.assignedTo === id)
-      .map((l) => l.id);
+    // Paginated assignee scan — does not depend on a global in-memory lead list.
+    const leadIdsToUnassign = await LeadsRepository.listIdsByAssignee(id);
 
     await UsersRepository.deleteUserTransaction(id, uid, deletedRecord, leadIdsToUnassign);
   };
@@ -107,12 +106,8 @@ export function useDeletedUsersStore() {
   const [isLoaded, setIsLoaded] = useState(false);
 
   useEffect(() => {
-    const unsubscribe = onSnapshot(
-      deletedUsersRef,
-      (snapshot) => {
-        const list: DeletedUserRecord[] = [];
-        snapshot.forEach((d) => list.push(d.data()));
-        list.sort((a, b) => new Date(b.deletedAt).getTime() - new Date(a.deletedAt).getTime());
+    const unsubscribe = UsersRepository.subscribeDeletedUsers(
+      (list) => {
         setDeletedUsers(list);
         setIsLoaded(true);
       },

@@ -1,4 +1,4 @@
-import { useMemo, useState, useRef, useEffect } from "react";
+﻿import { useMemo, useState, useRef, useEffect } from "react";
 import {
   MessageCircle,
   ArrowLeft,
@@ -48,7 +48,7 @@ function StatusTicks({ status }: { status?: string }) {
     return <Check className="w-3 h-3 text-theme-muted/50 inline ml-1" />;
   }
   if (status === "failed") {
-    return <AlertCircle className="w-3 h-3 text-rose-400 inline ml-1" />;
+    return <AlertCircle className="w-3 h-3 text-theme-danger inline ml-1" />;
   }
   return null;
 }
@@ -214,10 +214,10 @@ export default function WhatsAppInboxView({
 
   return (
     <div className="space-y-3">
-      <div className="rounded-xl border border-theme-border bg-theme-card px-3 py-2.5 flex flex-col sm:flex-row sm:items-center gap-2.5 justify-between">
+      <div className="rounded-theme border border-theme-border bg-theme-card px-3 py-2.5 flex flex-col sm:flex-row sm:items-center gap-2.5 justify-between">
         <div className="min-w-0">
-          <h1 className="text-sm font-black text-theme-text tracking-tight leading-tight flex items-center gap-1.5">
-            <MessageCircle className="w-3.5 h-3.5 text-green-500" />
+          <h1 className="text-sm font-bold text-theme-text tracking-tight leading-tight flex items-center gap-1.5">
+            <MessageCircle className="w-3.5 h-3.5 text-theme-success" aria-hidden="true" />
             WhatsApp Inbox
           </h1>
           <p className="text-[10px] text-theme-muted mt-0.5 leading-snug">
@@ -228,7 +228,7 @@ export default function WhatsAppInboxView({
           <span
             className={`text-[10px] font-bold px-2 py-1 rounded-full border ${
               isConnected
-                ? "bg-emerald-500/15 text-emerald-600 border-emerald-500/30"
+                ? "bg-theme-success/15 text-theme-success border-theme-success/30"
                 : "bg-theme-surface text-theme-muted border-theme-border"
             }`}
           >
@@ -250,7 +250,7 @@ export default function WhatsAppInboxView({
         </div>
       </div>
 
-      <div className="bg-theme-card rounded-xl shadow-md border border-theme-border h-[600px] flex overflow-hidden">
+      <div className="bg-theme-card rounded-theme shadow-elevation-sm border border-theme-border h-[600px] flex overflow-hidden">
         {/* Panel 1: Conversations */}
         <div
           className={`w-full md:w-[28%] border-r border-theme-border flex flex-col bg-theme-surface/50 ${
@@ -258,7 +258,7 @@ export default function WhatsAppInboxView({
           }`}
         >
           <div className="p-2.5 border-b border-theme-border space-y-2">
-            <span className="text-[10px] font-black text-theme-muted uppercase tracking-wider block">
+            <span className="text-[10px] font-bold text-theme-muted uppercase tracking-wider block">
               Conversations
             </span>
             <div className="relative">
@@ -267,7 +267,7 @@ export default function WhatsAppInboxView({
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Search name, phone, message…"
-                className="w-full h-8 pl-8 pr-2 rounded-lg border border-theme-border bg-theme-card text-[11px] text-theme-text outline-none focus:border-theme-accent"
+                className="w-full h-8 pl-8 pr-2 rounded-theme border border-theme-border bg-theme-card text-[11px] text-theme-text outline-none focus:border-theme-accent focus-visible:ring-2 focus-visible:ring-theme-ring"
               />
             </div>
           </div>
@@ -366,7 +366,7 @@ export default function WhatsAppInboxView({
                       className={`flex ${mine ? "justify-end" : "justify-start"}`}
                     >
                       <div
-                        className={`max-w-[80%] rounded-2xl px-3 py-2 text-[12px] leading-snug shadow-sm ${
+                        className={`max-w-[80%] rounded-theme px-3 py-2 text-[12px] leading-snug shadow-sm ${
                           mine
                             ? "bg-theme-accent text-theme-accent-fg rounded-br-md"
                             : "bg-theme-card text-theme-text border border-theme-border rounded-bl-md"
@@ -433,14 +433,14 @@ export default function WhatsAppInboxView({
               )}
 
               {sendError && (
-                <div className="px-3 py-1.5 text-[10px] text-rose-600 dark:text-rose-400 border-t border-theme-border">
+                <div className="px-3 py-1.5 text-[10px] text-theme-danger border-t border-theme-border">
                   {sendError}
                 </div>
               )}
 
               <div className="relative border-t border-theme-border p-2.5 bg-theme-card space-y-2">
                 {templatesOpen && (
-                  <div className="absolute bottom-full left-2 right-2 mb-1 rounded-xl border border-theme-border bg-theme-card shadow-lg p-2 z-10 max-h-48 overflow-y-auto">
+                  <div className="absolute bottom-full left-2 right-2 mb-1 rounded-theme border border-theme-border bg-theme-card shadow-lg p-2 z-10 max-h-48 overflow-y-auto">
                     {WHATSAPP_TEMPLATES.map((t) => (
                       <button
                         key={t.id}
@@ -463,7 +463,7 @@ export default function WhatsAppInboxView({
                   </div>
                 )}
                 {attachmentsOpen && (
-                  <div className="absolute bottom-full left-2 right-2 mb-1 rounded-xl border border-theme-border bg-theme-card shadow-lg p-2 z-10">
+                  <div className="absolute bottom-full left-2 right-2 mb-1 rounded-theme border border-theme-border bg-theme-card shadow-lg p-2 z-10">
                     {WHATSAPP_ATTACHMENTS.map((a) => (
                       <button
                         key={a.id}
@@ -549,7 +549,7 @@ export default function WhatsAppInboxView({
           }`}
         >
           <div className="p-2.5 border-b border-theme-border">
-            <span className="text-[10px] font-black text-theme-muted uppercase tracking-wider">
+            <span className="text-[10px] font-bold text-theme-muted uppercase tracking-wider">
               Lead
             </span>
           </div>

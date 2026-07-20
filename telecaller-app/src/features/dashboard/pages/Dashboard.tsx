@@ -26,6 +26,8 @@ import { useDashboardWidgets } from "@/features/dashboard/hooks/useDashboardWidg
 // Global Stores
 import { useProjectsStore } from "@/features/plots/hooks/useProjectsStore";
 import { useLeadsStore } from "@/features/leads/hooks/useLeadsStore";
+import { useAgentOpenLeads } from "@/features/leads/hooks/useAgentOpenLeads";
+import { AGENT_OPEN_LEADS_REALTIME_BOUND } from "@/shared/services/leads/leadQueryConstants";
 import { useUsersStore } from "@/features/employees/hooks/useUsersStore";
 import { useNotificationsStore } from "@/features/dashboard/hooks/useNotificationsStore";
 import { useAgentStatusStore } from "@/features/employees/hooks/useAgentStatusStore";
@@ -73,7 +75,8 @@ export default function Dashboard({ user, onLogout: _onLogout }: DashboardProps)
 
   // Global Stores Fetches
   const { projects, isLoaded: projectsLoaded } = useProjectsStore();
-  const { leads, isLoaded: leadsLoaded, addLead } = useLeadsStore();
+  const { addLead } = useLeadsStore();
+  const { openLeads: leads, isLoaded: leadsLoaded } = useAgentOpenLeads();
   const { users } = useUsersStore();
 
   const { notifications, addNotification, markAsRead, markAllAsRead } = useNotificationsStore(user?.id);
@@ -110,42 +113,34 @@ export default function Dashboard({ user, onLogout: _onLogout }: DashboardProps)
   const { trainingData } = useTrainingStore({ enabled: needsTrainingStore });
   const { coachingTip } = useCoachingTipStore({ enabled: needsWidgetStores });
 
+  // History: push (default) — matches sidebar <Link> so Back returns prior tab/subtab.
   const setActiveTab = useCallback(
     (tab: string) => {
-      setSearchParams(
-        (prev) => {
-          prev.set("tab", tab);
-          prev.delete("subtab");
-          return prev;
-        },
-        { replace: true }
-      );
+      setSearchParams((prev) => {
+        prev.set("tab", tab);
+        prev.delete("subtab");
+        return prev;
+      });
     },
     [setSearchParams]
   );
 
   const setLeadsSubTab = useCallback(
     (subtab: string) => {
-      setSearchParams(
-        (prev) => {
-          prev.set("subtab", subtab);
-          return prev;
-        },
-        { replace: true }
-      );
+      setSearchParams((prev) => {
+        prev.set("subtab", subtab);
+        return prev;
+      });
     },
     [setSearchParams]
   );
 
   const setCallsSubTab = useCallback(
     (subtab: string) => {
-      setSearchParams(
-        (prev) => {
-          prev.set("subtab", subtab);
-          return prev;
-        },
-        { replace: true }
-      );
+      setSearchParams((prev) => {
+        prev.set("subtab", subtab);
+        return prev;
+      });
     },
     [setSearchParams]
   );
@@ -332,15 +327,26 @@ export default function Dashboard({ user, onLogout: _onLogout }: DashboardProps)
     return notifications.find((n) => !n.userId && !n.read);
   }, [notifications]);
 
+  /**
+   * Follow-up alerts from agent openLeads only (useAgentOpenLeads), bounded to
+   * AGENT_OPEN_LEADS_REALTIME_BOUND assigned leads via DatabaseContext.
+   * Managers get an empty array by design — no company-wide lead scan here.
+   * Company-wide follow-ups need LeadQueryService + followUpDate filter (future).
+   */
   const followUpAlertLeads = useMemo(() => {
-    return leads.filter(
-      (l) =>
-        (isManagerial(user.role) || l.assignedTo === user.id) &&
-        l.followUpDate === todayStr &&
-        l.status !== "booked" &&
-        l.status !== "not-interested"
-    );
-  }, [leads, user, isManagerial, todayStr]);
+    if (isManagerial(user.role)) {
+      return [];
+    }
+    return leads
+      .slice(0, AGENT_OPEN_LEADS_REALTIME_BOUND)
+      .filter(
+        (l) =>
+          l.assignedTo === user.id &&
+          l.followUpDate === todayStr &&
+          l.status !== "booked" &&
+          l.status !== "not-interested"
+      );
+  }, [leads, user.id, user.role, isManagerial, todayStr]);
 
   const handleAddLeadSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -396,10 +402,16 @@ export default function Dashboard({ user, onLogout: _onLogout }: DashboardProps)
     return notifications.filter((n) => !n.read).length;
   }, [notifications]);
 
+  const skipLinkClassName =
+    "sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-[100] focus:px-4 focus:py-2 focus:bg-theme-accent focus:text-theme-accent-fg focus:rounded-theme focus:outline-none focus:ring-2 focus:ring-theme-ring focus:ring-offset-2 focus:ring-offset-theme-bg";
+
   // Loading skeleton screen
   if (!projectsLoaded || !leadsLoaded || !prefsLoaded) {
     return (
       <div className="h-full min-h-0 bg-theme-bg flex flex-col" aria-busy="true" aria-label="Loading dashboard">
+        <a href="#main-content" className={skipLinkClassName}>
+          Skip to main content
+        </a>
         <div className="h-14 border-b border-theme-border bg-theme-card px-6 flex items-center gap-3">
           <div className="w-8 h-8 rounded-theme bg-theme-surface animate-pulse" />
           <div className="h-5 w-40 rounded-theme bg-theme-surface animate-pulse" />
@@ -409,7 +421,7 @@ export default function Dashboard({ user, onLogout: _onLogout }: DashboardProps)
             <div className="w-24 h-8 rounded-theme bg-theme-surface animate-pulse" />
           </div>
         </div>
-        <div className="flex-1 p-6 max-w-7xl mx-auto w-full space-y-6">
+        <main id="main-content" className="flex-1 p-6 max-w-7xl mx-auto w-full space-y-6">
           <div className="flex gap-3 flex-wrap">
             {Array.from({ length: 6 }).map((_, i) => (
               <div key={i} className="h-9 w-28 rounded-full bg-theme-surface animate-pulse" />
@@ -427,13 +439,16 @@ export default function Dashboard({ user, onLogout: _onLogout }: DashboardProps)
               </div>
             ))}
           </div>
-        </div>
+        </main>
       </div>
     );
   }
 
   return (
     <div className="h-full min-h-0 flex flex-col overflow-hidden w-full">
+      <a href="#main-content" className={skipLinkClassName}>
+        Skip to main content
+      </a>
       <ConfettiEffect active={triggerConfetti} />
 
       {/* Pinned chrome — never scrolls */}
@@ -470,10 +485,12 @@ export default function Dashboard({ user, onLogout: _onLogout }: DashboardProps)
         user={user}
         isManagerial={isManagerial}
         activeTab={activeTab}
-        setActiveTab={setActiveTab}
       />
 
-      <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden w-full pb-20 md:pb-0">
+      <main
+        id="main-content"
+        className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden w-full pb-20 md:pb-0"
+      >
         {/* Mobile Status Details Summary Panel */}
         <MobileStatusPanel
           user={user}
@@ -568,9 +585,13 @@ export default function Dashboard({ user, onLogout: _onLogout }: DashboardProps)
             trainingData={trainingData}
           />
         </div>
-      </div>
+      </main>
 
-      {/* Simulated Dialer HUD overlay */}
+      {/*
+        Outbound dialer for Dashboard-local call state only.
+        IVR ringing is hosted solely by ModalHost DialerOverlay to avoid dual
+        focus-trapped modals (Wave 10 Agent 7).
+      */}
       <DialerOverlay
         activeDialerLead={activeDialerLead}
         dialerStatus={dialerStatus}
@@ -580,9 +601,9 @@ export default function Dashboard({ user, onLogout: _onLogout }: DashboardProps)
         dialerSpeaker={dialerSpeaker}
         setDialerSpeaker={setDialerSpeaker}
         handleEndCall={() => handleEndCall(setCallLogForm as any)}
-        activeIvrCall={activeIvrCall}
+        activeIvrCall={null}
         ivrSettings={ivrSettings}
-        matchedIvrLead={matchedIvrLead}
+        matchedIvrLead={null}
         projects={projects}
         clearActiveIvrCall={clearActiveIvrCall}
         handleAnswerIvrCall={handleAnswerIvrCall}
@@ -614,33 +635,37 @@ export default function Dashboard({ user, onLogout: _onLogout }: DashboardProps)
         user={user}
       />
 
-      {/* Add Lead Floating Action Button */}
-      <button
-        onClick={() => {
-          setAddLeadForm({
-            name: "",
-            phone: "",
-            email: "",
-            projectId: "",
-            plotId: "",
-            notes: "",
-            status: "new",
-            assignedTo: !isManagerial(user.role) ? user.id : "",
-            priority: "warm",
-            createdTime: new Date().toISOString(),
-            leadSource: "Direct Call",
-            leadMedium: "Direct",
-            followUpOn: "",
-            leadNumber: "",
-            createdBy: user.username,
-          });
-          setIsAddLeadModalOpen(true);
-        }}
-        className="md:hidden fixed bottom-20 right-6 z-40 w-14 h-14 bg-theme-accent hover:opacity-90 rounded-full flex items-center justify-center text-theme-accent-fg shadow-2xl hover:scale-105 active:scale-95 transition-all duration-200 cursor-pointer border border-theme-accent/20"
-        title="Add New Lead"
-      >
-        <Plus className="w-6 h-6" />
-      </button>
+      {/* Add Lead FAB — stacked above global Dial FAB (ModalHost) to avoid collision */}
+      {(activeTab === "leads" || activeTab === "calls") && (
+        <button
+          type="button"
+          onClick={() => {
+            setAddLeadForm({
+              name: "",
+              phone: "",
+              email: "",
+              projectId: "",
+              plotId: "",
+              notes: "",
+              status: "new",
+              assignedTo: !isManagerial(user.role) ? user.id : "",
+              priority: "warm",
+              createdTime: new Date().toISOString(),
+              leadSource: "Direct Call",
+              leadMedium: "Direct",
+              followUpOn: "",
+              leadNumber: "",
+              createdBy: user.username,
+            });
+            setIsAddLeadModalOpen(true);
+          }}
+          className="md:hidden fixed bottom-36 right-6 z-40 w-14 h-14 bg-theme-accent hover:opacity-90 rounded-full flex items-center justify-center text-theme-accent-fg shadow-2xl hover:scale-105 active:scale-95 transition-all duration-200 cursor-pointer border border-theme-accent/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-theme-ring focus-visible:ring-offset-2 focus-visible:ring-offset-theme-bg"
+          title="Add New Lead"
+          aria-label="Add new lead"
+        >
+          <Plus className="w-6 h-6" aria-hidden="true" />
+        </button>
+      )}
     </div>
   );
 }

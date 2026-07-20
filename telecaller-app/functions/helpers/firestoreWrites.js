@@ -1,12 +1,12 @@
 /**
  * Shared Firestore write helpers for Cloud Functions.
  *
- * DEFERRED (callLogs extraction): dual-write to a top-level `callLogs`
- * collection + cap the embedded lead.callLogs array. Until then, prefer
- * appendCallLog (arrayUnion) for race-safe appends.
+ * Phase C: call-log writes go through helpers/callLogsRepository (top-level
+ * `callLogs` collection + lead summary fields). No embedded array appends.
  */
 
 const admin = require("firebase-admin");
+const { createCallLog } = require("./callLogsRepository");
 
 /**
  * @param {unknown} err
@@ -19,21 +19,15 @@ function isAlreadyExistsError(err) {
 }
 
 /**
- * Append a call log entry without read-modify-write races.
+ * Append a call log entry to the top-level callLogs collection and update lead summaries.
  * @param {FirebaseFirestore.Firestore} db
  * @param {string} leadId
  * @param {object} logEntry
- * @param {Record<string, unknown>} [extraFields]
+ * @param {Record<string, unknown>} [extraFields] lead fields merged into the same batch
+ * @returns {Promise<string>} callLog id
  */
 async function appendCallLog(db, leadId, logEntry, extraFields = {}) {
-  await db
-    .collection("leads")
-    .doc(leadId)
-    .update({
-      updatedAt: new Date().toISOString(),
-      callLogs: admin.firestore.FieldValue.arrayUnion(logEntry),
-      ...extraFields,
-    });
+  return createCallLog(db, leadId, logEntry, extraFields);
 }
 
 /**
@@ -55,7 +49,8 @@ async function writeAuditLog(db, input) {
 }
 
 /**
- * Create-once ingest event for webhook idempotency (after auth).
+ * Create-once ingest event for webhook idempotency (claim-before-work gate).
+ * Uses Firestore create() so concurrent callers race safely — only one wins.
  * @param {FirebaseFirestore.Firestore} db
  * @param {string} eventId
  * @param {Record<string, unknown>} payload
@@ -75,6 +70,33 @@ async function claimIngestEvent(db, eventId, payload) {
     }
     throw err;
   }
+}
+
+/**
+ * Finalize a claimed ingest event after work completes.
+ * @param {FirebaseFirestore.Firestore} db
+ * @param {string} eventId
+ * @param {Record<string, unknown>} fields
+ * @returns {Promise<void>}
+ */
+async function updateIngestEvent(db, eventId, fields) {
+  const ref = db.collection("ingestEvents").doc(eventId);
+  await ref.update({
+    ...fields,
+    updatedAt: new Date().toISOString(),
+  });
+}
+
+/**
+ * Release an ingest claim so a retriable failure can be reprocessed.
+ * Safe only before any durable side effects (e.g. lead create) are committed.
+ * @param {FirebaseFirestore.Firestore} db
+ * @param {string} eventId
+ * @returns {Promise<void>}
+ */
+async function releaseIngestEvent(db, eventId) {
+  const ref = db.collection("ingestEvents").doc(eventId);
+  await ref.delete();
 }
 
 /**
@@ -99,5 +121,7 @@ module.exports = {
   appendCallLog,
   writeAuditLog,
   claimIngestEvent,
+  updateIngestEvent,
+  releaseIngestEvent,
   isInvalidFcmTokenError,
 };

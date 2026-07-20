@@ -111,16 +111,16 @@ export function getAgentPoints(telecaller: User, leads: Lead[]): AgentPerformanc
     (l) => l.status === "not-interested"
   ).length;
 
-  // Badge unlocks
+  // Badge unlocks (text labels only — no persistent emoji)
   const badges: string[] = [];
-  if (assignedLeadsCount >= 1) badges.push("Welcome Aboard 🤝");
-  if (bookingsCount >= 1) badges.push("First Booking 🏆");
-  if (currentMonthBookings >= 5) badges.push("Top Closer 👑");
-  if (currentMonthCalls >= 7500) badges.push("Dialer Pro 📞");
-  if (maxCallsInADay >= 200) badges.push("Phone Warrior 🔥");
-  if (siteVisits >= 5) badges.push("Visit Master 📅");
-  if (rejections >= 10) badges.push("Rejection Warrior 💪");
-  if (weeklyCalls >= 1500) badges.push("Elite Agent 💎");
+  if (assignedLeadsCount >= 1) badges.push("Welcome Aboard");
+  if (bookingsCount >= 1) badges.push("First Booking");
+  if (currentMonthBookings >= 5) badges.push("Top Closer");
+  if (currentMonthCalls >= 7500) badges.push("Dialer Pro");
+  if (maxCallsInADay >= 200) badges.push("Phone Warrior");
+  if (siteVisits >= 5) badges.push("Visit Master");
+  if (rejections >= 10) badges.push("Rejection Warrior");
+  if (weeklyCalls >= 1500) badges.push("Elite Agent");
 
   return { points, callsCount, bookingsCount, interestedCount, badges };
 }

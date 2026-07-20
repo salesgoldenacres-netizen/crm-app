@@ -18,16 +18,16 @@ export interface BankLoanRates {
 }
 
 export const QUICK_CALL_TEMPLATES: QuickCallTemplate[] = [
-  { label: "Busy 📴", text: "Customer busy, requested callback tomorrow." },
+  { label: "Busy", text: "Customer busy, requested callback tomorrow." },
   {
-    label: "Discount req. 💸",
+    label: "Discount req.",
     text: "Customer interested. Requested a price discount for negotiation.",
   },
   {
-    label: "Site Visit 🚗",
+    label: "Site Visit",
     text: "Customer agreed to schedule a site visit for this weekend.",
   },
-  { label: "Not Answering 🚫", text: "Called client. Ringing, but no answer." },
+  { label: "Not Answering", text: "Called client. Ringing, but no answer." },
 ];
 
 export const BANK_LOAN_RATES: BankLoanRates = {

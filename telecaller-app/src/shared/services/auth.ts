@@ -75,7 +75,8 @@ export const loginWithGoogle = async (): Promise<FirebaseUser> => {
     logger.error("AuthService", "linkUserProfile failed", err);
     await signOut(auth);
     throw new Error(
-      "Could not link your account to a registered profile. Please contact the administrator."
+      "Could not link your account to a registered profile. Please contact the administrator.",
+      { cause: err },
     );
   }
 

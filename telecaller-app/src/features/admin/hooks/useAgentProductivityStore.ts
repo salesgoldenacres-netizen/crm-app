@@ -1,7 +1,5 @@
 import { useState, useEffect } from "react";
-import { onSnapshot } from "firebase/firestore";
 import { DailyProductivity } from "@/shared/types";
-import { agentProductivityRef } from "@/shared/services/firebase/converters";
 import { AgentProductivityRepository } from "@/shared/services/firebase/repositories";
 
 export function useAgentProductivityStore() {
@@ -9,17 +7,10 @@ export function useAgentProductivityStore() {
   const [isLoaded, setIsLoaded] = useState(false);
 
   useEffect(() => {
-    const unsubscribe = onSnapshot(
-      agentProductivityRef,
-      (snapshot) => {
-        const prod: Record<string, DailyProductivity> = {};
-        snapshot.forEach((d) => {
-          prod[d.id] = d.data();
-        });
-        setProductivity(prod);
-        setIsLoaded(true);
-      }
-    );
+    const unsubscribe = AgentProductivityRepository.subscribeMap((prod) => {
+      setProductivity(prod);
+      setIsLoaded(true);
+    });
     return () => unsubscribe();
   }, []);
 
@@ -33,6 +24,11 @@ interface UpdateAgentProductivityArgs {
   prevStatus: string;
 }
 
+/**
+ * @deprecated Phase F — do not call from client logCall paths.
+ * Sole productivity writer is the Cloud Function + productivityEvents.
+ * Kept only for emergency/admin tooling; prefer CF.
+ */
 export async function updateAgentProductivity({
   userId,
   newStatus,       // lead status after this call (e.g. 'booked', 'interested')

@@ -4,6 +4,7 @@ import {
   getDocs,
   limit,
   query,
+  where,
   DocumentSnapshot,
   getDoc,
   doc,
@@ -15,12 +16,13 @@ import { FirestoreCursorAdapter } from "../adapters/FirestoreCursorAdapter";
 import { buildRoleScopedLeadsQuery, LeadScopeOptions } from "@/shared/contracts/queryScopes";
 import { CustomRole, Lead, User } from "@/shared/types";
 import { db } from "@/shared/services/firebase";
+import { isManagerial } from "@/shared/utils/roleUtils";
 
 export class FirestorePaginationProvider implements PaginationProvider<Lead> {
   constructor(
     private readonly user: User | null,
     private readonly customRoles: CustomRole[],
-    private readonly activeProjectId?: string
+    private readonly activeProjectId?: string | null
   ) {}
 
   /**
@@ -29,18 +31,41 @@ export class FirestorePaginationProvider implements PaginationProvider<Lead> {
   public async fetchPage(options: PaginationOptions): Promise<CursorPage<Lead>> {
     PaginationService.validatePageSize(options.pageSize);
 
-    // Build the query scoping options
+    const leadScope = options.leadScope;
+    const projectId =
+      leadScope?.projectId !== undefined
+        ? leadScope.projectId
+        : this.activeProjectId;
+
     const scopeOptions: LeadScopeOptions = {
-      projectId: this.activeProjectId,
+      projectId,
+      orderField: leadScope?.orderField ?? "updatedAt",
+      orderDirection: leadScope?.orderDirection ?? "desc",
+      omitLimit: leadScope?.omitLimit ?? true,
       pageSize: options.pageSize,
     };
 
-    // Resolve user ID string safely
     const uid = this.user ? this.user.uid || this.user.id || "" : "";
     const roleCode = this.user ? this.user.role || "" : "";
 
-    // Build scoped query
-    let baseQuery = buildRoleScopedLeadsQuery(uid, roleCode, this.customRoles, scopeOptions);
+    let baseQuery = buildRoleScopedLeadsQuery(
+      uid,
+      roleCode,
+      this.customRoles,
+      scopeOptions,
+    );
+
+    // Index-safe extra equality: manager filtering by assignee.
+    // Agents are already scoped to assignedTo == uid in buildAgentLeadsQuery.
+    if (
+      leadScope?.assignedTo &&
+      isManagerial(roleCode, this.customRoles)
+    ) {
+      baseQuery = query(
+        baseQuery as Query<Lead>,
+        where("assignedTo", "==", leadScope.assignedTo),
+      );
+    }
 
     if (options.cursor) {
       const decoded = FirestoreCursorAdapter.decode(options.cursor);
@@ -51,33 +76,33 @@ export class FirestorePaginationProvider implements PaginationProvider<Lead> {
       }
     }
 
-    // Request pageSize + 1 to check if hasNextPage is true
     const fetchLimit = options.pageSize + 1;
     const paginatedQuery = query(baseQuery as Query<Lead>, limit(fetchLimit));
 
-    // Execute lookup
     const querySnap = await getDocs(paginatedQuery);
     const docs = querySnap.docs;
 
     const hasNextPage = docs.length > options.pageSize;
     const pageDocs = hasNextPage ? docs.slice(0, options.pageSize) : docs;
 
-    const items = pageDocs.map((d) => d.data());
+    const items = pageDocs.map((d) => {
+      const data = d.data();
+      return { ...data, id: d.id } as Lead;
+    });
 
-    // Generate cursors using the adapter
     const lastDoc = pageDocs[pageDocs.length - 1];
-    const nextCursor = hasNextPage && lastDoc
-      ? FirestoreCursorAdapter.encode(lastDoc as DocumentSnapshot, "next")
-      : undefined;
+    const nextCursor =
+      hasNextPage && lastDoc
+        ? FirestoreCursorAdapter.encode(lastDoc as DocumentSnapshot, "next")
+        : undefined;
 
-    // Previous cursor is determined by the service stack (stateless query ignores this)
     const hasPreviousPage = !!options.cursor;
 
     return PaginationService.buildCursorPage(
       items,
       options.pageSize,
       nextCursor,
-      options.cursor, // Current cursor acts as back reference point
+      options.cursor,
       hasNextPage,
       hasPreviousPage
     );

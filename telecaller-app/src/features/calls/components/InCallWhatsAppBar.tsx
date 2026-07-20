@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+﻿import { useMemo, useState } from "react";
 import {
   MessageCircle,
   ChevronUp,
@@ -92,24 +92,24 @@ export default function InCallWhatsAppBar({
 
   return (
     <div className="fixed top-16 bottom-20 md:bottom-4 right-2 md:right-4 w-[min(100%-1rem,360px)] z-50 animate-fadeIn flex flex-col pointer-events-none">
-      <div className="pointer-events-auto mt-auto md:mt-0 md:h-full max-h-[min(70vh,640px)] md:max-h-none rounded-2xl border border-green-500/30 bg-theme-card/95 backdrop-blur-md shadow-xl overflow-hidden flex flex-col">
+      <div className="pointer-events-auto mt-auto md:mt-0 md:h-full max-h-[min(70vh,640px)] md:max-h-none rounded-theme border border-theme-success/30 bg-theme-card/95 backdrop-blur-md shadow-elevation-md overflow-hidden flex flex-col">
         <button
           type="button"
           onClick={() => setExpanded((v) => !v)}
-          className="w-full flex items-center gap-2 px-3 py-2.5 cursor-pointer border-0 bg-green-600/10 hover:bg-green-600/15 text-left"
+          className="w-full flex items-center gap-2 px-3 py-2.5 cursor-pointer border-0 bg-theme-success/10 hover:bg-theme-success/15 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-theme-ring"
         >
-          <span className="size-8 rounded-lg bg-green-600 text-white inline-flex items-center justify-center shrink-0">
+          <span className="size-8 rounded-theme bg-theme-success text-white inline-flex items-center justify-center shrink-0">
             <MessageCircle className="w-4 h-4" />
           </span>
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-1.5">
-              <span className="text-[11px] font-black text-theme-text truncate">
+              <span className="text-[11px] font-bold text-theme-text truncate">
                 WhatsApp · {lead.name}
               </span>
               <span
                 className={`text-[8px] font-bold uppercase px-1.5 py-0.5 rounded-full border ${
                   isConnected
-                    ? "border-emerald-500/40 text-emerald-600"
+                    ? "border-theme-success/40 text-theme-success"
                     : "border-theme-border text-theme-muted"
                 }`}
               >
@@ -222,7 +222,7 @@ export default function InCallWhatsAppBar({
             )}
 
             {error && (
-              <p className="px-2.5 pt-1 text-[9px] text-rose-500">{error}</p>
+              <p className="px-2.5 pt-1 text-[9px] text-theme-danger">{error}</p>
             )}
 
             <div className="p-2.5 flex items-center gap-1.5">

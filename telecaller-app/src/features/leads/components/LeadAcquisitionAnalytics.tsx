@@ -1,4 +1,4 @@
-import { Activity } from "lucide-react";
+﻿import { Activity } from "lucide-react";
 import { Lead } from "@/shared/types";
 
 interface LeadAcquisitionAnalyticsProps {
@@ -58,7 +58,7 @@ export default function LeadAcquisitionAnalytics({ leads }: LeadAcquisitionAnaly
   ];
 
   return (
-    <div className="bg-theme-card rounded-xl shadow-sm border border-theme-border p-5 mb-6 text-sm">
+    <div className="bg-theme-card rounded-theme shadow-sm border border-theme-border p-5 mb-6 text-sm">
       <h3 className="text-sm font-bold text-theme-text uppercase tracking-wider mb-4 flex items-center">
         <Activity className="w-4 h-4 mr-2 text-indigo-500" />
         Lead Source Acquisition Analytics
@@ -77,7 +77,7 @@ export default function LeadAcquisitionAnalytics({ leads }: LeadAcquisitionAnaly
           ))}
         </div>
 
-        <div className="col-span-3 h-28 bg-gray-55 dark:bg-gray-900/50 rounded-xl border dark:border-gray-800 flex items-end justify-around px-4 pb-2 pt-4">
+        <div className="col-span-3 h-28 bg-gray-55 dark:bg-gray-900/50 rounded-theme border dark:border-gray-800 flex items-end justify-around px-4 pb-2 pt-4">
           {items.map((item) => (
             <div key={item.label} className="flex flex-col items-center w-16 space-y-1.5 group">
               <div className="text-[10px] font-bold text-gray-650 dark:text-gray-400 group-hover:scale-105 transition-transform">

@@ -195,7 +195,7 @@ export default function AdminProjectsTab({ user }: AdminProjectsTabProps) {
         <button
           type="button"
           onClick={() => handleOpenProjectModal()}
-          className="inline-flex items-center px-2.5 h-8 bg-theme-accent hover:opacity-90 text-theme-accent-fg rounded-theme text-[11px] font-bold transition-colors cursor-pointer border-0"
+          className="inline-flex items-center min-h-11 sm:min-h-0 sm:h-8 px-3 py-2 sm:py-0 bg-theme-accent hover:opacity-90 text-theme-accent-fg rounded-theme text-[11px] font-bold transition-colors cursor-pointer border-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-theme-ring"
         >
           <Plus className="w-3.5 h-3.5 mr-1.5" /> Add Project
         </button>

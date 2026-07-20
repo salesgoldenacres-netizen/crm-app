@@ -1,14 +1,13 @@
 import { logAnalyticsEvent } from "@/shared/utils/analytics";
 import { logger } from "@/shared/utils/logger";
-import { updateAgentProductivity } from "@/features/admin/hooks/adminStores";
-import { useDatabase } from "@/shared/services/DatabaseContext";
 import { Lead, CallLog } from "@/shared/types";
 import {
   normalizePhone,
   cleanLeadName,
   cleanEmailAddress,
 } from "@/shared/utils/formatUtils";
-import { LeadsRepository } from "@/shared/services/firebase/repositories";
+import { LeadRepository } from "@/shared/services/firebase/repositories";
+import { CallLogsRepository } from "@/shared/services/firebase/CallLogsRepository";
 import {
   publishCallCompleted,
   publishFollowUpDiff,
@@ -41,29 +40,26 @@ export interface LogCallPayload {
   timelineActivity?: LogCallTimelineActivity;
 }
 
+/**
+ * Lead mutation facade. List reads → LeadQueryService / useLeadQuery.
+ * Agent dialer convenience → useAgentOpenLeads (bounded, not list SoT).
+ * Productivity counters → Cloud Function only (no client increments).
+ */
 export function useLeadsStore() {
-  const { leads, isLeadsLoaded: isLoaded } = useDatabase();
-
-  const addLead = async (leadData: Partial<Lead> & { name: string; phone: string }): Promise<Lead | { isDuplicate: boolean }> => {
+  const addLead = async (
+    leadData: Partial<Lead> & { name: string; phone: string },
+  ): Promise<Lead | { isDuplicate: boolean }> => {
     const cleanName = cleanLeadName(leadData.name);
     const cleanEmail = cleanEmailAddress(leadData.email || "");
     const cleanPhone = normalizePhone(leadData.phone);
 
-    // 2. Deduplication check against in-memory leads array
-    const duplicate = leads.find((l: Lead) => l.phone === cleanPhone);
+    const duplicates = await LeadRepository.findByPhone(cleanPhone, 1);
+    const duplicate = duplicates[0];
     if (duplicate) {
       logger.info(
         "LeadsStore",
-        `Client-side duplicate detected for phone: ${cleanPhone}. Merging into existing lead ID: ${duplicate.id}`
+        `Duplicate detected for phone: ${cleanPhone}. Merging into existing lead ID: ${duplicate.id}`,
       );
-
-      const newLogs = duplicate.callLogs ? [...duplicate.callLogs] : [];
-      newLogs.push({
-        date: new Date().toISOString(),
-        note: `Duplicate lead attempt merged. Source: Manual/Bulk Upload. Notes: ${leadData.notes || "No description provided."}`,
-        status: duplicate.status || "new",
-        agent: "system",
-      });
 
       const updatedLead: Lead = {
         ...duplicate,
@@ -75,11 +71,19 @@ export function useLeadsStore() {
             : duplicate.name,
         email: duplicate.email || cleanEmail,
         updatedAt: new Date().toISOString(),
-        callLogs: newLogs,
       };
 
-      // Save update in Firestore
-      await LeadsRepository.add(updatedLead);
+      await LeadRepository.update(duplicate.id, {
+        name: updatedLead.name,
+        email: updatedLead.email,
+        updatedAt: updatedLead.updatedAt,
+      });
+      await CallLogsRepository.create(duplicate.id, {
+        date: new Date().toISOString(),
+        note: `Duplicate lead attempt merged. Source: Manual/Bulk Upload. Notes: ${leadData.notes || "No description provided."}`,
+        status: duplicate.status || "new",
+        agent: "system",
+      });
       return { ...updatedLead, isDuplicate: true };
     }
 
@@ -100,16 +104,17 @@ export function useLeadsStore() {
       source: leadData.source || "Direct Call",
       followUpDate: finalFollowUp,
       followUpOn: finalFollowUp,
-      callLogs: leadData.callLogs || [
-        {
-          date: new Date().toISOString(),
-          note: "Lead created.",
-          status: leadData.status || "new",
-          agent: "system",
-        },
-      ],
+      callCount: 0,
+      hasAgentCall: false,
     };
-    await LeadsRepository.add(newLead);
+    delete (newLead as Partial<Lead>).callLogs;
+    await LeadRepository.add(newLead);
+    await CallLogsRepository.create(newId, {
+      date: new Date().toISOString(),
+      note: "Lead created.",
+      status: leadData.status || "new",
+      agent: "system",
+    });
     logAnalyticsEvent("lead_created", {
       id: newId,
       projectId: leadData.source || "unassigned",
@@ -128,8 +133,8 @@ export function useLeadsStore() {
     updatedFields: Partial<Lead>,
     options?: { suppressTimeline?: boolean },
   ): Promise<void> => {
-    const prev = leads.find((l: Lead) => l.id === id);
-    await LeadsRepository.update(id, updatedFields);
+    const prev = await LeadRepository.getById(id);
+    await LeadRepository.update(id, updatedFields);
 
     if (!prev || options?.suppressTimeline) return;
 
@@ -196,7 +201,7 @@ export function useLeadsStore() {
   };
 
   const deleteLead = async (id: string): Promise<void> => {
-    await LeadsRepository.delete(id);
+    await LeadRepository.delete(id);
   };
 
   const logCall = async (
@@ -210,10 +215,10 @@ export function useLeadsStore() {
       callType,
       picked,
       timelineActivity,
-    }: LogCallPayload
+    }: LogCallPayload,
   ): Promise<void> => {
-    // Capture the lead's CURRENT status before overwriting it (for productivity delta)
-    const prevLead = leads.find((l: Lead) => l.id === leadId);
+    // Identity load for timeline diffs — productivity is CF-only (no client increment).
+    const prevLead = await LeadRepository.getById(leadId);
     const prevLeadStatus = prevLead?.status || "new";
     const agentUserId = prevLead?.assignedTo || null;
 
@@ -223,14 +228,15 @@ export function useLeadsStore() {
       status,
       agent: agent || "telecaller",
     };
-    // Attach optional call tracking fields
-    if (duration !== undefined) newLog.duration = duration; // in seconds
-    if (callType) newLog.callType = callType; // 'outgoing' | 'incoming'
-    if (picked !== undefined) newLog.picked = picked; // true if customer answered
+    if (duration !== undefined) newLog.duration = duration;
+    if (callType) newLog.callType = callType;
+    if (picked !== undefined) newLog.picked = picked;
 
     const callSourceId = `call:${leadId}:${newLog.date}`;
 
-    await LeadsRepository.logCall(leadId, newLog, status, followUpDate || "");
+    await LeadRepository.logCall(leadId, newLog, status, followUpDate || "", {
+      lastAgentId: agentUserId,
+    });
 
     logAnalyticsEvent("call_logged", {
       leadId,
@@ -238,7 +244,6 @@ export function useLeadsStore() {
       agent: agent || "telecaller",
     });
 
-    // Resolve primary activity: explicit timelineActivity wins over heuristics.
     let activity: LogCallTimelineActivity;
     if (timelineActivity) {
       activity = timelineActivity;
@@ -249,7 +254,6 @@ export function useLeadsStore() {
         noteLower.includes("call log") ||
         noteLower.includes("disposition:") ||
         noteLower.includes("duration:");
-      // Bracketed domain tags must use typed publishers — do not heuristic-classify as notes.
       const isLegacyTaggedNonCall =
         noteLower.includes("[whatsapp") ||
         noteLower.includes("[discount") ||
@@ -290,8 +294,6 @@ export function useLeadsStore() {
       });
     }
 
-    // Status / follow-up are secondary diffs — only when values actually change.
-    // Callers must NOT also updateLead({ status, followUpDate }) for the same intent.
     if (status && status !== prevLeadStatus) {
       void publishLeadStatusChanged({
         leadId,
@@ -316,116 +318,71 @@ export function useLeadsStore() {
       });
     }
 
-    // Fire-and-forget: update agent's daily productivity telemetry
-    if (agentUserId) {
-      updateAgentProductivity({
-        userId: agentUserId,
-        newStatus: status,
-        prevStatus: prevLeadStatus,
-        duration: duration || 0,
-      }).catch((err) =>
-        logger.warn("LeadsStore", "Failed to update telemetry:", err)
-      );
-    }
+    // Intentionally no client updateAgentProductivity — CF + productivityEvents is sole writer.
   };
 
-  const bulkUpdateLeads = async (leadIds: string[], updatedFields: Partial<Lead>): Promise<void> => {
-    await LeadsRepository.bulkUpdate(leadIds, updatedFields);
+  const bulkUpdateLeads = async (
+    leadIds: string[],
+    updatedFields: Partial<Lead>,
+  ): Promise<void> => {
+    await LeadRepository.bulkUpdate(leadIds, updatedFields);
   };
 
-  const mergeLeads = async (targetId: string, sourceId: string, customSelections: Partial<Lead> | null = null): Promise<void> => {
-    const targetLead = leads.find((l: Lead) => l.id === targetId);
-    const sourceLead = leads.find((l: Lead) => l.id === sourceId);
-    if (!targetLead || !sourceLead) return;
-
-    const mergedLogs = [
-      ...(targetLead.callLogs || []),
-      ...(sourceLead.callLogs || []),
-    ];
-    mergedLogs.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-
-    let updates: Partial<Lead> = {
-      callLogs: mergedLogs,
-      updatedAt: new Date().toISOString(),
-    };
-
-    if (customSelections) {
-      const selectedNotes = customSelections.notes || "";
-      let mergedNotes = selectedNotes;
-      if (
-        sourceLead.notes &&
-        sourceLead.notes !== targetLead.notes &&
-        !selectedNotes.includes(sourceLead.notes)
-      ) {
-        mergedNotes = `${selectedNotes}\n[Merged Notes from ${sourceLead.name}]: ${sourceLead.notes}`;
-      }
-
-      updates = {
-        ...updates,
-        ...customSelections,
-        notes: mergedNotes,
-      };
-    } else {
-      // Automatic merge logic
-      const mergedNotes = `${targetLead.notes || ""}\n[Merged Notes from ${sourceLead.name}]: ${sourceLead.notes || ""}`;
-      updates.notes = mergedNotes;
-
-      if (!targetLead.email && sourceLead.email)
-        updates.email = sourceLead.email;
-      if (!targetLead.source && sourceLead.source) {
-        updates.source = sourceLead.source;
-      }
-    }
-
-    await LeadsRepository.update(targetId, updates);
-    await LeadsRepository.delete(sourceId);
+  const mergeLeads = async (
+    targetId: string,
+    sourceId: string,
+    customSelections: Partial<Lead> | null = null,
+  ): Promise<void> => {
+    const result = await LeadRepository.mergeLeads(
+      targetId,
+      sourceId,
+      customSelections,
+    );
+    if (!result) return;
 
     void publishLeadMerged({
       leadId: targetId,
       sourceLeadId: sourceId,
-      sourceLeadName: sourceLead.name,
+      sourceLeadName: result.source.name,
       sourceId,
       idempotencyKey: `lead_merged_${targetId}_${sourceId}`,
     });
   };
 
-  const rateCallLog = async (leadId: string, logIndex: number, qualityScore: string | number, adminFeedback: string): Promise<void> => {
-    const lead = leads.find((l: Lead) => l.id === leadId);
-    if (!lead || !lead.callLogs || !lead.callLogs[logIndex]) return;
-    const updatedLogs = [...lead.callLogs];
-    updatedLogs[logIndex] = {
-      ...updatedLogs[logIndex],
-      qualityScore: parseInt(qualityScore as string) || undefined,
-      adminFeedback: adminFeedback || "",
-    } as CallLog;
-    await LeadsRepository.rateCallLog(leadId, updatedLogs);
+  const rateCallLog = async (
+    leadId: string,
+    logIndex: number,
+    qualityScore: string | number,
+    adminFeedback: string,
+  ): Promise<void> => {
+    const lead = (await LeadRepository.getById(leadId)) || {
+      id: leadId,
+      callLogs: [],
+    };
+    await CallLogsRepository.rateByLeadIndex(
+      lead,
+      logIndex,
+      parseInt(qualityScore as string, 10) || undefined,
+      adminFeedback || "",
+    );
   };
 
-  const archiveLeads = async (leadIds: string[], username = "admin"): Promise<void> => {
-    const archivedList: { leadId: string; archivedLead: Lead & { archivedAt: string; archivedBy: string } }[] = [];
-    for (const id of leadIds) {
-      const lead = leads.find((l: Lead) => l.id === id);
-      if (!lead) continue;
-
-      const archivedLead = {
-        ...lead,
-        archivedAt: new Date().toISOString(),
-        archivedBy: username,
-        updatedAt: new Date().toISOString(),
-      };
-      archivedList.push({ leadId: id, archivedLead });
-    }
-    if (archivedList.length > 0) {
-      await LeadsRepository.archiveLeads(archivedList);
-    }
+  const archiveLeads = async (
+    leadIds: string[],
+    username = "admin",
+  ): Promise<void> => {
+    await LeadRepository.archiveLeadsByIds(leadIds, username);
   };
 
-  const bulkAddLeads = async (leadsData: Array<Partial<Lead> & { name: string; phone: string }>): Promise<{ successCount: number; duplicateCount: number }> => {
+  const bulkAddLeads = async (
+    leadsData: Array<Partial<Lead> & { name: string; phone: string }>,
+  ): Promise<{ successCount: number; duplicateCount: number }> => {
     let successCount = 0;
     let duplicateCount = 0;
     const newlyCreatedLeads: Lead[] = [];
     const newLeadsToDb: Lead[] = [];
     const updatedDuplicatesToDb: Lead[] = [];
+    const phoneToLead = new Map<string, Lead>();
 
     for (const leadData of leadsData) {
       let cleanPhone: string;
@@ -438,20 +395,17 @@ export function useLeadsStore() {
       const cleanName = cleanLeadName(leadData.name);
       const cleanEmail = cleanEmailAddress(leadData.email || "");
 
-      let duplicate = leads.find((l: Lead) => l.phone === cleanPhone);
+      let duplicate =
+        phoneToLead.get(cleanPhone) ||
+        newlyCreatedLeads.find((l) => l.phone === cleanPhone);
+
       if (!duplicate) {
-        duplicate = newlyCreatedLeads.find((l) => l.phone === cleanPhone);
+        const found = await LeadRepository.findByPhone(cleanPhone, 1);
+        duplicate = found[0];
+        if (duplicate) phoneToLead.set(cleanPhone, duplicate);
       }
 
       if (duplicate) {
-        const newLogs = duplicate.callLogs ? [...duplicate.callLogs] : [];
-        newLogs.push({
-          date: new Date().toISOString(),
-          note: `Duplicate lead attempt merged. Source: Bulk Upload. Notes: ${leadData.notes || "No description provided."}`,
-          status: duplicate.status || "new",
-          agent: "system",
-        });
-
         const updatedLead: Lead = {
           ...duplicate,
           name:
@@ -462,19 +416,23 @@ export function useLeadsStore() {
               : duplicate.name,
           email: duplicate.email || cleanEmail,
           updatedAt: new Date().toISOString(),
-          callLogs: newLogs,
         };
 
-        const newIdx = newlyCreatedLeads.findIndex((l) => l.id === duplicate.id);
+        const newIdx = newlyCreatedLeads.findIndex((l) => l.id === duplicate!.id);
         if (newIdx !== -1) {
           newlyCreatedLeads[newIdx] = updatedLead;
         }
 
+        phoneToLead.set(cleanPhone, updatedLead);
         updatedDuplicatesToDb.push(updatedLead);
         duplicateCount++;
       } else {
         const newId =
-          Date.now().toString() + "-" + Math.floor(Math.random() * 1000) + "-" + successCount;
+          Date.now().toString() +
+          "-" +
+          Math.floor(Math.random() * 1000) +
+          "-" +
+          successCount;
         const finalCreatedTime = leadData.createdAt || new Date().toISOString();
 
         const newLead: Lead = {
@@ -487,32 +445,43 @@ export function useLeadsStore() {
           notes: leadData.notes || "",
           createdAt: finalCreatedTime,
           updatedAt: new Date().toISOString(),
-          callLogs: [
-            {
-              date: new Date().toISOString(),
-              note: leadData.notes || "Initial import of lead.",
-              status: leadData.status || "new",
-              agent: "system",
-            },
-          ],
+          callCount: 0,
+          hasAgentCall: false,
         };
+        delete (newLead as Partial<Lead>).callLogs;
 
         newlyCreatedLeads.push(newLead);
         newLeadsToDb.push(newLead);
+        phoneToLead.set(cleanPhone, newLead);
         successCount++;
       }
     }
 
     if (newLeadsToDb.length > 0 || updatedDuplicatesToDb.length > 0) {
-      await LeadsRepository.bulkAddLeads(newLeadsToDb, updatedDuplicatesToDb);
+      await LeadRepository.bulkAddLeads(newLeadsToDb, updatedDuplicatesToDb);
+    }
+
+    for (const lead of newLeadsToDb) {
+      await CallLogsRepository.create(lead.id, {
+        date: new Date().toISOString(),
+        note: lead.notes || "Initial import of lead.",
+        status: lead.status || "new",
+        agent: "system",
+      });
+    }
+    for (const lead of updatedDuplicatesToDb) {
+      await CallLogsRepository.create(lead.id, {
+        date: new Date().toISOString(),
+        note: `Duplicate lead attempt merged. Source: Bulk Upload. Notes: ${lead.notes || "No description provided."}`,
+        status: lead.status || "new",
+        agent: "system",
+      });
     }
 
     return { successCount, duplicateCount };
   };
 
   return {
-    leads,
-    isLoaded,
     addLead,
     updateLead,
     deleteLead,

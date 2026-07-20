@@ -7,9 +7,10 @@ import {
   BookingMetrics,
   TeamMetrics,
 } from "./analyticsTypes";
+import { User } from "@/shared/types";
 
 interface CacheEntry {
-  data: any;
+  data: unknown;
   timestamp: number;
   ttl: number; // in milliseconds
 }
@@ -30,20 +31,20 @@ export class AnalyticsService implements IAnalyticsService {
     aggregation: AnalyticsProvider;
   };
   private cache = new Map<string, CacheEntry>();
-  private activePromises = new Map<string, Promise<any>>();
+  private activePromises = new Map<string, Promise<unknown>>();
   
   // Scoping context dependencies
   private getActiveProjectId: () => string | undefined;
-  private getUser: () => any | null;
-  private checkPermission: (user: any | null, capability: string, projectId?: string) => boolean;
+  private getUser: () => User | null;
+  private checkPermission: (user: User | null, capability: string, projectId?: string) => boolean;
 
   constructor(
     clientProvider: AnalyticsProvider,
     summaryProvider: AnalyticsProvider,
     aggregationProvider: AnalyticsProvider,
     getActiveProjectId: () => string | undefined,
-    getUser: () => any | null,
-    checkPermission: (user: any | null, capability: string, projectId?: string) => boolean
+    getUser: () => User | null,
+    checkPermission: (user: User | null, capability: string, projectId?: string) => boolean
   ) {
     this.providers = {
       client: clientProvider,
@@ -140,10 +141,11 @@ export class AnalyticsService implements IAnalyticsService {
           try {
             const res = await runCall(this.providers.aggregation);
             return res;
-          } catch (aggregationErr: any) {
+          } catch (aggregationErr: unknown) {
+            const errMsg = aggregationErr instanceof Error ? aggregationErr.message : "All analytics providers failed.";
             throw new AnalyticsError(
               "PROVIDER_UNAVAILABLE",
-              `All analytics providers failed. Aggregation error: ${aggregationErr.message}`
+              `All analytics providers failed. Aggregation error: ${errMsg}`
             );
           }
         }

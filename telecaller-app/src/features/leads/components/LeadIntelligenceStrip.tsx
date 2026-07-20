@@ -1,4 +1,4 @@
-import { createElement } from "react";
+import { createElement, useMemo } from "react";
 import { Link } from "react-router-dom";
 import {
   Activity,
@@ -10,7 +10,11 @@ import {
   ClipboardList,
 } from "lucide-react";
 import Badge from "@/shared/components/ui/Badge";
-import type { LeadIntelligence, LeadNextActionType } from "@/shared/contracts";
+import type {
+  LeadIntelligence,
+  LeadNextActionType,
+  LeadScoreFactor,
+} from "@/shared/contracts";
 import type { Lead } from "@/shared/types";
 import { computeLeadIntelligence } from "@/features/leads/intelligence";
 
@@ -79,7 +83,7 @@ export default function LeadIntelligenceStrip({
 
   const topFactors = intelligence.scoreFactors
     .slice()
-    .sort((a, b) => Math.abs(b.delta) - Math.abs(a.delta))
+    .sort((a: LeadScoreFactor, b: LeadScoreFactor) => Math.abs(b.delta) - Math.abs(a.delta))
     .slice(0, 4);
 
   return (

@@ -105,6 +105,7 @@ export default function CallLogModal({
       isOpen={isOpen && !!lead}
       onClose={onClose}
       title={lead ? `Log Call — ${lead.name}` : "Log Call Outcome"}
+      variant="sheet"
       size="md"
       footer={
         <FormActions>

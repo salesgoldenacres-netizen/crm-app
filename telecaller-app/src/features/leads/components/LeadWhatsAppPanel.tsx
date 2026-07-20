@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+﻿import { useMemo } from "react";
 import { MessageCircle, ExternalLink, Image, FileText } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Lead } from "@/shared/types";
@@ -42,7 +42,7 @@ export default function LeadWhatsAppPanel({
   return (
     <div className="card-premium p-4 space-y-3">
       <div className="flex items-center justify-between gap-2">
-        <h3 className="text-xs font-black text-theme-text uppercase tracking-wider flex items-center gap-1.5">
+        <h3 className="text-xs font-bold text-theme-text uppercase tracking-wider flex items-center gap-1.5">
           <MessageCircle className="w-3.5 h-3.5 text-green-500" />
           WhatsApp
         </h3>

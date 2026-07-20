@@ -11,6 +11,7 @@ import {
   sidebarSubItem,
   sidebarSubTree,
 } from "./sidebarNavStyles";
+import { NAV_LABELS } from "@/shared/constants/navTaxonomy";
 
 interface CallsSubmenuProps {
   isSidebarCollapsed: boolean;
@@ -37,17 +38,18 @@ export default function CallsSubmenu({
         <Link
           to="/?tab=calls"
           className={sidebarGroupLink(isSidebarCollapsed)}
-          title="Calls Hub"
+          title={NAV_LABELS.calls}
+          aria-label={isSidebarCollapsed ? NAV_LABELS.calls : undefined}
         >
-          <PhoneCall className={sidebarIcon("calls")} />
-          {!isSidebarCollapsed && <span className="truncate">Calls Hub</span>}
+          <PhoneCall className={sidebarIcon("calls")} aria-hidden="true" />
+          {!isSidebarCollapsed && <span className="truncate">{NAV_LABELS.calls}</span>}
         </Link>
         {!isSidebarCollapsed && (
           <button
             type="button"
             onClick={() => setIsCallsOpen((o) => !o)}
             className={sidebarGroupToggle()}
-            aria-label="Toggle Calls Hub menu"
+            aria-label={`Toggle ${NAV_LABELS.calls} menu`}
           >
             <ChevronDown
               className={`${sidebarChevronClass} ${isCallsOpen ? "rotate-180" : ""}`}

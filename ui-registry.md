@@ -59,6 +59,312 @@
 
 Screenshot PNGs for the Wave 1 visual baseline remain an **operational follow-up** (checklist in [`directives/wave1-visual-baseline.md`](directives/wave1-visual-baseline.md)) and do **not** block later waves.
 
+### Wave 10 Agent 1 — Design System Architect (July 17, 2026) — additive notes
+
+**DLS version stays v1.4** (no bump). Foundation cleanup for later Wave 10 agents.
+
+| Topic | Standard |
+| --- | --- |
+| **Button touch targets** | All sizes use `min-h-11` on mobile; compact padding resumes at `sm+` (`sm:min-h-0`). |
+| **Modal `variant`** | Implemented: `center` (default) = dialog at all breakpoints; `sheet` = bottom sheet &lt; `sm`, centered `sm+`. Form modals pass `variant="sheet"`; `Dialog` confirms stay `center`. |
+| **Drawer / sheet tops** | Use `rounded-t-theme` (not `rounded-t-3xl`). |
+| **Radius codemod (scoped)** | Shared chrome + Branding/Login/Targets/CallHistory: `rounded-xl` / `rounded-2xl` / `rounded-3xl` → `rounded-theme`; sheet tops → `rounded-t-theme`. Feature islands (Dialer, Attendance, Maps) still have residuals for later agents. |
+| **Weight codemod (scoped)** | `font-black` / `font-extrabold` → `font-bold` in shared primitives + scoped consumers. Prefer `type-*` / `font-semibold` for new work. |
+| **Badge `info`** | Uses `theme-info` (`bg-theme-info/10 text-theme-info border-theme-info/20`). Branding can override `--theme-info`. |
+| **Emoji policy (touched)** | `AdminTargetsTab` announcement options + CTA: text + Lucide `Megaphone` (no persistent emoji). `CallHistoryView` channel chip: Lucide + shared `Badge`. |
+| **Credibility models** | `BrandingSettingsTab` + `Login` brand marks use `rounded-theme`. |
+
+**Later agents still own:** full a11y (A7), remaining feature-island `rounded-xl` / `font-black` sweep. Attendance rewrite → **Agent 3 (done)**. Dialer overlays → **Agent 5 (done)**; PowerDialerWidget indigo residual remains. Map editor chrome/touch → **Agent 8 (done)**. Alert/confirm migration → **Agent 4 (done)**.
+
+### Wave 10 Agent 2 — Navigation & IA (July 17, 2026) — additive notes
+
+**DLS version stays v1.4** (no bump). Navigation feels like one system across desktop sidebar, mobile bottom nav, overflow drawer, and Admin chrome.
+
+| Topic | Standard |
+| --- | --- |
+| **Canonical label map** | `telecaller-app/src/shared/constants/navTaxonomy.ts` → `NAV_LABELS` + `ADMIN_NAV_GROUPS`. Use these strings for primary destinations; do not invent synonyms ("Leads CRM", "Calls Hub", "Layout Maps", "Control Panel", "Training HQ"). |
+| **Primary labels** | Dashboard · CRM (mobile umbrella) · Leads · Calls · Maps · Attendance · Training · My Profile · Templates · Shortcuts · Full Screen · Admin · Account · Workspace |
+| **Admin destinations** | Single `ADMIN_NAV_GROUPS` drives Admin page tabs **and** sidebar Operations/Admin submenu. Same id/label/icon/tone everywhere. |
+| **IA shell** | Desktop: Sidebar → PageHeader → Content. Mobile: Bottom Nav → context actions → Content. One overflow drawer (`MobileDrawer`) for secondary workspace tabs; `MobileProfileDrawer` for Account tools only. |
+| **History** | Tab / subtab changes **push** history (match sidebar `<Link>`). Do not `replace: true` for primary navigation. Mobile drawer uses `<Link to="/?tab=…">` (push). |
+| **Mobile FABs** | Global Dial FAB stays `bottom-20 right-6` (`ModalHost`). Contextual Add Lead FAB only on Leads/Calls tabs at `bottom-36 right-6` (stacked above dial). Theme tokens on dial FAB (no indigo island). |
+| **Admin chrome** | No redundant "Back to CRM" (breadcrumb / bottom nav suffice). Dead readOnly "Search console…" removed. Mobile Admin title uses `NAV_LABELS.admin`. |
+
+**Remaining debt for later agents:** Attendance full migrate → **Agent 3 (done)**; Dialer overlays → **Agent 5 (done)** (PowerDialerWidget indigo residual remains); Map editor touch/chrome → **Agent 8 (done)**; mass alert→Dialog → **Agent 4 (done)**.
+
+### Wave 10 Agent 8 — Map Experience (July 17, 2026) — additive notes
+
+**DLS version stays v1.4** (no bump). Map chrome + touch safety only — **no** plot geometry algorithms, Firestore plot schema, or permission model changes. Attendance / Dialer not touched. `useAdminMapEditor` alert/confirm → migrated by Agent 4.
+
+| Topic | Standard |
+| --- | --- |
+| **Touch edit gate** | `useMapEditCapability` — unlock when `(any-pointer: fine)` **or** `lg+` and not coarse-primary-only. Coarse/touch-primary: force view mode; banner *"Use a larger screen to edit maps"*; view/pan/zoom remain. Desktop mouse workflows unchanged. |
+| **Edit panel (mobile)** | `AdminMapSidebar` uses Wave 5 `Drawer` `position="bottom"` `size="lg"` below `md`; docked `aside` at `md+`. No more `h-1/2` stacked edit panel. |
+| **Project map (mobile)** | `ProjectMapSidebar`: search/filters stay as bottom chrome; selected-plot details open in bottom `Drawer`. Desktop keeps docked sidebar. |
+| **Map chrome tokens** | `AdminMapHeader`, `AdminMapSidebar`, `AdminMapSettings`, `AdminMapEditor`, `ProjectMapSidebar` → `theme-*` / `rounded-theme` / `focus-visible:ring-theme-ring` / icon-button `min-h-11 min-w-11` + `aria-label`. |
+| **Invalid utilities fixed** | Removed broken classes (`indigo-505`, `indigo-605`, `indigo-550`, `hover:bg-indigo-55`, etc.) from map chrome/settings. |
+
+**Remaining map debt:** Full Pointer Events migration for true touch editing; ProjectMap page header residual `font-black` / status pill chrome; AdminMapCanvas cursor/hit-testing still mouse-oriented. JSON import feedback uses Toast (Agent 4).
+
+### Wave 10 Agent 3 — Attendance Module (July 17, 2026) — additive notes
+
+**DLS version stays v1.4** (no bump). Agent attendance surface migrated to shared primitives; clock-in/out/break/status behavior unchanged.
+
+| Topic | Standard |
+| --- | --- |
+| **Primary surface** | `AttendanceTab` — `Card` / `CardHeader` / `CardBody`, shared `Button` / `Badge` / `EmptyState` / `DataTable`, `Dialog` confirms (already Wave 5). |
+| **Tokens** | `theme-card` / `theme-text` / `theme-muted` / `theme-border` / `theme-surface` / `theme-accent` / `theme-success` / `theme-warning` / `theme-danger`. No raw gray / indigo / emerald islands. |
+| **Radius / type** | `rounded-theme`; `type-page-title` / `type-card-title` / `type-label` / `type-kpi` / `type-secondary`. |
+| **Emoji / motion** | Lucide `Calendar` / `Clock` / `Coffee` / `Timer` only — no persistent emoji. No `animate-pulse` on break CTA (solid `Button` variant). |
+| **Status chips** | Attendance row status → shared `Badge` (`success` present, `warning` late, `default` else). Today status: Offline / Clocked In / On Break / Completed. |
+| **History** | Hand-rolled `<table>` → `DataTable` (`density="comfortable"`, sort by date desc). Empty → `EmptyState`. |
+| **Nav label** | Page title uses `NAV_LABELS.attendance` from `navTaxonomy.ts`. |
+| **Related chrome** | `AdminAttendanceTab` KPI tiles: `rounded-theme` + theme success/warning/danger icon wells (no green/yellow/rose raw). `DashboardHeader` / `MobileStatusPanel` already on theme tokens — left as-is. |
+
+**Remaining debt:** Admin timesheet matrix still local grid (functional, not DataTable); optional loading skeletons if attendance store adds explicit loading flags later. Dialer overlays closed under Agent 5 (PowerDialerWidget indigo residual remains). Map chrome/touch closed under Agent 8. Alert/confirm migration closed under Agent 4.
+
+### Wave 10 Agent 5 — Dialer Experience (July 17, 2026) — additive notes
+
+**DLS version stays v1.4** (no bump). Dialer overlays adopt Modal/Drawer Contract §3f chrome; call placement / IVR / logging pipelines unchanged.
+
+| Topic | Standard |
+| --- | --- |
+| **Host** | Outbound + map simulated dialer → shared `Modal` `variant="sheet"` `size="sm"`; IVR ringing → `Modal` `variant="center"` `size="md"`. No `fixed inset-0` slate/indigo islands. |
+| **Dismiss** | `closeOnBackdrop={false}` (avoid accidental hang-up). Escape / header Close → end call (outbound) or decline IVR (`clearActiveIvrCall`). |
+| **Tokens** | `bg-theme-card` / `theme-surface` / `theme-border` / `theme-accent` / `theme-success` / `theme-danger` — not indigo or dark-only slate-900. Light + dark via appearance tokens. |
+| **Status** | `DialerStatusChip`: colored dot **plus** status text (`role="status"` `aria-live="polite"`). Not color-only. |
+| **Controls** | Large mute / speaker (≥44px) with visible labels + `aria-pressed` / `aria-label`; end call = large `theme-danger` circle. IVR Answer / Decline use shared `Button` (`success` / `outline`); Answer uses flex grow — **not** invalid `flex-2`. |
+| **Motion** | No decorative bounce / ping / fake waveform bars. Connecting = calm text hint; active = mono timer only. |
+| **Shared chrome** | `telecaller-app/src/features/calls/components/DialerChrome.tsx` — presentational helpers only. Lead Detail `SimulatedDialer` (inline card) aligned to same tokens; pipelines not merged. |
+
+**A11y delivered:** `role="dialog"` `aria-modal` `aria-labelledby` / `aria-describedby`, focus trap, Escape, return-focus (via `Modal` / `useOverlayFocus`), live status + duration, labeled controls.
+
+**Dialer a11y (Agent 7):** Modal `closeLabel` `"End call"` / `"Decline call"`; IVR sole host = ModalHost (Dashboard passes `activeIvrCall={null}`). Outbound dual state hosts remain by design until a later merge. MANUAL QA keyboard/SR/theme on dialer still required.
+
+### Wave 10 Agent 4 — Dialog & Interaction (July 17, 2026) — additive notes
+
+**DLS version stays v1.4** (no bump). Presentation-only: replace native `alert` / `confirm` / `prompt` with shared Toast + Dialog. No business-logic / Firestore / schema changes. Outcomes preserved (delete still deletes after confirm, etc.).
+
+| Topic | Standard |
+| --- | --- |
+| **Informational / success / error** | `useToast()` — `success` \| `error` \| `warning` \| `info`. Prefer Toast over blocking Dialog for non-destructive feedback. |
+| **Confirm / danger** | Shared `Dialog` via `InteractionDialog` `mode="confirm"`; `confirmVariant="danger"` for deletes; backdrop opt-out via Dialog danger default. |
+| **Prompt (text input)** | `InteractionDialog` `mode="prompt"` — Dialog + shared `Input`, labeled, Enter submits, Escape / Cancel dismisses (`onCancel` when needed). |
+| **Blocking info (rare)** | `InteractionDialog` `mode="alert"` — OK-only Dialog (e.g. plot summary on inventory map click). |
+| **Host** | `telecaller-app/src/shared/components/ui/InteractionDialog.tsx` — composes existing `Dialog` / `Input`; do **not** invent a parallel dialog system. |
+| **ESLint** | `no-alert: error` + `no-restricted-globals` for `alert` / `confirm` / `prompt` in `telecaller-app/eslint.config.js`. |
+
+**Migrated (49 → 0 call sites in `src/`):** `useAdminMapEditor`, `useBrandingSettings`, `AdminTargetsTab`, `AdminMapSettings`, `AdminMapHeader`, `ProjectMapsView`, `ProjectMap`, `ProjectFormModal` (+ hosts `AdminMapEditor`, `BrandingSettingsTab`).
+
+**Leftovers:** none in `telecaller-app/src`. Soft residual: older feature files may still use local `FeedbackDialog` state patterns (already on shared Dialog) — leave as-is; prefer `InteractionDialog` + Toast for new work.
+
+### Wave 10 Agent 6 — Responsive Design (July 17, 2026) — additive notes
+
+**DLS version stays v1.4** (no bump). Layout / overflow / touch-target polish only — **no** business logic, schema, API, or Map Pointer Events editing changes.
+
+| Topic | Standard |
+| --- | --- |
+| **Shell overflow** | Dashboard / Admin content regions keep `overflow-x-hidden` + `min-w-0`; toolbars wrap or scroll (`overflow-x-auto` + `scrollbar-none` / `overscroll-x-contain`). |
+| **Touch targets** | Interactive controls in touched chrome ≥ **44px** on mobile (`min-h-11` / `min-w-11`); compact resume at `sm+` (`sm:min-h-0` / `sm:h-8`) matching Button primitive. |
+| **Admin chrome** | Mobile tab strip: `min-h-11` + `rounded-theme` (not tiny pills). Dense toolbars (Leads / Users / Projects / Attendance) wrap + ≥44px controls. |
+| **PageHeader** | `min-h-14` with column stack on narrow; actions `flex-wrap`; breadcrumb may scroll horizontally. |
+| **Tables** | Prefer existing mobile alternatives (`LeadsMobileGrid`, `ResponsiveDataView`). Wide matrices (Admin timesheet) → horizontal scroll + sticky header + sticky first column. `DataTable` already scrolls + sticky thead. |
+| **Map header** | `AdminMapHeader` stacks below `lg`; tool strip scrolls; bulk bar `flex-wrap` so landscape phones don’t clip. |
+| **Power Dialer** | `PowerDialerWidget` on `theme-*` / `rounded-theme` / `Badge`; controls `min-h-11`; no indigo/purple/emoji/ping islands. |
+| **Bulk bar** | `BulkActionsPanel` theme tokens + ≥44px controls; sits above mobile bottom nav (`bottom-20`). |
+
+**Files touched:** `PowerDialerWidget`, `Admin` (mobile tabs), `PageHeader`, `DashboardHeader`, `LeadsWorkspace`, `LeadListPresetStrip`, `QuickAccessStatusTabs`, `BulkActionsPanel`, `AdminLeadsTab`, `AdminUsersTab`, `AdminProjectsTab`, `AdminAttendanceTab`, `AdminMapHeader`, `AttendanceTab`, `ui-registry.md`.
+
+**Remaining debt for A9:** Cleared under Wave 10 Agent 9 (see Agent 9 notes below). Soft: Admin timesheet not on `DataTable` (functional scroll/sticky only). Full outbound dialer state merge (Dashboard `useDashboardDialer` vs ModalHost) deferred — IVR dual-mount cleared under A7.
+
+### Wave 10 Agent 9 — Visual Polish (July 17, 2026) — additive notes
+
+**DLS version stays v1.4** (no bump). Presentation-only cohesion pass — eliminate remaining “two apps” islands. No business logic / schema / API changes.
+
+| Topic | Standard |
+| --- | --- |
+| **Agent Profile** | Lucide achievement icons (no emoji); `theme-*` / `rounded-theme` / `type-*`; shared `Badge` + `Button`; no hover-lift; toggles use `theme-accent` (no indigo). |
+| **Training** | `NAV_LABELS.training`; theme cards; `EmptyState` for empty objections; docs panel `theme-accent-muted` (no indigo island). |
+| **Admin Users teams** | Team cards `rounded-theme` + `border-theme-border`; members via `Badge`; empty → `EmptyState`. |
+| **Admin Targets** | Avatar wells `bg-theme-accent-muted`; section icons `text-theme-accent`; demote raw user ID copy. |
+| **Project Map header** | `type-card-title`; Available/Sold via shared `Badge`; plot status chips → semantic theme tokens; loader `border-theme-accent`. |
+| **App loaders** | Boot / Suspense spinners → `bg-theme-bg` + `border-theme-accent` (not emerald/slate islands). |
+| **Lead Detail** | Status via `Badge` + `getLeadStatusBadgeVariant`; hide raw Firestore ID from header; Call CTA solid (no decorative `animate-pulse`); `type-card-title`. |
+| **Leads table groups** | Group header dots/washes → semantic `theme-*` / sky (no purple/blue/amber raw islands). |
+| **Lead status colors** | `leadColors.ts` → theme tokens + `getLeadStatusBadgeVariant` helper. |
+| **Call History** | KPI wells theme semantic; empty → `EmptyState`; status chips via `Badge`. |
+| **Message / WhatsApp chrome** | Voice/doc bubbles → `theme-accent` (no indigo). |
+| **Emoji sweep (scoped)** | `leadTemplates` labels, `performanceUtils` badge strings, reports outcome labels, proximity competitor copy — text only. |
+
+**Files touched:** `AgentProfileView`, `TrainingHQView`, `agentStats`, `AdminUsersTab`, `AdminTargetsTab`, `ProjectMap`, `App`, `LeadDetailsPage`, `LeadsDesktopTable`, `leadColors`, `CallHistoryView`, `MessageContentRenderer`, `leadTemplates`, `performanceUtils`, `CustomDateRangeReports`, `LeadProximityInsights`, `ui-registry.md`.
+
+**Leftover soft debt (non-blocking):** deeper `font-black` / `rounded-xl` residues in WhatsAppInbox, Admin KPI widgets, AgentReportCard, ThemeMockupPreview; A7 MANUAL QA checklist; Map Pointer Events + outbound dialer dual-host merge.
+
+### Wave 10 Agent 7 — Accessibility (July 17, 2026) — additive notes
+
+**DLS version stays v1.4** (no bump). Presentation / semantics / focus only — no business logic, schema, API, or permission changes. Map Pointer Events rewrite skipped (Agent 8 gate stands). **Do not claim perfect WCAG AA without MANUAL QA.**
+
+| Topic | Standard |
+| --- | --- |
+| **Modal / Drawer `closeLabel`** | Optional prop (default `"Close"`). Dialer outbound / simulated → `"End call"`; IVR ringing → `"Decline call"`. |
+| **IVR host** | Sole IVR ringing overlay = `ModalHost` `DialerOverlay`. Dashboard mount passes `activeIvrCall={null}` to avoid dual focus traps. Outbound still has two state hosts (Dashboard dialer vs AppShell DialPad) — merge deferred. |
+| **Focus imprint** | Interactive chrome: `focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-theme-ring`. Applied to ThemeToggle, sidebar nav helpers, DesktopSidebar collapse, SidebarFooter sign-out, MobileBottomNav, Dial FAB / Add Lead FAB. |
+| **Icon-only labels** | Collapse / Sign out / Theme options / collapsed sidebar destinations / Account bottom-nav control labeled. |
+| **Dropdowns** | Notification + status menus: Escape dismiss, click-outside, `aria-expanded` / `aria-haspopup`, unread announced in text (`sr-only` + count in bell label). Mark-read controls ≥44px + focus ring. |
+| **Status** | Dialer / Power Dialer already text + color; notification unread not color-alone. |
+| **Agent Profile** | Preference switches: labeled checkboxes + `peer-focus-visible` ring; Copy link button focusable/labeled. Visual theme residual → A9. |
+
+**Files touched:** `Modal`, `Drawer`, `DialerOverlay`, `SimulatedDialerOverlay`, `Dashboard` (IVR null-out), `DashboardHeader`, `AgentProfileView`, `ThemeToggle`, `DesktopSidebar`, `SidebarFooter`, `SidebarNavigationMenu`, `CRMSubmenu` / `CallsSubmenu` / `MapsSubmenu` / `OperationsDeskSubmenu`, `sidebarNavStyles`, `MobileBottomNav`, `ModalHost`, `ui-registry.md`.
+
+**MANUAL QA leftover (required before claiming AA):**
+- [ ] Keyboard: Tab through header → status menu → notifications → ThemeToggle; Escape closes menus; no focus trap outside open Modal/Drawer
+- [ ] Dialer: Escape / header control ends outbound call (`End call`); IVR Decline via header (`Decline call`); only one IVR dialog when ringing on Dashboard
+- [ ] Screen reader: icon-only sidebar (collapsed) + Account + Dial FAB announce names; dialer status/live region updates
+- [ ] Light + dark: focus ring visible on chrome + dialer controls
+- [ ] Mobile: bottom nav + profile drawer focus order; FAB focus rings
+
+### Wave 10 Agent 10 — QA & Consistency (July 17, 2026) — Wave 10 complete summary
+
+**DLS version stays v1.4** (no bump). Audit-only close-out; Agent 9 visual polish may still have been concurrent at scoring time.
+
+| Gate | Result |
+| --- | --- |
+| Native `alert` / `confirm` / `prompt` in `src/` | **0** (ESLint `no-alert` + `no-restricted-globals` enforced) |
+| Nav taxonomy | **PASS** — `NAV_LABELS` / `ADMIN_NAV_GROUPS` drive sidebar, bottom nav, drawers, Admin |
+| Modal / Dialog / Dialer a11y | **PASS (code)** — focus trap, Escape, return-focus, `closeLabel` End/Decline call; MANUAL QA checklist above still open |
+| Lint | **2 pre-existing errors** (auth/`useUsersStore`) + restricted-import warnings — not Wave 10 regressions |
+| Build | **PASS** (`vite build` OK) |
+
+**Strict scores (before → after Wave 10 estimate):** Design 7.8 → **8.9** · UX 7.5 → **9.0** · A11y 7.0 → **8.8** · Responsive 7.5 → **9.0** · Visual 7.0 → **8.5** (Agent 9 concurrent). Targets Design≥9.5 / Visual≥9 / A11y≥9 **not fully met**.
+
+**Cohesion verdict:** **CONDITIONAL PASS** — primary chrome + Agent 9 polished islands (Profile, Training, Admin Users/Targets, ProjectMap header, Lead Detail header, Call History KPIs, Leads group colors) read as one product. Soft secondary residues remain (WhatsAppInbox / Admin KPI widgets / ThemeMockup).
+
+**Post–Wave 10 debt (priority):** (1) Soft residual `font-black` / `rounded-xl` on WhatsAppInbox, AdminDashboardKPICards, AgentReportCard, ThemeMockupPreview; (2) A7 MANUAL QA checklist; (3) Map Pointer Events + outbound dialer dual-host merge; (4) Shared residual indigo (`Toast` info, `sidebarNavStyles` tones, `NotFound` / `ErrorBoundary` / `CallRecordingPlayer`).
+
+### Wave 10 continuation — island sweep (July 17, 2026)
+
+**DLS version stays v1.4** (no bump). Thin feature-island token sweep after Agent 10 CONDITIONAL PASS (Design 8.9 / Visual 8.5).
+
+| Topic | What changed |
+| --- | --- |
+| **Weight** | All `font-black` / `font-extrabold` in `src/features` → `font-bold` (0 leftovers). |
+| **Radius** | High-traffic + admin settings `rounded-xl` → `rounded-theme` (sheet tops untouched). Residual: `ThemeMockupPreview` only (theme sandbox). |
+| **Emoji** | Cleared persistent emoji UI in `leadTemplates`, `CustomDateRangeReports`, `LeadProximityInsights`, `PendingDiscountsApprovals`, `AdminTrainingTabs` coaching/events — text + Lucide. |
+| **Indigo → theme** | `CallHistoryView` KPI well, `Toast` info, `NotFound`, `ErrorBoundary`, `SegmentedStageTracker` selected state, `sidebarNavStyles` leads/users/slate tones, `CallRecordingPlayer`. `AdminTargetsTab` already theme-clean (skipped). |
+| **Skipped / coordinate** | Agent 9 Profile/Training HQ files not mid-conflict; Training admin placeholders owned here. |
+
+**Remaining soft debt:** A7 MANUAL QA; Map Pointer Events + dialer dual-host; ThemeMockupPreview sandbox radii; sparse semantic rainbow on niche admin charts (not indigo wells). Honest post-sweep estimate: Design **~9.1** / Visual **~8.9** — likely ≥9 Design; Visual still just under 9 without Agent 9 screenshot close-out.
+
+### Inviting Work Atmosphere (July 17, 2026) — additive notes
+
+**DLS version stays v1.4** (no bump). Token-value upgrade only — no second design system, no business logic. Appearance + branding writers unchanged in responsibility.
+
+| Topic | Before → After (intent) |
+| --- | --- |
+| **Light canvas** | Cool flat sage `#f3f6f4` + pure white cards → warm sage `#f1f5f2`, soft card `#fcfdfc`, surface `#e5ece7` |
+| **Light type** | Cold slate text `#0f172a` / muted `#5a6b63` → forest charcoal `#15201c` / friendlier muted `#5f7269` |
+| **Light borders / ring** | `#d5e0da` / `#b8d9d0` → softer `#d7e1db` / `#c2d9cf` |
+| **Dark canvas** | Near-void `#0b1a16` + tight cards → inviting forest `#0c1b17`, lifted card `#17352c`, surface `#143028` |
+| **Dark type / borders** | Harsh white + dim muted → soft `#eef3f0` / `#a0b3aa`; clearer border `#23453c` |
+| **Semantics** | Neon-leaning danger `#ef4444`, gold `#c9a227`, success `#43A047` → cohesive coral `#D65C5C`, soft gold `#C4A032`, success `#3D9B4A`; **info** `#2A7D8C` (teal, not sky island) |
+| **Elevation** | Flat black micro-shadows → green-tinted soft depth (`--elevation-sm` / `--elevation-md`); dark card-premium uses elevation tokens |
+| **Canvas glow** | Stronger brand radials → calmer green/gold washes for all-day comfort |
+| **Login** | Pulsing orbs + hardcoded gold → static token-driven glows; `shadow-elevation-sm` |
+| **Badge `info`** | Sky raw utilities → `theme-info` (branding override via `--theme-info`) |
+
+**Sources of truth (kept in sync):** `telecaller-app/src/index.css` (`:root` / `.dark`), `useThemeStore` `STRUCTURAL_*`, `brandPalette.ts` defaults, `useBrandingStore` identity writers (accent / semantic / soft `--box-shadow`).
+
+**Preserve:** Admin branding still overrides accent, success, warning, danger, info, radius, shadow intensity, gradients. Appearance still owns structural surfaces on light/dark flip.
+
+**Risks:** Orgs with saved Firestore branding colors keep their identity (only defaults + CSS fallbacks change). Soft off-white cards may look “less white” next to screenshots of pure `#fff`. Danger coral is slightly softer — still readable on Badge / Dialog danger.
+
+### Brand Customizer → Login & loading (July 18, 2026) — additive notes
+
+**DLS version stays v1.4** (no bump). Presentation-only: login + boot screens consume Brand Customizer tokens.
+
+| Topic | Standard |
+| --- | --- |
+| **Bootstrap** | `useBrandingStore` mounts at `App` root (pre-auth). `applyBrandingToDom` + `ga_branding_cache` theme login/boot before Firestore. |
+| **Controls** | Existing Brand Colors + Surfaces + company/logo/tagline — no separate login atmosphere fields. |
+| **Surfaces** | Login left = `app-canvas`; form = `card-premium`; hero = `sidebar-brand-rail` (sidebar gradient). Boot = `BrandedBootScreen`. |
+| **Rules** | `settings/branding` public-read so unauthenticated login can load live theme; write remains admin-only. |
+
+### Wave 10 — Inviting surfaces (July 17, 2026) — additive notes
+
+**DLS version stays v1.4** (no bump). Presentation-only polish on **primary daily paths** so work surfaces feel calm and inviting. Coordinates with theme-token refresh — consumers use `theme-*` / `type-*` / shared primitives so palette changes apply automatically. **No business logic.**
+
+| Surface | Standard |
+| --- | --- |
+| **Shell** | `PageHeader` / `DashboardHeader` / sidebar / bottom nav: calmer density, `type-page-title` / `type-card-title`, `rounded-theme`, active rail accent via `theme-warning` (not hardcoded gold hex). |
+| **Bottom nav** | Soft `rounded-theme` pills (not `rounded-full` clusters); `font-semibold`; frosted `bg-theme-card/95`. |
+| **Leads command bar** | Card-level quiet chrome + flush preset strip; chips separated by a light rule; empty → friendly `EmptyState` + `Button` reset. |
+| **Lead detail** | Calm sticky header via shared `Button` / `Badge`; no hover-scale; mid tabs use accent card (not brand-gradient); not-found → `EmptyState`; timeline/scripts on theme tokens (no slate/indigo/amber islands). |
+| **Attendance** | Already DLS — tighter vertical rhythm (`space-y-5`), month chip on `theme-card`. |
+| **Dialer chrome** | Contact block uses `type-card-title`; hierarchy only — no decorative motion. |
+| **Stage tracker** | Theme surface + semantic dots (`theme-accent` / `warning` / `success` / `danger`); no gray/white islands. |
+
+**Motion:** Functional transitions only (`transition-colors`). No decorative pulse / bounce / scale on primary chrome.
+
+**Files touched:** `PageHeader`, `DashboardHeader`, `DesktopSidebar`, `sidebarNavStyles`, `MobileBottomNav`, `LeadsWorkspace`, `LeadListPresetStrip`, `LeadDetailsPage`, `SmartCallScript`, `LeadInteractionHistory`, `AttendanceTab`, `DialerChrome`, `SegmentedStageTracker`, `ui-registry.md`.
+
+### Wave 10 — Admin & secondary CRM polish (July 17, 2026) — additive notes
+
+**DLS version stays v1.4** (no bump). Invite-to-work language on Admin shell + reports widgets + WhatsApp/calls residual islands. Presentation-only; Admin tab routing unchanged.
+
+| Surface | Standard |
+| --- | --- |
+| **Admin shell** | Content well `p-3 md:p-5` / `space-y-4`; pinned chrome stays `bg-theme-card` + `PageHeader`. |
+| **Report widgets** | Prefer shared `Card` / `CardHeader` / `CardBody` + `type-label` headers; soft wells = `bg-theme-surface` + `border-theme-border` + `rounded-theme` + `shadow-elevation-sm`. |
+| **KPI tiles** | `AdminDashboardKPICards` / date-range KPIs: theme card shell + elevation-sm; icon wells `theme-accent-muted` / semantic `/15`. |
+| **Status chips** | Shared `Badge` (`success` / `info` / `warning` / `default`) — no gray/green/blue raw islands. |
+| **Empty states** | `EmptyState` inside Card (agents board, report card select, rated-calls table). |
+| **WhatsApp / calls** | Inbox + in-call bar: `theme-success` / `theme-danger` / `rounded-theme` / `shadow-elevation-*` (no emerald/rose/green raw). Bubbles `rounded-theme`. |
+| **Training admin** | Section icons `text-theme-accent`; forms on `theme-surface`; event CTAs `theme-warning` / `theme-danger`. |
+| **Theme mockup chrome** | Outer preview chrome on theme tokens; inner sandbox may keep CSS-var preview frame. |
+| **Forms / modals** | Sheet modals keep `px-6 py-5` body + `px-6 py-4` header/footer; consumers use `FIELD_*` + shared Button. |
+
+**Indigo cleared on admin/calls paths.** Maps: chrome-only (no geometry). Profile / Training HQ verified clean (no indigo/gray islands).
+
+**Files touched:** `Admin`, `AdminDashboardHeader`, `AdminDashboardKPICards`, `AgentStatusBoard`, `ProjectInventoryDashboard`, `AgentReportCardTab`, `CustomDateRangeReports`, `CallQualityTab`, `AdminTrainingTabs`, `CloudFunctionCodeReference`, `WebhookSimulatorConsole`, `ThemeMockupPreview`, `EvolutionIntegrationsPanel`, `AdminTargetsTab`, `WhatsAppInboxView`, `InCallWhatsAppBar`, `ProjectMapsView`, `ui-registry.md`.
+
+---
+
+### InteractionDialog
+
+File: `telecaller-app/src/shared/components/ui/InteractionDialog.tsx`  
+Last updated: July 17, 2026
+
+| Property | Class / pattern |
+| --- | --- |
+| Shell | Shared `Dialog` → `Modal` (focus trap, Escape, return-focus) |
+| Prompt field | Shared `Input` with label |
+| Confirm footer | Cancel outline → Confirm primary/danger (FormActions via Dialog) |
+| Alert footer | Single OK (cancelLabel) |
+
+**Pattern notes:** Hooks expose `interaction` + `clearInteraction`; page/tab hosts render `<InteractionDialog />`. Toast for non-blocking messages.
+
+### DialerOverlay / SimulatedDialerOverlay
+
+File: `telecaller-app/src/features/calls/components/DialerOverlay.tsx`, `SimulatedDialerOverlay.tsx`, `DialerChrome.tsx`  
+Last updated: July 17, 2026
+
+| Property | Class / pattern |
+| --- | --- |
+| Host | `Modal` sheet (outbound) / center (IVR); IVR only from `ModalHost` |
+| Close label | Outbound `closeLabel="End call"`; IVR `closeLabel="Decline call"` |
+| Surface | `bg-theme-card` `border-theme-border` `rounded-theme` (via Modal) |
+| Status chip | `bg-theme-surface` `border-theme-border` + dot `bg-theme-accent` \| `bg-theme-success` + text |
+| Avatar idle | `bg-theme-accent-muted` `border-theme-accent/30` `text-theme-accent` |
+| Avatar active | `bg-theme-success/15` `border-theme-success/30` `text-theme-success` |
+| Timer | `font-mono` `text-theme-success` `tabular-nums` |
+| Mute on | `bg-theme-danger/10` `border-theme-danger/40` `text-theme-danger` |
+| Speaker on | `bg-theme-accent-muted` `border-theme-accent/40` `text-theme-accent` |
+| End call | `bg-theme-danger` circle `h-16 w-16` |
+| IVR Answer | `Button` `variant="success"` |
+| IVR Decline | `Button` `variant="outline"` |
+
+**Pattern notes:** Presentation-only; do not change dial / answer / end / IVR bridge / call-log triggers. Prefer `DialerChrome` helpers for any future dialer surfaces.
+
 ---
 
 ## 1. Core Principles
@@ -82,29 +388,38 @@ Screenshot PNGs for the Wave 1 visual baseline remain an **operational follow-up
 
 | Layer | Owner | What it sets |
 | --- | --- | --- |
-| **Appearance** | `useThemeStore` / light–dark | Structural surfaces: `--theme-bg`, `--theme-surface`, `--theme-card`, `--theme-text`, `--theme-muted`, `--theme-border`, canvas/sidebar gradients |
-| **Branding** | `useBrandingStore` / admin branding | Identity: `--theme-accent`, gold secondary, `--radius`, `--box-shadow`, brand gradients |
+| **Appearance** | `useThemeStore` / light–dark | Resolves Light / Dark / System (`dark` class). Structural defaults until branding overwrites. |
+| **Branding** | `useBrandingStore` / Theme & Branding | Identity + surfaces: `--theme-accent`, `--theme-secondary`, light/dark `--theme-bg` / card / text / border / sidebar, `--radius`, `--box-shadow`, canvas / sidebar / brand gradients. Applied at **app bootstrap** (not only after login) via Firestore + `ga_branding_cache`. |
+
+**Login & loading:** use the same tokens — `app-canvas` / `BrandedBootScreen` / login form + `sidebar-brand-rail`. Customize via existing Brand Colors + Surfaces (no separate login fields). Verify: change Primary → Go Live → log out → login/boot reflect the new palette.
 
 ### Semantic utilities (prefer these)
 
 | Token / class | Use |
 | --- | --- |
-| `bg-theme-bg` / `app-canvas` | Page canvas |
+| `bg-theme-bg` / `app-canvas` | Page canvas (incl. login left column & boot screens) |
 | `bg-theme-card` / `bg-theme-surface` | Cards / inset surfaces |
 | `text-theme-text` / `text-theme-muted` | Primary / secondary copy |
 | `border-theme-border` | Default borders |
 | `text-theme-accent` / `bg-theme-accent` / `bg-theme-accent-muted` | Brand actions & soft accents |
-| `text-theme-success` / `warning` / `danger` | Status meaning (not decoration) |
+| `text-theme-secondary` | Secondary / gold accents (login checkmarks, rail highlights) |
+| `text-theme-success` / `warning` / `danger` / `info` | Status meaning (not decoration) |
 | `bg-brand-gradient` / `text-brand-gradient` | Primary CTAs / wordmarks |
-| `sidebar-brand-rail` / `header-brand-strip` | Shell brand chrome |
+| `sidebar-brand-rail` / `header-brand-strip` | Shell brand chrome + login hero panel |
+| `BrandedBootScreen` | Auth loading + Suspense fallback (theme tokens + company name) |
 
 ### Baseline palette (defaults)
 
 | Role | Value |
 | --- | --- |
-| Primary (deep green) | `#0F5C4C` → hover `#0A4A3D` |
-| Secondary (gold) | `#C9A227` → hover `#B8921F` |
-| WhatsApp / success messaging | Keep `green-500` / `--theme-success` distinct from brand primary |
+| Primary (brand green) | `#2E7D32` → hover `#256A2A` (chrome gradients may use deep `#0F5C4C`) |
+| Secondary (soft gold) | `#C4A032` → hover `#B08F2A` |
+| Success | `#3D9B4A` — distinct from primary |
+| Warning | `#C4A032` |
+| Danger | `#D65C5C` |
+| Info | `#2A7D8C` |
+| Light canvas / card | `#f1f5f2` / `#fcfdfc` |
+| Dark canvas / card | `#0c1b17` / `#17352c` |
 
 Indigo / purple / raw gray islands in new or Wave‑1‑touched UI are **superseded**. Remapped `indigo-*` utilities may still resolve via branding bridges — prefer explicit `theme-*` on new work.
 
@@ -443,7 +758,7 @@ No Zod / schema / required-set changes; no Firestore / submit / routing; no seco
 
 | Region | Rule |
 | --- | --- |
-| **Header** | Title `font-semibold` / quiet; optional subtitle muted; close control labeled (`aria-label="Close"`) ≥44px + `focus-visible` ring |
+| **Header** | Title `font-semibold` / quiet; optional subtitle muted; close control labeled via `closeLabel` (default `"Close"`) ≥44px + `focus-visible` ring |
 | **Body** | Scrollable; form fields follow Form Contract §3e |
 | **Footer** | Right-aligned; **FormActions** for forms; Dialog Confirm = Secondary outline then Primary/Danger |
 
@@ -466,7 +781,7 @@ No Zod / schema / required-set changes; no Firestore / submit / routing; no seco
 
 ### Non-goals (this contract)
 
-No open/close business logic / ModalRegistry redesign; no Firestore; no filter Apply model change; no second form kit; toast redesign optional and separate. Remaining ~45 native `alert`/`confirm` sites (+ branding hook) are **soft residuals** — convert in a later Dialog pass, not by reopening Wave 5 primitives. Wave 5 close-out: [`directives/wave5-complete.md`](directives/wave5-complete.md).
+No open/close business logic / ModalRegistry redesign; no Firestore; no filter Apply model change; no second form kit; toast redesign optional and separate. Native `alert`/`confirm`/`prompt` sites were soft residuals after Wave 5 — **cleared in Wave 10 Agent 4** via Toast + `InteractionDialog`. Wave 5 close-out: [`directives/wave5-complete.md`](directives/wave5-complete.md).
 
 ---
 
@@ -694,7 +1009,7 @@ Remaining non-blocking residuals (out of Agent-widget scope or deferred):
 
 **Focus rings (Wave 1.5 imprint):** Interactive chrome should use `focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-theme-ring` (do not remove outlines without a visible replacement). Shared `DataTable` sort controls, search, and checkboxes follow the same imprint.
 
-Wave 2 **approved complete** (2026-07-13): shared DataTable + Leads/Admin consumer adoption formalized as **DLS v1.1** (§3a–3c). Wave 3 **validated complete** (2026-07-13): Filter / Command Surface Contract formalized as **DLS v1.2** (§3d). Wave 4 **validated complete** (2026-07-13): Form Contract formalized as **DLS v1.3** (§3e). Wave 5 **validated complete** (2026-07-13): Modal/Drawer Contract formalized as **DLS v1.4** (§3f). Soft residuals (remaining alert/confirm sites, MANUAL QA keyboard/SR/theme, team cards) deferred to later waves or operational follow-up.
+Wave 2 **approved complete** (2026-07-13): shared DataTable + Leads/Admin consumer adoption formalized as **DLS v1.1** (§3a–3c). Wave 3 **validated complete** (2026-07-13): Filter / Command Surface Contract formalized as **DLS v1.2** (§3d). Wave 4 **validated complete** (2026-07-13): Form Contract formalized as **DLS v1.3** (§3e). Wave 5 **validated complete** (2026-07-13): Modal/Drawer Contract formalized as **DLS v1.4** (§3f). Soft residuals (MANUAL QA keyboard/SR/theme, team cards) deferred to later waves or operational follow-up; native alert/confirm cleared in Wave 10 Agent 4.
 
 ---
 

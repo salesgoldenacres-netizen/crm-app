@@ -11,8 +11,21 @@ import {
   Settings,
   X,
   Trash2,
+  Monitor,
 } from "lucide-react";
 import { Project } from "@/shared/types";
+import { useToast } from "@/shared/components/Toast";
+
+const iconBtn =
+  "min-h-11 min-w-11 inline-flex items-center justify-center rounded-theme " +
+  "text-theme-muted hover:text-theme-text hover:bg-theme-surface transition-colors " +
+  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-theme-ring " +
+  "disabled:opacity-30 disabled:pointer-events-none";
+
+const toolBtn =
+  "flex-shrink-0 inline-flex items-center justify-center gap-1 min-h-11 px-3 py-2 " +
+  "text-xs md:text-sm rounded-theme font-semibold transition-colors cursor-pointer " +
+  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-theme-ring";
 
 interface AdminMapHeaderProps {
   project: Project;
@@ -48,6 +61,8 @@ interface AdminMapHeaderProps {
   setCalibrationPoints: (pts: any[]) => void;
   pushToHistory: () => void;
   updateProject: (id: string, updates: Partial<Project>) => Promise<void>;
+  /** Wave 10: when false, hide edit tools and show touch gate banner. */
+  canEditMaps?: boolean;
 }
 
 export default function AdminMapHeader({
@@ -84,27 +99,43 @@ export default function AdminMapHeader({
   setCalibrationPoints,
   pushToHistory,
   updateProject,
+  canEditMaps = true,
 }: AdminMapHeaderProps) {
+  const { toast } = useToast();
   return (
-    <header className="bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700 z-10 transition-colors">
-      <div className="px-2 md:px-4 py-2 md:py-3 flex flex-col md:flex-row items-center justify-between space-y-2 md:space-y-0">
-        <div className="flex items-center w-full md:w-auto justify-between md:justify-start space-x-2 md:space-x-4">
-          <div className="flex items-center space-x-2 md:space-x-4">
+    <header className="bg-theme-card shadow-sm border-b border-theme-border z-10 transition-colors">
+      {!canEditMaps && (
+        <div
+          role="status"
+          className="px-3 py-2 bg-theme-accent-muted border-b border-theme-border flex items-center gap-2 text-xs sm:text-sm text-theme-text"
+        >
+          <Monitor className="w-4 h-4 text-theme-accent flex-shrink-0" aria-hidden="true" />
+          <span>
+            Use a larger screen to edit maps. You can still view, pan, and zoom on this
+            device.
+          </span>
+        </div>
+      )}
+
+      <div className="px-2 md:px-4 py-2 md:py-3 flex flex-col lg:flex-row lg:items-center justify-between gap-2 min-w-0">
+        <div className="flex items-center w-full lg:w-auto justify-between lg:justify-start gap-2 md:gap-4 min-w-0">
+          <div className="flex items-center gap-2 md:gap-4 min-w-0">
             <Link
               to="/admin"
-              className="p-1 md:p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400"
+              aria-label="Back to Admin"
+              className={iconBtn}
             >
-              <ArrowLeft className="w-5 h-5" />
+              <ArrowLeft className="w-5 h-5" aria-hidden="true" />
             </Link>
-            <h1 className="text-lg md:text-xl font-bold text-gray-900 dark:text-white truncate max-w-[150px] md:max-w-none">
+            <h1 className="text-base sm:text-lg md:text-xl font-bold text-theme-text truncate min-w-0 max-w-[min(100%,12rem)] sm:max-w-[16rem] lg:max-w-none">
               Edit Map: {project.name}
             </h1>
           </div>
         </div>
 
-        <div className="flex items-center space-x-2 overflow-x-auto w-full md:w-auto pb-1 md:pb-0 scrollbar-hide">
-          <div className="relative flex items-center bg-gray-100 dark:bg-gray-700 rounded px-2 py-1 h-8 mr-2 flex-shrink-0 border border-slate-200 dark:border-slate-800">
-            <Search className="w-3.5 h-3.5 text-gray-400 dark:text-gray-305 mr-1.5" />
+        <div className="flex items-center gap-2 overflow-x-auto overscroll-x-contain w-full lg:w-auto min-w-0 pb-1 lg:pb-0 scrollbar-hide">
+          <div className="relative flex items-center bg-theme-surface rounded-theme px-2 min-h-11 mr-2 flex-shrink-0 border border-theme-border">
+            <Search className="w-3.5 h-3.5 text-theme-muted mr-1.5" aria-hidden="true" />
             <input
               type="text"
               placeholder="Search plot..."
@@ -113,195 +144,220 @@ export default function AdminMapHeader({
                 setSearchQuery(e.target.value);
                 handleSearchFocus(e.target.value);
               }}
-              className="bg-transparent border-none outline-none text-xs dark:text-white w-20 md:w-28"
+              aria-label="Search plot"
+              className="bg-transparent border-none outline-none text-xs text-theme-text w-20 md:w-28 focus-visible:ring-0"
             />
             {searchQuery && (
               <button
+                type="button"
                 onClick={() => setSearchQuery("")}
-                className="text-gray-400 dark:text-gray-300 hover:text-gray-605"
+                aria-label="Clear search"
+                className={iconBtn + " !min-h-8 !min-w-8"}
               >
-                <X className="w-3 h-3" />
+                <X className="w-3 h-3" aria-hidden="true" />
               </button>
             )}
           </div>
 
-          <div className="flex space-x-1 border-r border-gray-250 dark:border-gray-700 pr-2 mr-2">
-            <button
-              onClick={handleUndo}
-              disabled={pastHistoryLength === 0}
-              className="p-1.5 rounded hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 disabled:opacity-30"
-              title="Undo (Ctrl+Z)"
-            >
-              <Undo2 className="w-4 h-4" />
-            </button>
-            <button
-              onClick={handleRedo}
-              disabled={futureHistoryLength === 0}
-              className="p-1.5 rounded hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 disabled:opacity-30"
-              title="Redo (Ctrl+Y)"
-            >
-              <Redo2 className="w-4 h-4" />
-            </button>
-          </div>
+          {canEditMaps && (
+            <div className="flex space-x-1 border-r border-theme-border pr-2 mr-2">
+              <button
+                type="button"
+                onClick={handleUndo}
+                disabled={pastHistoryLength === 0}
+                className={iconBtn}
+                title="Undo (Ctrl+Z)"
+                aria-label="Undo"
+              >
+                <Undo2 className="w-4 h-4" aria-hidden="true" />
+              </button>
+              <button
+                type="button"
+                onClick={handleRedo}
+                disabled={futureHistoryLength === 0}
+                className={iconBtn}
+                title="Redo (Ctrl+Y)"
+                aria-label="Redo"
+              >
+                <Redo2 className="w-4 h-4" aria-hidden="true" />
+              </button>
+            </div>
+          )}
 
-          {mode === "view" && (
+          {canEditMaps && mode === "view" && (
             <>
               <button
+                type="button"
                 onClick={() => {
                   setMode("draw");
                   setActivePlotId(null);
                 }}
-                className="flex-shrink-0 flex items-center px-3 py-1.5 bg-indigo-600 text-white text-xs md:text-sm rounded hover:bg-indigo-750 transition cursor-pointer"
+                className={`${toolBtn} bg-theme-accent text-theme-accent-fg hover:opacity-90`}
               >
-                <Plus className="w-3.5 h-3.5 mr-1" /> Draw Area
+                <Plus className="w-3.5 h-3.5" aria-hidden="true" /> Draw Area
               </button>
               <button
+                type="button"
                 onClick={() => {
                   setMode("slice");
                   setActivePlotId(null);
                   setSlicePoints([]);
                 }}
-                className="flex-shrink-0 flex items-center px-3 py-1.5 bg-purple-600 text-white text-xs md:text-sm rounded hover:bg-purple-700 transition cursor-pointer"
+                className={`${toolBtn} bg-theme-surface text-theme-text border border-theme-border hover:bg-theme-card`}
               >
-                <Scissors className="w-3.5 h-3.5 mr-1" /> Slice
+                <Scissors className="w-3.5 h-3.5" aria-hidden="true" /> Slice
               </button>
               <button
+                type="button"
                 onClick={() => {
                   setMode("bulk");
                   setActivePlotId(null);
                   setSelectedPlotIds([]);
                 }}
-                className="flex-shrink-0 flex items-center px-3 py-1.5 bg-blue-600 text-white text-xs md:text-sm rounded hover:bg-blue-700 transition cursor-pointer"
+                className={`${toolBtn} bg-theme-surface text-theme-text border border-theme-border hover:bg-theme-card`}
               >
-                <CheckSquare className="w-3.5 h-3.5 mr-1" /> Bulk Action
+                <CheckSquare className="w-3.5 h-3.5" aria-hidden="true" /> Bulk Action
               </button>
               <button
+                type="button"
                 onClick={() => {
                   setMode("editLabels");
                   setActivePlotId(null);
                 }}
-                className="flex-shrink-0 flex items-center px-3 py-1.5 bg-emerald-600 text-white text-xs md:text-sm rounded hover:bg-emerald-700 transition cursor-pointer"
+                className={`${toolBtn} bg-theme-success text-white hover:opacity-90`}
                 title="Drag to adjust plot label offset"
               >
-                <Move className="w-3.5 h-3.5 mr-1" /> Move Labels
+                <Move className="w-3.5 h-3.5" aria-hidden="true" /> Move Labels
               </button>
               <button
+                type="button"
                 onClick={() => setShowSettings(!showSettings)}
-                className={`flex-shrink-0 p-1.5 rounded border transition cursor-pointer ${
+                aria-label="Editor settings"
+                aria-pressed={showSettings}
+                className={`${iconBtn} border ${
                   showSettings
-                    ? "bg-gray-200 dark:bg-gray-700 border-indigo-500"
-                    : "bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600"
-                } text-gray-700 dark:text-gray-300`}
+                    ? "bg-theme-accent-muted border-theme-accent"
+                    : "bg-theme-card border-theme-border"
+                }`}
               >
-                <Settings className="w-4 h-4" />
+                <Settings className="w-4 h-4" aria-hidden="true" />
               </button>
             </>
           )}
 
-          {mode === "draw" && (
+          {canEditMaps && mode === "draw" && (
             <div className="flex space-x-2">
               <button
+                type="button"
                 onClick={() => {
                   setDrawingPoints([]);
                   setMode("view");
                 }}
-                className="flex-shrink-0 px-3 py-1.5 bg-gray-200 text-gray-800 text-xs md:text-sm rounded hover:bg-gray-300 cursor-pointer"
+                className={`${toolBtn} bg-theme-surface text-theme-text border border-theme-border hover:bg-theme-card`}
               >
                 Cancel
               </button>
               <button
+                type="button"
                 onClick={handleFinishDrawing}
-                className="flex-shrink-0 flex items-center px-3 py-1.5 bg-green-600 text-white text-xs md:text-sm rounded hover:bg-green-750 cursor-pointer"
+                className={`${toolBtn} bg-theme-success text-white hover:opacity-90`}
               >
-                <Plus className="w-3.5 h-3.5 mr-1" /> Finish Shape
+                <Plus className="w-3.5 h-3.5" aria-hidden="true" /> Finish Shape
               </button>
             </div>
           )}
 
-          {mode === "slice" && (
+          {canEditMaps && mode === "slice" && (
             <button
+              type="button"
               onClick={() => {
                 setMode("view");
                 setActivePlotId(null);
                 setSlicePoints([]);
               }}
-              className="flex-shrink-0 px-3 py-1.5 bg-gray-200 text-gray-800 dark:bg-gray-700 dark:text-white text-xs md:text-sm rounded hover:bg-gray-300 cursor-pointer"
+              className={`${toolBtn} bg-theme-surface text-theme-text border border-theme-border hover:bg-theme-card`}
             >
               Cancel Slice
             </button>
           )}
 
-          {mode === "calibrate" && (
+          {canEditMaps && mode === "calibrate" && (
             <button
+              type="button"
               onClick={() => {
                 setMode("view");
                 setCalibrationPoints([]);
               }}
-              className="flex-shrink-0 px-3 py-1.5 bg-gray-200 text-gray-800 dark:bg-gray-700 dark:text-white text-xs md:text-sm rounded hover:bg-gray-300 cursor-pointer"
+              className={`${toolBtn} bg-theme-surface text-theme-text border border-theme-border hover:bg-theme-card`}
             >
               Cancel Calibration
             </button>
           )}
 
-          {mode === "editLabels" && (
+          {canEditMaps && mode === "editLabels" && (
             <button
+              type="button"
               onClick={() => {
                 setMode("view");
               }}
-              className="flex-shrink-0 px-3 py-1.5 bg-emerald-600 text-white text-xs md:text-sm rounded hover:bg-emerald-700 cursor-pointer"
+              className={`${toolBtn} bg-theme-success text-white hover:opacity-90`}
             >
               Done Moving Labels
             </button>
           )}
 
-          {mode === "editShape" && (
+          {canEditMaps && mode === "editShape" && (
             <div className="flex items-center space-x-2">
-              <div className="flex border rounded overflow-hidden bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-700 h-8 text-xs">
+              <div className="flex border rounded-theme overflow-hidden bg-theme-card border-theme-border min-h-11 text-xs">
                 <button
+                  type="button"
                   onClick={() => setEditSubMode("vertices")}
-                  className={`px-2 py-1 cursor-pointer ${
+                  className={`px-3 min-h-11 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-theme-ring ${
                     editSubMode === "vertices"
-                      ? "bg-indigo-600 text-white"
-                      : "text-gray-700 dark:text-gray-300 hover:bg-gray-100"
+                      ? "bg-theme-accent text-theme-accent-fg"
+                      : "text-theme-text hover:bg-theme-surface"
                   }`}
                 >
                   Edit Corners
                 </button>
                 <button
+                  type="button"
                   onClick={() => setEditSubMode("transform")}
-                  className={`px-2 py-1 cursor-pointer ${
+                  className={`px-3 min-h-11 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-theme-ring ${
                     editSubMode === "transform"
-                      ? "bg-indigo-600 text-white"
-                      : "text-gray-700 dark:text-gray-300 hover:bg-gray-100"
+                      ? "bg-theme-accent text-theme-accent-fg"
+                      : "text-theme-text hover:bg-theme-surface"
                   }`}
                 >
                   Scale/Rotate
                 </button>
               </div>
               <button
+                type="button"
                 onClick={() => {
                   setMode("view");
                   setActivePlotId(null);
                 }}
-                className="flex-shrink-0 px-3 py-1.5 bg-indigo-600 text-white text-xs md:text-sm rounded hover:bg-indigo-700 cursor-pointer"
+                className={`${toolBtn} bg-theme-accent text-theme-accent-fg hover:opacity-90`}
               >
                 Done Shape
               </button>
             </div>
           )}
 
-          {mode === "bulk" && (
-            <div className="flex items-center space-x-1.5 bg-blue-50 dark:bg-blue-955/40 p-1 rounded-lg border border-blue-200 dark:border-blue-900/60 flex-shrink-0 text-xs">
-              <span className="font-medium text-blue-700 dark:text-blue-300 px-1">
+          {canEditMaps && mode === "bulk" && (
+            <div className="flex flex-wrap items-center gap-1.5 bg-theme-accent-muted/40 p-1.5 rounded-theme border border-theme-border shrink-0 text-xs max-w-full">
+              <span className="font-medium text-theme-accent px-1 whitespace-nowrap">
                 {selectedPlotIds.length} Selected
               </span>
 
               <button
                 type="button"
                 onClick={handleSelectAll}
-                className="px-2 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded font-medium h-7 flex items-center shadow-sm cursor-pointer border-0"
+                className={`${toolBtn} bg-theme-accent text-theme-accent-fg hover:opacity-90 !min-h-11`}
               >
-                {project.plots.every((p) => selectedPlotIds.includes(p.id)) && selectedPlotIds.length > 0
+                {project.plots.every((p) => selectedPlotIds.includes(p.id)) &&
+                selectedPlotIds.length > 0
                   ? "Deselect All"
                   : "Select All"}
               </button>
@@ -309,10 +365,10 @@ export default function AdminMapHeader({
               <button
                 type="button"
                 onClick={() => setFreeSelectActive(!freeSelectActive)}
-                className={`px-2 py-1 rounded font-medium h-7 flex items-center shadow-sm cursor-pointer transition border border-solid ${
+                className={`${toolBtn} border border-solid ${
                   freeSelectActive
-                    ? "bg-emerald-650 text-white border-emerald-600"
-                    : "bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-305 border-gray-300 dark:border-gray-700 hover:bg-gray-50"
+                    ? "bg-theme-success text-white border-theme-success"
+                    : "bg-theme-card text-theme-text border-theme-border hover:bg-theme-surface"
                 }`}
               >
                 {freeSelectActive ? "Drag Selecting" : "Free Select"}
@@ -332,7 +388,8 @@ export default function AdminMapHeader({
                     setMode("view");
                   }
                 }}
-                className="p-1 rounded border border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-white h-7 cursor-pointer text-xs"
+                aria-label="Bulk status"
+                className="p-2 rounded-theme border border-theme-border bg-theme-card text-theme-text min-h-11 cursor-pointer text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-theme-ring"
               >
                 <option value="">Status...</option>
                 <option value="available">Available</option>
@@ -343,18 +400,23 @@ export default function AdminMapHeader({
                 <option value="park">Park</option>
               </select>
 
-              <div className="flex items-center border rounded overflow-hidden bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-700 h-7 text-xs">
+              <div className="flex items-center border rounded-theme overflow-hidden bg-theme-card border-theme-border min-h-11 text-xs">
                 <input
                   type="number"
                   placeholder="Rate"
                   value={bulkRate}
                   onChange={(e) => setBulkRate(e.target.value)}
-                  className="w-12 p-1 dark:bg-gray-800 dark:text-white outline-none"
+                  aria-label="Bulk rate"
+                  className="w-14 p-2 bg-transparent text-theme-text outline-none"
                 />
                 <button
+                  type="button"
                   onClick={() => {
                     const numericRate = parseFloat(bulkRate);
-                    if (isNaN(numericRate)) return alert("Please enter a valid rate");
+                    if (isNaN(numericRate)) {
+                      toast("Please enter a valid rate", "warning");
+                      return;
+                    }
                     pushToHistory();
                     const updated = project.plots.map((p) => {
                       if (selectedPlotIds.includes(p.id)) {
@@ -365,32 +427,34 @@ export default function AdminMapHeader({
                         return { ...p, rate: bulkRate, price: priceVal };
                       }
                       return p;
-                      
                     });
                     updateProject(projectId, { ...project, plots: updated });
                     setSelectedPlotIds([]);
                     setMode("view");
                   }}
-                  className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 text-blue-600 font-bold border-l border-gray-300 dark:border-gray-700 cursor-pointer bg-transparent border-0"
+                  className="px-2 min-h-11 hover:bg-theme-surface text-theme-accent font-bold border-l border-theme-border cursor-pointer bg-transparent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-theme-ring"
                 >
                   Apply
                 </button>
               </div>
 
               <button
+                type="button"
                 onClick={handleMergePlots}
                 disabled={selectedPlotIds.length < 2}
-                className="px-2 py-1 bg-purple-600 text-white disabled:opacity-40 rounded font-medium h-7 flex items-center cursor-pointer border-0"
+                className={`${toolBtn} bg-theme-accent text-theme-accent-fg disabled:opacity-40`}
               >
                 Merge
               </button>
 
               <button
+                type="button"
                 onClick={handleBulkDelete}
-                className="p-1 bg-red-600 text-white rounded h-7 cursor-pointer border-0 flex items-center justify-center w-7"
+                className={`${iconBtn} bg-theme-danger text-white hover:opacity-90`}
                 disabled={selectedPlotIds.length === 0}
+                aria-label="Delete selected plots"
               >
-                <Trash2 className="w-3.5 h-3.5" />
+                <Trash2 className="w-3.5 h-3.5" aria-hidden="true" />
               </button>
             </div>
           )}

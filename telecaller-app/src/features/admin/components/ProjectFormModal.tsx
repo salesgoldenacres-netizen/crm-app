@@ -9,6 +9,7 @@ import Button from "@/shared/components/ui/Button";
 import Modal from "@/shared/components/ui/Modal";
 import FormActions from "@/shared/components/ui/FormActions";
 import { FIELD_CONTROL_CLASS } from "@/shared/components/ui/formField";
+import { useToast } from "@/shared/components/Toast";
 
 interface ProjectFormState {
   name: string;
@@ -45,6 +46,7 @@ export default function ProjectFormModal({
   editingProject,
   onSave,
 }: ProjectFormModalProps) {
+  const { toast } = useToast();
   const [projectForm, setProjectForm] = useState<ProjectFormState>(() =>
     editingProject
       ? {
@@ -114,7 +116,7 @@ export default function ProjectFormModal({
       setProjectForm((prev) => ({ ...prev, image: downloadUrl }));
     } catch (err: any) {
       logger.error("ProjectFormModal", "Image upload failed:", err);
-      alert("Failed to upload image: " + err.message);
+      toast("Failed to upload image: " + err.message, "error");
     } finally {
       setUploadingImage(false);
     }
@@ -130,6 +132,7 @@ export default function ProjectFormModal({
       isOpen={isOpen}
       onClose={onClose}
       title={editingProject ? "Edit Project Details" : "Add New Project"}
+      variant="sheet"
       size="xl"
       className="max-w-2xl"
       footer={

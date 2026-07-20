@@ -12,6 +12,7 @@ import {
   sidebarSubItem,
   sidebarSubTree,
 } from "./sidebarNavStyles";
+import { NAV_LABELS } from "@/shared/constants/navTaxonomy";
 
 interface MapsSubmenuProps {
   isSidebarCollapsed: boolean;
@@ -40,17 +41,18 @@ export default function MapsSubmenu({
         <Link
           to="/?tab=projects"
           className={sidebarGroupLink(isSidebarCollapsed)}
-          title="Layout Maps"
+          title={NAV_LABELS.maps}
+          aria-label={isSidebarCollapsed ? NAV_LABELS.maps : undefined}
         >
-          <Map className={sidebarIcon("maps")} />
-          {!isSidebarCollapsed && <span className="truncate">Layout Maps</span>}
+          <Map className={sidebarIcon("maps")} aria-hidden="true" />
+          {!isSidebarCollapsed && <span className="truncate">{NAV_LABELS.maps}</span>}
         </Link>
         {!isSidebarCollapsed && (
           <button
             type="button"
             onClick={() => setIsMapDropdownOpen((o) => !o)}
             className={sidebarGroupToggle()}
-            aria-label="Toggle Layout Maps menu"
+            aria-label={`Toggle ${NAV_LABELS.maps} menu`}
           >
             <ChevronDown
               className={`${sidebarChevronClass} ${isMapDropdownOpen ? "rotate-180" : ""}`}

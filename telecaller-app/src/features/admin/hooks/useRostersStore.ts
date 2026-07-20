@@ -1,7 +1,5 @@
 import { useState, useEffect } from "react";
-import { onSnapshot } from "firebase/firestore";
 import { Roster } from "@/shared/types";
-import { rostersRef } from "@/shared/services/firebase/converters";
 import { RostersRepository } from "@/shared/services/firebase/repositories";
 
 export interface UseRostersStoreOptions {
@@ -17,11 +15,7 @@ export function useRostersStore(options: UseRostersStoreOptions = {}) {
   useEffect(() => {
     if (!enabled) return;
 
-    const unsubscribe = onSnapshot(rostersRef, (snapshot) => {
-      const rost: Record<string, Roster> = {};
-      snapshot.forEach((d) => {
-        rost[d.id] = d.data();
-      });
+    const unsubscribe = RostersRepository.subscribe((rost) => {
       setRosters(rost);
       setIsLoaded(true);
     });

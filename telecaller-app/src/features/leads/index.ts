@@ -38,6 +38,8 @@ export { default as WhatsAppAssistant } from "./components/WhatsAppAssistant";
 export * from "./hooks/useAdminLeads";
 export * from "./hooks/useArchivedLeadsStore";
 export * from "./hooks/useLeadsStore";
+export * from "./hooks/useAgentOpenLeads";
+export * from "./hooks/useLeadQuery";
 
 export * from "./constants/leadTemplates";
 export * from "./utils/leadColors";

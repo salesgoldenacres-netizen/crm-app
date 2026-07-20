@@ -8,6 +8,7 @@ import { User, Team, CustomRole } from "@/shared/types";
 import DataTable, { ColumnDef } from "@/shared/components/DataTable";
 import Badge from "@/shared/components/ui/Badge";
 import Dialog from "@/shared/components/ui/Dialog";
+import EmptyState from "@/shared/components/ui/EmptyState";
 
 type FeedbackDialog =
   | { mode: "alert"; title: string; description: string }
@@ -58,7 +59,10 @@ export default function AdminUsersTab({ user, customRoles, isManagerial }: Admin
 
   const handleSaveUser = async (userForm: any) => {
     // Password is Auth-only — never audit or persist to Firestore.
-    const { password: _authPassword, ...profileFields } = userForm;
+    const { password: _, ...profileFields } = userForm as Record<string, unknown> & {
+      password?: string;
+    };
+    void _;
     let changes: Record<string, { before: any; after: any }> | null = null;
     if (editingUser) {
       changes = {};
@@ -267,21 +271,21 @@ export default function AdminUsersTab({ user, customRoles, isManagerial }: Admin
 
   return (
     <>
-      <div className="flex flex-col sm:flex-row sm:justify-end sm:items-center mb-3 gap-2">
-        <div className="relative flex-grow sm:flex-grow-0">
+      <div className="flex flex-col sm:flex-row sm:justify-end sm:items-center mb-3 gap-2 min-w-0">
+        <div className="relative flex-grow sm:flex-grow-0 w-full sm:w-auto">
           <input
             type="text"
             placeholder="Search username or role…"
             value={userSearchQuery}
             onChange={(e) => setUserSearchQuery(e.target.value)}
-            className="w-full sm:w-56 pl-8 pr-3 h-8 bg-theme-card border border-theme-border rounded-lg text-[11px] text-theme-text placeholder:text-theme-muted focus:outline-none focus:ring-1 focus:ring-theme-ring transition-colors"
+            className="w-full sm:w-56 pl-8 pr-3 min-h-11 sm:min-h-0 sm:h-8 bg-theme-card border border-theme-border rounded-theme text-[11px] text-theme-text placeholder:text-theme-muted focus:outline-none focus:ring-2 focus:ring-theme-ring transition-colors"
           />
           <Filter className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-theme-muted pointer-events-none" />
         </div>
         <button
           type="button"
           onClick={() => handleOpenUserModal()}
-          className="inline-flex items-center justify-center px-2.5 h-8 bg-theme-accent text-theme-accent-fg rounded-lg hover:opacity-90 text-[11px] font-bold transition-colors cursor-pointer border-0"
+          className="inline-flex items-center justify-center min-h-11 sm:min-h-0 sm:h-8 px-3 py-2 sm:py-0 bg-theme-accent text-theme-accent-fg rounded-theme hover:opacity-90 text-[11px] font-bold transition-colors cursor-pointer border-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-theme-ring"
         >
           <Plus className="w-3.5 h-3.5 mr-1.5" /> Add User
         </button>
@@ -298,14 +302,15 @@ export default function AdminUsersTab({ user, customRoles, isManagerial }: Admin
 
       {/* Teams & Groups Management */}
       <div className="mt-8 space-y-6">
-        <div className="flex justify-between items-center">
-          <h2 className="text-xl font-bold text-theme-text flex items-center">
-            <Users className="w-5 h-5 mr-2 text-indigo-500" />
-            Teams & Groups Hierarchy
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 min-w-0">
+          <h2 className="text-lg sm:text-xl font-bold text-theme-text flex items-center min-w-0">
+            <Users className="w-5 h-5 mr-2 text-theme-accent shrink-0" />
+            <span className="truncate">Teams & Groups Hierarchy</span>
           </h2>
           <button
+            type="button"
             onClick={() => setIsTeamModalOpen(true)}
-            className="flex items-center px-3 py-1.5 bg-theme-accent hover:opacity-90 text-white rounded-md text-xs font-semibold shadow-sm transition-colors cursor-pointer border-0"
+            className="inline-flex items-center justify-center min-h-11 sm:min-h-0 px-3 py-2 sm:py-1.5 bg-theme-accent hover:opacity-90 text-theme-accent-fg rounded-theme text-xs font-semibold shadow-sm transition-colors cursor-pointer border-0 shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-theme-ring"
           >
             <Plus className="w-3.5 h-3.5 mr-1" /> Add Team
           </button>
@@ -313,8 +318,13 @@ export default function AdminUsersTab({ user, customRoles, isManagerial }: Admin
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {teams.length === 0 ? (
-            <div className="md:col-span-2 bg-theme-card rounded-xl p-8 text-center text-gray-400 italic border dark:border-gray-700">
-              No teams configured yet. Create a team and assign a Team Lead.
+            <div className="md:col-span-2">
+              <EmptyState
+                title="No teams configured yet"
+                description="Create a team and assign a Team Lead."
+                icon={<Users className="w-8 h-8" aria-hidden="true" />}
+                className="max-w-none"
+              />
             </div>
           ) : (
             teams.map((t) => {
@@ -322,26 +332,27 @@ export default function AdminUsersTab({ user, customRoles, isManagerial }: Admin
               return (
                 <div
                   key={t.id}
-                  className="bg-theme-card rounded-xl p-5 border dark:border-gray-700 shadow-sm flex flex-col justify-between space-y-4"
+                  className="bg-theme-card rounded-theme p-5 border border-theme-border shadow-elevation-sm flex flex-col justify-between space-y-4"
                 >
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <h3 className="font-extrabold text-theme-text text-base">
+                  <div className="flex justify-between items-start gap-3">
+                    <div className="min-w-0">
+                      <h3 className="type-card-title text-theme-text truncate">
                         {t.name}
                       </h3>
-                      <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-theme-accent-muted text-indigo-700 dark:bg-indigo-955/40 dark:text-indigo-400 border border-indigo-100 inline-block mt-1">
-                        Lead:{" "}
-                        {leadUser ? leadUser.username : "No Lead Assigned"}
-                      </span>
+                      <Badge variant="primary" className="mt-1 normal-case tracking-wide">
+                        Lead: {leadUser ? leadUser.username : "No Lead Assigned"}
+                      </Badge>
                     </div>
-                    <div className="flex items-center space-x-2">
+                    <div className="flex items-center space-x-2 shrink-0">
                       <button
+                        type="button"
                         onClick={() => setIsTeamModalOpen(t)}
-                        className="text-xs text-theme-accent hover:text-indigo-800 font-bold cursor-pointer bg-transparent border-0"
+                        className="text-xs text-theme-accent hover:opacity-80 font-semibold cursor-pointer bg-transparent border-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-theme-ring rounded-theme min-h-11 sm:min-h-0 px-1"
                       >
                         Edit
                       </button>
                       <button
+                        type="button"
                         onClick={() => {
                           setFeedback({
                             mode: "confirm",
@@ -360,7 +371,7 @@ export default function AdminUsersTab({ user, customRoles, isManagerial }: Admin
                             },
                           });
                         }}
-                        className="text-xs text-red-600 hover:text-red-800 font-bold cursor-pointer bg-transparent border-0"
+                        className="text-xs text-theme-danger hover:opacity-80 font-semibold cursor-pointer bg-transparent border-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-theme-ring rounded-theme min-h-11 sm:min-h-0 px-1"
                       >
                         Delete
                       </button>
@@ -368,23 +379,20 @@ export default function AdminUsersTab({ user, customRoles, isManagerial }: Admin
                   </div>
 
                   <div className="space-y-1.5">
-                    <span className="block text-[10px] font-bold text-gray-400 uppercase">
+                    <span className="block type-label text-theme-muted">
                       Members ({t.memberIds?.length || 0})
                     </span>
                     <div className="flex flex-wrap gap-1.5">
                       {t.memberIds?.map((mId) => {
                         const member = users.find((u) => u.id === mId);
                         return member ? (
-                          <span
-                            key={mId}
-                            className="px-2 py-0.5 rounded bg-gray-100 dark:bg-gray-700 text-theme-text text-[10px] font-medium border dark:border-gray-600"
-                          >
+                          <Badge key={mId} variant="default" className="normal-case tracking-wide font-medium">
                             {member.username}
-                          </span>
+                          </Badge>
                         ) : null;
                       })}
                       {(!t.memberIds || t.memberIds.length === 0) && (
-                        <span className="text-xs text-gray-400 italic">
+                        <span className="text-xs text-theme-muted">
                           No members in team.
                         </span>
                       )}
@@ -401,7 +409,7 @@ export default function AdminUsersTab({ user, customRoles, isManagerial }: Admin
       <div className="mt-8">
         <button
           onClick={() => setShowDeletedUsers((v) => !v)}
-          className="flex items-center gap-2 text-sm font-semibold text-theme-muted hover:text-gray-700 dark:hover:text-gray-300 transition-colors cursor-pointer bg-transparent border-0"
+          className="flex items-center gap-2 text-sm font-semibold text-theme-muted hover:text-theme-text transition-colors cursor-pointer bg-transparent border-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-theme-ring rounded-theme"
         >
           <Archive className="w-4 h-4" />
           Deleted Users Archive ({deletedUsers.length})

@@ -1,4 +1,4 @@
-import { DollarSign, TrendingUp, PhoneCall, Inbox } from "lucide-react";
+﻿import { DollarSign, TrendingUp, PhoneCall, Inbox } from "lucide-react";
 
 interface AdminDashboardKPICardsProps {
   totalRevenue: number;
@@ -16,7 +16,7 @@ interface AdminDashboardKPICardsProps {
 }
 
 const cardShell =
-  "rounded-xl border border-theme-border bg-theme-card p-3 flex flex-col justify-between gap-2.5 min-h-0";
+  "rounded-theme border border-theme-border bg-theme-card shadow-elevation-sm p-3 flex flex-col justify-between gap-2.5 min-h-0";
 
 export default function AdminDashboardKPICards({
   totalRevenue,
@@ -44,7 +44,7 @@ export default function AdminDashboardKPICards({
             <span className="text-[9px] font-bold uppercase tracking-wider text-theme-muted block">
               Estimated Revenue
             </span>
-            <span className="text-xl font-black text-theme-text mt-0.5 block truncate">
+            <span className="text-xl font-bold text-theme-text mt-0.5 block truncate">
               {formatRevenue(totalRevenue)}
             </span>
           </div>
@@ -81,7 +81,7 @@ export default function AdminDashboardKPICards({
               />
             </svg>
             <div className="absolute inset-0 flex flex-col items-center justify-end pb-0.5">
-              <span className="text-[11px] font-extrabold text-theme-text leading-none tabular-nums">
+              <span className="text-[11px] font-bold text-theme-text leading-none tabular-nums">
                 {clamped}%
               </span>
             </div>
@@ -110,7 +110,7 @@ export default function AdminDashboardKPICards({
             <span className="text-[9px] font-bold uppercase tracking-wider text-theme-muted block">
               Lead Conversion
             </span>
-            <span className="text-xl font-black text-theme-text mt-0.5 block tabular-nums">
+            <span className="text-xl font-bold text-theme-text mt-0.5 block tabular-nums">
               {conversionRate}%
             </span>
           </div>
@@ -135,7 +135,7 @@ export default function AdminDashboardKPICards({
             <span className="text-[9px] font-bold uppercase tracking-wider text-theme-muted block">
               Today&apos;s Calls
             </span>
-            <span className="text-xl font-black text-theme-text mt-0.5 block tabular-nums">
+            <span className="text-xl font-bold text-theme-text mt-0.5 block tabular-nums">
               {totalCallsTodayCount}
             </span>
           </div>
@@ -160,7 +160,7 @@ export default function AdminDashboardKPICards({
             <span className="text-[9px] font-bold uppercase tracking-wider text-theme-muted block">
               Pending Approvals
             </span>
-            <span className="text-xl font-black text-theme-text mt-0.5 block tabular-nums">
+            <span className="text-xl font-bold text-theme-text mt-0.5 block tabular-nums">
               {pendingTotal}
             </span>
           </div>

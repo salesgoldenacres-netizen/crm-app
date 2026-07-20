@@ -48,6 +48,7 @@ export default function TeamConfigModal({
       isOpen={isOpen}
       onClose={onClose}
       title={editingTeam ? "Edit Team" : "Add New Team"}
+      variant="sheet"
       size="md"
       footer={
         <FormActions>

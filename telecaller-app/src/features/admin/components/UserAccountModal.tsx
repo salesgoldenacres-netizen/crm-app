@@ -102,6 +102,7 @@ export default function UserAccountModal({
       isOpen={isOpen}
       onClose={onClose}
       title={editingUser ? "Edit User Account" : "Add New User Account"}
+      variant="sheet"
       footer={
         <FormActions>
           <Button type="button" variant="outline" onClick={onClose}>

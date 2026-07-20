@@ -16,6 +16,8 @@ export interface User {
   isMigrated?: boolean;
   allowedProjects?: string[];
   organizationId?: string;
+  fcmToken?: string;
+  fcmTokenUpdatedAt?: string;
 }
 
 export interface Team {

@@ -1,6 +1,4 @@
 import { useState, useEffect } from "react";
-import { doc, onSnapshot } from "firebase/firestore";
-import { db } from "@/shared/services/firebase";
 import { EventLog } from "@/shared/types";
 import { SettingsRepository } from "@/shared/services/firebase/repositories";
 
@@ -17,8 +15,8 @@ export function useEventsStore(options: UseEventsStoreOptions = {}) {
   useEffect(() => {
     if (!enabled) return;
 
-    const unsubscribe = onSnapshot(doc(db, "settings", "events"), (docSnap) => {
-      setEvents(docSnap.exists() ? docSnap.data().list || [] : []);
+    const unsubscribe = SettingsRepository.subscribeEvents((list) => {
+      setEvents(list);
       setIsLoaded(true);
     });
     return () => unsubscribe();

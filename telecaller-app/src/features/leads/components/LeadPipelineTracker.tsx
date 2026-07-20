@@ -1,4 +1,4 @@
-import { useState } from "react";
+﻿import { useState } from "react";
 import { Ban } from "lucide-react";
 import Dialog from "@/shared/components/ui/Dialog";
 
@@ -75,7 +75,7 @@ export default function LeadPipelineTracker({
               "bg-theme-surface text-theme-muted border-theme-border hover:bg-theme-card";
             if (isActive) {
               tone =
-                "bg-brand-gradient text-white border-transparent shadow-md shadow-[color-mix(in_srgb,var(--primary-color)_35%,transparent)] font-extrabold";
+                "bg-brand-gradient text-white border-transparent shadow-md shadow-[color-mix(in_srgb,var(--primary-color)_35%,transparent)] font-bold";
             } else if (isCompleted) {
               tone =
                 "bg-theme-accent-muted text-theme-accent border-theme-accent/25 font-bold";
@@ -92,7 +92,7 @@ export default function LeadPipelineTracker({
                     label: stage.label,
                   })
                 }
-                className={`relative min-h-10 px-1.5 sm:px-2 rounded-xl border text-[10px] sm:text-[11px] text-center transition-all cursor-pointer flex items-center justify-center leading-tight ${tone}`}
+                className={`relative min-h-10 px-1.5 sm:px-2 rounded-theme border text-[10px] sm:text-[11px] text-center transition-all cursor-pointer flex items-center justify-center leading-tight ${tone}`}
               >
                 {isCompleted && !isActive && (
                   <span className="absolute top-1 right-1 size-1.5 rounded-full bg-theme-accent" />

@@ -1,7 +1,5 @@
 import { useState, useEffect } from "react";
-import { onSnapshot } from "firebase/firestore";
 import { CallTarget } from "@/shared/types";
-import { callTargetsRef } from "@/shared/services/firebase/converters";
 import { CallTargetsRepository } from "@/shared/services/firebase/repositories";
 
 export interface UseCallTargetStoreOptions {
@@ -17,11 +15,7 @@ export function useCallTargetStore(options: UseCallTargetStoreOptions = {}) {
   useEffect(() => {
     if (!enabled) return;
 
-    const unsubscribe = onSnapshot(callTargetsRef, (snapshot) => {
-      const tgts: Record<string, CallTarget> = {};
-      snapshot.forEach((d) => {
-        tgts[d.id] = d.data();
-      });
+    const unsubscribe = CallTargetsRepository.subscribe((tgts) => {
       setTargets(tgts);
       setIsLoaded(true);
     });

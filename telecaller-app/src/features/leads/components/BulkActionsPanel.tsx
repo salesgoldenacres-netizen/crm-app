@@ -6,11 +6,12 @@ import {
   normalizeLeadStatus,
   planStatusTransition,
 } from "@/shared/contracts";
-import { useLeadsStore } from "@/features/leads/hooks/useLeadsStore";
 
 interface BulkActionsPanelProps {
   selectedLeadIds: string[];
   setSelectedLeadIds: (ids: string[]) => void;
+  /** Current page/row models for display + status transition checks (not company SoT). */
+  pageLeads: Lead[];
   bulkAssignee: string;
   setBulkAssignee: (assignee: string) => void;
   bulkStatus: string;
@@ -26,6 +27,7 @@ interface BulkActionsPanelProps {
 export default function BulkActionsPanel({
   selectedLeadIds,
   setSelectedLeadIds,
+  pageLeads,
   bulkAssignee,
   setBulkAssignee,
   bulkStatus,
@@ -37,7 +39,6 @@ export default function BulkActionsPanel({
   user,
   toast,
 }: BulkActionsPanelProps) {
-  const { leads } = useLeadsStore();
   const [binConfirmOpen, setBinConfirmOpen] = useState(false);
   const [pendingBinCount, setPendingBinCount] = useState(0);
 
@@ -46,15 +47,14 @@ export default function BulkActionsPanel({
   return (
     <>
     {selectedLeadIds.length > 0 && (
-    <div className="fixed bottom-20 md:bottom-6 left-1/2 -translate-x-1/2 z-50 w-[calc(100%-2rem)] max-w-4xl bg-white border border-indigo-100 rounded-2xl p-4 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-xl shadow-indigo-100/40 animate-sheetSlideUp text-slate-800">
-      <div className="text-xs font-bold text-gray-900">
-        ⚡{" "}
-        <span className="text-theme-accent">
+    <div className="fixed bottom-20 md:bottom-6 left-1/2 -translate-x-1/2 z-50 w-[calc(100%-2rem)] max-w-4xl max-h-[40vh] overflow-y-auto bg-theme-card border border-theme-border rounded-theme p-3 sm:p-4 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 shadow-elevation-md animate-sheetSlideUp text-theme-text">
+      <div className="text-xs font-semibold text-theme-text shrink-0">
+        <span className="text-theme-accent tabular-nums">
           {selectedLeadIds.length}
         </span>{" "}
         leads selected
       </div>
-      <div className="flex flex-wrap items-center gap-3">
+      <div className="flex flex-wrap items-center gap-2 sm:gap-3 min-w-0">
         <select
           value={bulkAssignee}
           onChange={async (e) => {
@@ -72,7 +72,8 @@ export default function BulkActionsPanel({
               "success"
             );
           }}
-          className="text-xs bg-white border border-gray-300 rounded-lg p-2 focus:ring-theme-ring text-gray-900"
+          aria-label="Reassign selected leads"
+          className="min-h-11 text-xs bg-theme-card border border-theme-border rounded-theme px-2 py-2 focus:ring-theme-ring text-theme-text"
         >
           <option value="">Reassign to...</option>
           {users
@@ -98,7 +99,7 @@ export default function BulkActionsPanel({
             const allowedIds: string[] = [];
             let blocked = 0;
             for (const id of selectedLeadIds) {
-              const lead = leads.find((l) => l.id === id);
+              const lead = pageLeads.find((l) => l.id === id);
               const plan = planStatusTransition({
                 from: lead?.status,
                 to,
@@ -132,7 +133,8 @@ export default function BulkActionsPanel({
               "success",
             );
           }}
-          className="text-xs bg-white border border-gray-300 rounded-lg p-2 focus:ring-theme-ring text-gray-900"
+          aria-label="Update status for selected leads"
+          className="min-h-11 text-xs bg-theme-card border border-theme-border rounded-theme px-2 py-2 focus:ring-theme-ring text-theme-text"
         >
           <option value="">Update Status...</option>
           <option value="new">New</option>
@@ -152,9 +154,9 @@ export default function BulkActionsPanel({
               setPendingBinCount(selectedLeadIds.length);
               setBinConfirmOpen(true);
             }}
-            className="px-3 py-1.5 bg-theme-danger hover:opacity-90 text-white text-xs rounded-lg font-bold flex items-center space-x-1 transition-colors cursor-pointer border-0"
+            className="inline-flex items-center gap-1 min-h-11 px-3 py-2 bg-theme-danger hover:opacity-90 text-white text-xs rounded-theme font-bold transition-colors cursor-pointer border-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-theme-ring"
           >
-            <Trash2 className="w-3.5 h-3.5" />
+            <Trash2 className="w-3.5 h-3.5" aria-hidden />
             <span>Move to Bin</span>
           </button>
         )}
@@ -162,7 +164,7 @@ export default function BulkActionsPanel({
         <button
           type="button"
           onClick={() => setSelectedLeadIds([])}
-          className="px-3 py-1.5 border border-gray-300 text-xs rounded-lg hover:bg-gray-50 font-semibold cursor-pointer text-gray-700 bg-white"
+          className="inline-flex items-center min-h-11 px-3 py-2 border border-theme-border text-xs rounded-theme hover:bg-theme-surface font-semibold cursor-pointer text-theme-text bg-theme-card focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-theme-ring"
         >
           Deselect
         </button>

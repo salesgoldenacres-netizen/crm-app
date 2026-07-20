@@ -3,7 +3,7 @@ import { AnalyticsService } from "./AnalyticsService";
 import { ClientAnalyticsProvider } from "./ClientAnalyticsProvider";
 import { SummaryDocumentProvider } from "./SummaryDocumentProvider";
 import { FirestoreAggregationProvider } from "./FirestoreAggregationProvider";
-import { useLeadsStore } from "@/features/leads/hooks/useLeadsStore";
+import { useAgentOpenLeads } from "@/features/leads/hooks/useAgentOpenLeads";
 import { useUsersStore } from "@/features/employees/hooks/useUsersStore";
 import { useCallTargetStore, useGoalsStore } from "@/features/admin/hooks/adminStores";
 import { useProjectScope } from "../ProjectScopeContext";
@@ -26,24 +26,33 @@ export function AnalyticsProvider({ children }: AnalyticsProviderProps) {
   const { activeProjectId } = useProjectScope();
   const authContext = useAuthorization();
 
-  // Getters for store arrays to pass to ClientAnalyticsProvider
-  const leadsStore = useLeadsStore();
+  // Tier 1 client analytics: agent open-leads only (bounded). Managers → empty.
+  const { openLeads } = useAgentOpenLeads();
   const usersStore = useUsersStore();
   const targetsStore = useCallTargetStore();
   const goalsStore = useGoalsStore();
 
-  const getLeads = () => leadsStore.leads;
+  const getLeads = () => openLeads;
   const getUsers = () => usersStore.users;
   const getTargets = () => targetsStore.targets;
-  const getGoals = () => goalsStore.goals;
+  /** Adapt settings Goals document into the array shape ClientAnalyticsProvider expects. */
+  const getGoals = () => {
+    const g = goalsStore.goals;
+    return [
+      { target: g.monthlyCallGoal, achieved: 0, label: "Monthly Calls" },
+      { target: g.monthlyBookingGoal, achieved: 0, label: "Monthly Bookings" },
+      { target: g.targetRevenue, achieved: 0, label: g.customGoalText || "Revenue" },
+    ];
+  };
 
   const analyticsService = useMemo(() => {
-    const client = new ClientAnalyticsProvider(getLeads, getUsers, getTargets, getGoals);
+    const isManager = authContext.canManageUsers();
+    const client = new ClientAnalyticsProvider(getLeads, getUsers, getTargets, getGoals, isManager);
     const summary = new SummaryDocumentProvider();
     const aggregation = new FirestoreAggregationProvider();
 
     // Check permission utilizing AuthorizationContext canViewAnalytics
-    const checkPermission = (u: any, capability: string, _projId?: string) => {
+    const checkPermission = (_user: unknown, capability: string, _projId?: string) => {
       if (capability === "view-analytics") {
         return authContext.canViewAnalytics();
       }
@@ -54,7 +63,7 @@ export function AnalyticsProvider({ children }: AnalyticsProviderProps) {
       client,
       summary,
       aggregation,
-      () => activeProjectId,
+      () => activeProjectId ?? undefined,
       () => user,
       checkPermission
     );

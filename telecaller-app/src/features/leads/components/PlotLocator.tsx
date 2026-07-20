@@ -1,4 +1,4 @@
-import { Map } from "lucide-react";
+﻿import { Map } from "lucide-react";
 import { Project, Lead } from "@/shared/types";
 
 interface PlotLocatorProps {
@@ -44,11 +44,11 @@ export default function PlotLocator({ activeProj, activeLead }: PlotLocatorProps
 
   return (
     <div className="card-premium p-6 space-y-4 hover:border-theme-accent/40 transition-all duration-300">
-      <h4 className="text-xs font-black text-theme-muted uppercase tracking-wider flex items-center">
+      <h4 className="text-xs font-bold text-theme-muted uppercase tracking-wider flex items-center">
         <Map className="w-4 h-4 mr-1.5 text-theme-accent" />
         Interactive Plot Locator
       </h4>
-      <div className="bg-theme-surface border border-theme-border rounded-xl flex items-center justify-center p-3.5 h-40 relative overflow-hidden bg-[linear-gradient(color-mix(in_srgb,var(--primary-color)_8%,transparent)_1px,transparent_1px),linear-gradient(90deg,color-mix(in_srgb,var(--primary-color)_8%,transparent)_1px,transparent_1px)] bg-[size:16px_16px]">
+      <div className="bg-theme-surface border border-theme-border rounded-theme flex items-center justify-center p-3.5 h-40 relative overflow-hidden bg-[linear-gradient(color-mix(in_srgb,var(--primary-color)_8%,transparent)_1px,transparent_1px),linear-gradient(90deg,color-mix(in_srgb,var(--primary-color)_8%,transparent)_1px,transparent_1px)] bg-[size:16px_16px]">
         <div className="absolute inset-0 bg-radial-gradient from-[color-mix(in_srgb,var(--primary-color)_10%,transparent)] via-transparent to-transparent pointer-events-none" />
 
         <svg
@@ -84,7 +84,7 @@ export default function PlotLocator({ activeProj, activeLead }: PlotLocatorProps
             y={(minY + maxY) / 2}
             textAnchor="middle"
             dominantBaseline="middle"
-            className="text-[5px] font-black fill-[var(--primary-color)]"
+            className="text-[5px] font-bold fill-[var(--primary-color)]"
           >
             {plotObj.number}
           </text>

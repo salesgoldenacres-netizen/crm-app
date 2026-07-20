@@ -1,6 +1,4 @@
 import { useState, useEffect } from "react";
-import { doc, onSnapshot } from "firebase/firestore";
-import { db } from "@/shared/services/firebase";
 import { Goals } from "@/shared/types";
 import { SettingsRepository } from "@/shared/services/firebase/repositories";
 
@@ -22,8 +20,8 @@ export function useGoalsStore(options: UseGoalsStoreOptions = {}) {
   useEffect(() => {
     if (!enabled) return;
 
-    const unsubscribe = onSnapshot(doc(db, "settings", "goals"), (docSnap) => {
-      if (docSnap.exists()) setGoals(docSnap.data() as Goals);
+    const unsubscribe = SettingsRepository.subscribeGoals((data) => {
+      if (data) setGoals(data);
       setIsLoaded(true);
     });
     return () => unsubscribe();

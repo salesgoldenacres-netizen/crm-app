@@ -1,4 +1,5 @@
 export {
+  APPEARANCE_CHANGED_EVENT,
   useAppearanceStore,
   useThemeStore,
   applyAppearance,

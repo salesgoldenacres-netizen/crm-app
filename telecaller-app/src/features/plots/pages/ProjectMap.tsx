@@ -4,6 +4,7 @@ import { ArrowLeft } from "lucide-react";
 import { useAppShell } from "@/shared/layouts/AppShellContext";
 import { useProjectsStore } from "@/features/plots/hooks/useProjectsStore";
 import { useLeadsStore } from "@/features/leads/hooks/useLeadsStore";
+import { useAgentOpenLeads } from "@/features/leads/hooks/useAgentOpenLeads";
 import { useIVRStore } from "@/features/calls/hooks/useIVRStore";
 import { functions } from "@/shared/services/firebase";
 import { httpsCallable } from "firebase/functions";
@@ -16,12 +17,15 @@ import LinkLeadModal from "@/features/leads/components/LinkLeadModal";
 import SimulatedDialerOverlay from "@/features/calls/components/SimulatedDialerOverlay";
 import ProjectMapSidebar from "../components/ProjectMapSidebar";
 import ProjectMapCanvas from "../components/ProjectMapCanvas";
+import { useToast } from "@/shared/components/Toast";
+import Badge from "@/shared/components/ui/Badge";
 
 interface ProjectMapProps {
   user: User;
 }
 
 export default function ProjectMap({ user }: ProjectMapProps) {
+  const { toast } = useToast();
   const { id } = useParams<{ id: string }>();
   const {
     projects,
@@ -29,12 +33,11 @@ export default function ProjectMap({ user }: ProjectMapProps) {
     updateProject,
   } = useProjectsStore();
   const {
-    leads,
-    isLoaded: leadsLoaded,
     addLead,
     updateLead: updateLeadInStore,
     logCall,
   } = useLeadsStore();
+  const { openLeads: leads, isLoaded: leadsLoaded } = useAgentOpenLeads();
   const { ivrSettings } = useIVRStore(user ? user.id : null);
   const project = id ? projects[id] : undefined;
 
@@ -234,10 +237,10 @@ export default function ProjectMap({ user }: ProjectMapProps) {
 
   if (!projectsLoaded || !leadsLoaded) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+      <div className="min-h-screen bg-theme-bg flex items-center justify-center">
         <div className="text-center">
-          <div className="w-16 h-16 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-gray-600 dark:text-gray-300 font-medium">
+          <div className="w-16 h-16 border-4 border-theme-accent border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+          <p className="text-theme-muted font-medium">
             Loading interactive layout map...
           </p>
         </div>
@@ -246,7 +249,7 @@ export default function ProjectMap({ user }: ProjectMapProps) {
   }
   if (!project)
     return (
-      <div className="p-10 text-center dark:text-white">Project not found</div>
+      <div className="p-10 text-center text-theme-text">Project not found</div>
     );
 
   const filteredPlots = project.plots.filter(
@@ -256,19 +259,19 @@ export default function ProjectMap({ user }: ProjectMapProps) {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "available":
-        return "bg-green-100 dark:bg-green-900/50 text-green-800 dark:text-green-400";
+        return "bg-theme-success/10 text-theme-success border-theme-success/20";
       case "sold":
-        return "bg-red-100 dark:bg-red-900/50 text-red-800 dark:text-red-400";
+        return "bg-theme-danger/10 text-theme-danger border-theme-danger/20";
       case "reserved":
-        return "bg-yellow-100 dark:bg-yellow-900/50 text-yellow-800 dark:text-yellow-400";
+        return "bg-theme-warning/10 text-theme-warning border-theme-warning/20";
       case "road":
-        return "bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-300";
+        return "bg-theme-surface text-theme-muted border-theme-border";
       case "market":
-        return "bg-blue-100 dark:bg-blue-900/50 text-blue-800 dark:text-blue-400";
+        return "bg-sky-50 text-sky-700 border-sky-100 dark:bg-sky-950/40 dark:text-sky-300 dark:border-sky-800";
       case "park":
-        return "bg-emerald-100 dark:bg-emerald-900/50 text-emerald-800 dark:text-emerald-400";
+        return "bg-theme-success/10 text-theme-success border-theme-success/20";
       default:
-        return "bg-gray-100 text-gray-800";
+        return "bg-theme-surface text-theme-text border-theme-border";
     }
   };
 
@@ -372,7 +375,7 @@ export default function ProjectMap({ user }: ProjectMapProps) {
     if (!selectedPlot) return;
     if (leadLinkMode === "existing") {
       if (!selectedExistingLeadId) {
-        alert("Please select a lead first.");
+        toast("Please select a lead first.", "warning");
         return;
       }
       await updateLeadInStore(selectedExistingLeadId, {
@@ -404,27 +407,28 @@ export default function ProjectMap({ user }: ProjectMapProps) {
           <div className="flex items-center space-x-3">
             <Link
               to="/"
-              className="p-1.5 rounded-xl bg-theme-surface hover:bg-theme-card text-theme-muted hover:text-theme-text transition-all border border-theme-border shadow-sm"
+              className="p-1.5 min-h-11 min-w-11 inline-flex items-center justify-center rounded-theme bg-theme-surface hover:bg-theme-card text-theme-muted hover:text-theme-text transition-all border border-theme-border shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-theme-ring"
               title="Back to CRM"
+              aria-label="Back to CRM"
             >
-              <ArrowLeft className="w-4 h-4" />
+              <ArrowLeft className="w-4 h-4" aria-hidden="true" />
             </Link>
-            <h1 className="text-sm font-black text-theme-text truncate max-w-[150px] md:max-w-none tracking-tight">
+            <h1 className="type-card-title text-theme-text truncate max-w-[150px] md:max-w-none tracking-tight">
               {project.name}
             </h1>
           </div>
           <div className="flex items-center space-x-3">
             <div className="flex flex-col md:flex-row space-y-1 md:space-y-0 md:space-x-2">
-              <div className="bg-emerald-500/10 text-emerald-400 text-[10px] px-2.5 py-1 rounded-full font-bold border border-emerald-500/20 uppercase tracking-wider">
+              <Badge variant="success" className="normal-case tracking-wide">
                 <span className="hidden sm:inline">Available: </span>
                 <span className="sm:hidden">Avail: </span>
                 {project.plots.filter((p) => p.status === "available").length}
-              </div>
-              <div className="bg-rose-500/10 text-rose-400 text-[10px] px-2.5 py-1 rounded-full font-bold border border-rose-500/20 uppercase tracking-wider">
+              </Badge>
+              <Badge variant="danger" className="normal-case tracking-wide">
                 <span className="hidden sm:inline">Sold: </span>
                 <span className="sm:hidden">Sold: </span>
                 {project.plots.filter((p) => p.status === "sold").length}
-              </div>
+              </Badge>
             </div>
           </div>
         </div>

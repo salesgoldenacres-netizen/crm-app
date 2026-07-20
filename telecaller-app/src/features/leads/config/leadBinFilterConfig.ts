@@ -42,6 +42,7 @@ export function leadBinFiltersEqual(a: LeadBinFilters, b: LeadBinFilters): boole
 
 export interface LeadBinFilterable {
   leadNumber?: string;
+  leadReference?: string;
   name?: string;
   phone?: string;
   email?: string;
@@ -59,7 +60,9 @@ export function matchLeadBinFilters(
 ): boolean {
   if (f.leadNumber) {
     const q = f.leadNumber.toLowerCase();
-    if (!(lead.leadNumber || "").toLowerCase().includes(q)) return false;
+    const matchNum = (lead.leadNumber || "").toLowerCase().includes(q);
+    const matchRef = (lead.leadReference || "").toLowerCase().includes(q);
+    if (!matchNum && !matchRef) return false;
   }
   if (f.name) {
     const q = f.name.toLowerCase();

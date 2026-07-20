@@ -1,7 +1,7 @@
 {
   "name": "telecaller-app",
   "private": true,
-  "version": "0.0.58",
+  "version": "0.0.61",
   "type": "module",
   "engines": {
     "node": ">=22"
@@ -11,9 +11,10 @@
     "build": "vite build",
     "build:ota": "node scripts/deploy-ota.js",
     "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
     "preview": "vite preview",
     "test": "vitest run",
-    "test:coverage": "vitest run --coverage src/shared/utils/dateUtils.test.ts"
+    "test:coverage": "vitest run --coverage src/shared/utils/dateUtils.test.ts src/shared/services/leads/LeadQueryService.test.ts src/shared/services/firebase/callLogIds.test.ts src/shared/services/performance/pagination/pagination.test.ts"
   },
   "dependencies": {
     "@capacitor/android": "^8.4.0",
@@ -22,6 +23,7 @@
     "@capacitor/splash-screen": "^8.0.1",
     "@capacitor/status-bar": "^8.0.2",
     "@capgo/capacitor-updater": "^8.49.4",
+    "@sentry/react": "^10.66.0",
     "@tanstack/react-virtual": "^3.14.6",
     "clsx": "^2.1.1",
     "firebase": "^12.14.0",

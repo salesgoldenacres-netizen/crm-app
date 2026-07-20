@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+﻿import React, { useState, useRef } from "react";
 import { Delete, Phone, UserPlus, User as UserIcon, X } from "lucide-react";
 import { useToast } from "@/shared/components/Toast";
 import { Lead, Project } from "@/shared/types";
@@ -191,7 +191,7 @@ export default function DialPadDrawer({
       <button
         type="button"
         onClick={handleCall}
-        className="w-full py-3.5 bg-theme-success hover:opacity-90 active:scale-[0.98] rounded-xl font-black text-sm text-white transition-all shadow-lg flex items-center justify-center space-x-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-theme-ring border-0 cursor-pointer"
+        className="w-full py-3.5 bg-theme-success hover:opacity-90 active:scale-[0.98] rounded-theme font-bold text-sm text-white transition-all shadow-lg flex items-center justify-center space-x-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-theme-ring border-0 cursor-pointer"
       >
         <Phone className="w-4 h-4 fill-current" aria-hidden="true" />
         <span>Call Number</span>
@@ -212,7 +212,7 @@ export default function DialPadDrawer({
       {/* Specialized telephony UX — layout/behavior preserved; chrome tokenized */}
       <div className="space-y-4">
         {/* Display Output */}
-        <div className="relative bg-theme-surface rounded-xl p-4 border border-theme-border flex flex-col justify-between h-24">
+        <div className="relative bg-theme-surface rounded-theme p-4 border border-theme-border flex flex-col justify-between h-24">
           <input
             type="text"
             value={phoneNumber}
@@ -256,7 +256,7 @@ export default function DialPadDrawer({
 
         {/* Lead Matches Search Results */}
         {!selectedLead && searchResults.length > 0 && (
-          <div className="bg-theme-surface/60 rounded-xl border border-theme-border p-2 space-y-1">
+          <div className="bg-theme-surface/60 rounded-theme border border-theme-border p-2 space-y-1">
             <div className="text-[9px] font-bold text-theme-muted uppercase tracking-wider px-2 py-1">
               Matching Contacts
             </div>
@@ -282,7 +282,7 @@ export default function DialPadDrawer({
 
         {/* Quick Create Lead Panel */}
         {phoneNumber && !selectedLead && searchResults.length === 0 && (
-          <div className="bg-theme-surface/60 rounded-xl border border-theme-border p-3 space-y-2">
+          <div className="bg-theme-surface/60 rounded-theme border border-theme-border p-3 space-y-2">
             {!showQuickCreate ? (
               <button
                 type="button"

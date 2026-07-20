@@ -1,9 +1,6 @@
 import { useState, useEffect } from "react";
-import { onSnapshot, doc } from "firebase/firestore";
 import { AttendanceRecord, BreakSession } from "@/shared/types";
-import { attendanceRef } from "@/shared/services/firebase/converters";
 import { AttendanceRepository, AgentStatusRepository } from "@/shared/services/firebase/repositories";
-import { buildAttendanceDateRangeQuery } from "@/shared/contracts";
 
 /** Rolling window for list listeners — avoids unbounded attendance sync. */
 const ATTENDANCE_LIST_RANGE_DAYS = 90;
@@ -37,12 +34,7 @@ export function useAttendanceStore(userId?: string) {
     const startDate = shiftLocalDateStr(ATTENDANCE_LIST_RANGE_DAYS);
 
     // 1. Date-ranged attendance list (replaces full-collection listener)
-    const rangeQuery = buildAttendanceDateRangeQuery({ startDate, endDate });
-    const unsubscribeAll = onSnapshot(rangeQuery, (snapshot) => {
-      const records: AttendanceRecord[] = [];
-      snapshot.forEach((d) => {
-        records.push({ id: d.id, ...d.data() } as AttendanceRecord);
-      });
+    const unsubscribeAll = AttendanceRepository.subscribeRange(startDate, endDate, (records) => {
       // Sort by checkIn descending
       records.sort(
         (a, b) =>
@@ -60,12 +52,8 @@ export function useAttendanceStore(userId?: string) {
     if (userId) {
       const todayStr = getLocalDateStr();
       const docId = `${todayStr}_${userId}`;
-      unsubscribeToday = onSnapshot(doc(attendanceRef, docId), (docSnap) => {
-        if (docSnap.exists()) {
-          setTodayAttendance(docSnap.data());
-        } else {
-          setTodayAttendance(null);
-        }
+      unsubscribeToday = AttendanceRepository.subscribeToday(docId, (record) => {
+        setTodayAttendance(record);
         setIsLoaded(true);
       });
     }

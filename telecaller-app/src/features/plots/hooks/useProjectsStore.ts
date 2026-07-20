@@ -7,19 +7,7 @@ export function useProjectsStore() {
 
   const updateProject = async (projectId: string, updatedProject: Project): Promise<void> => {
     try {
-      const dbProject = {
-        ...updatedProject,
-        plots: updatedProject.plots.map((p) => ({
-          ...p,
-          points: p.points ? p.points.map((pt) => {
-            if (Array.isArray(pt)) {
-              return { x: pt[0], y: pt[1] };
-            }
-            return pt;
-          }) : [],
-        })),
-      };
-      await ProjectsRepository.set(projectId, dbProject);
+      await ProjectsRepository.set(projectId, updatedProject);
     } catch (err) {
       console.error("Error updating project in Firestore: ", err);
     }

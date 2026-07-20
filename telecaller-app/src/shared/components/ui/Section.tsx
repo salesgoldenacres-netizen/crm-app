@@ -13,7 +13,7 @@ export default function Section({ children, title, description, className, ...pr
       {(title || description) && (
         <div className="space-y-1">
           {title && (
-            <h2 className="text-sm sm:text-base font-extrabold text-theme-text">
+            <h2 className="text-sm sm:text-base font-bold text-theme-text">
               {title}
             </h2>
           )}

@@ -1,8 +1,6 @@
 import { useState, useEffect } from "react";
-import { onSnapshot } from "firebase/firestore";
 import { LeaveRequest } from "@/shared/types";
 import { LeaveRequestsRepository } from "@/shared/services/firebase/repositories";
-import { buildLeaveRequestsListQuery } from "@/shared/contracts";
 
 export interface UseLeaveRequestsStoreOptions {
   /**
@@ -26,18 +24,12 @@ export function useLeaveRequestsStore(
   useEffect(() => {
     if (!enabled) return;
 
-    const listQuery = buildLeaveRequestsListQuery({
-      ...(listLimit != null ? { limit: listLimit } : {}),
-      ...(userId ? { userId } : {}),
-    });
-
-    const unsubscribe = onSnapshot(
-      listQuery,
-      (snapshot) => {
-        const list: LeaveRequest[] = [];
-        snapshot.forEach((d) => {
-          list.push({ id: d.id, ...d.data() } as LeaveRequest);
-        });
+    const unsubscribe = LeaveRequestsRepository.subscribeList(
+      {
+        ...(listLimit != null ? { limit: listLimit } : {}),
+        ...(userId ? { userId } : {}),
+      },
+      (list) => {
         list.sort(
           (a, b) =>
             new Date(b.createdAt ?? "").getTime() -
@@ -45,8 +37,7 @@ export function useLeaveRequestsStore(
         );
         setLeaveRequests(list);
         setIsLoaded(true);
-      },
-      (err) => console.error("Error listening to leave requests", err),
+      }
     );
     return () => unsubscribe();
   }, [enabled, listLimit, userId]);

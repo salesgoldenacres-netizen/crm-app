@@ -1,8 +1,6 @@
 import { useState, useEffect } from "react";
 import { CustomRole } from "@/shared/types";
 import { CustomRolesRepository } from "@/shared/services/firebase/repositories";
-import { subscribeSharedListener } from "@/shared/services/firebase/sharedListener";
-import { attachCustomRolesSnapshot } from "@/shared/services/firebase/sharedSnapshots";
 
 const PRESET_ROLES: CustomRole[] = [
   { id: "admin", name: "Admin", isManagerial: true, isPreset: true },
@@ -86,22 +84,16 @@ const PRESET_ROLES: CustomRole[] = [
   },
 ];
 
-const CUSTOM_ROLES_LISTENER_KEY = "customRoles";
-
 export function useCustomRolesStore() {
   const [roles, setRoles] = useState<CustomRole[]>(PRESET_ROLES);
   const [isLoaded, setIsLoaded] = useState(false);
 
   useEffect(() => {
-    return subscribeSharedListener<CustomRole[]>(
-      CUSTOM_ROLES_LISTENER_KEY,
-      PRESET_ROLES,
-      (emit) => attachCustomRolesSnapshot(emit, PRESET_ROLES),
-      ({ data, isLoaded: loaded }) => {
-        setRoles(data);
-        setIsLoaded(loaded);
-      },
-    );
+    const unsubscribe = CustomRolesRepository.subscribe((data) => {
+      setRoles(data);
+      setIsLoaded(true);
+    }, PRESET_ROLES);
+    return () => unsubscribe();
   }, []);
 
   const addCustomRole = async (roleData: {

@@ -1,17 +1,5 @@
 import { useState, useEffect } from "react";
-import {
-  doc,
-  collection,
-  query,
-  where,
-  orderBy,
-  limit,
-  onSnapshot,
-  setDoc,
-  deleteDoc,
-  addDoc,
-} from "firebase/firestore";
-import { db } from "@/shared/services/firebase";
+import { IvrCallsRepository, SettingsRepository } from "@/shared/services/firebase/repositories";
 
 export interface IVRSettings {
   enableIvr: boolean;
@@ -65,51 +53,31 @@ export function useIVRStore(userId: string | null | undefined) {
   const [isLoaded, setIsLoaded] = useState(false);
 
   useEffect(() => {
-    const unsubscribe = onSnapshot(
-      doc(db, "settings", "integrations"),
-      (docSnap) => {
-        if (docSnap.exists()) {
-          setIvrSettings((prev) =>
-            Object.assign({}, prev, docSnap.data() as Partial<IVRSettings>) as IVRSettings
-          );
-        }
-        setIsLoaded(true);
-      }
-    );
+    const unsubscribe = SettingsRepository.subscribeIntegrations((data) => {
+      setIvrSettings((prev) =>
+        Object.assign({}, prev, data as Partial<IVRSettings>) as IVRSettings
+      );
+      setIsLoaded(true);
+    });
     return () => unsubscribe();
   }, []);
 
   useEffect(() => {
     if (!userId) return;
-    // Auto-ID docs keyed by agentId field (not doc id === agent id).
-    const q = query(
-      collection(db, "ivrCalls"),
-      where("agentId", "==", userId),
-      where("status", "==", "ringing"),
-      orderBy("timestamp", "desc"),
-      limit(1)
-    );
-    const unsubscribe = onSnapshot(q, (snap) => {
-      if (!snap.empty) {
-        const d = snap.docs[0];
-        setActiveIvrCall({ id: d.id, ...(d.data() as Omit<IVRActiveCall, "id">) });
-      } else {
-        setActiveIvrCall(null);
-      }
+    const unsubscribe = IvrCallsRepository.subscribeActiveCall(userId, (call) => {
+      setActiveIvrCall(call);
     });
     return () => unsubscribe();
   }, [userId]);
 
   const updateIvrSettings = async (settings: Partial<IVRSettings>) => {
-    await setDoc(doc(db, "settings", "integrations"), settings, {
-      merge: true,
-    });
+    await SettingsRepository.setIntegrations(settings);
   };
 
   const clearActiveIvrCall = async () => {
     if (!activeIvrCall?.id) return;
     try {
-      await deleteDoc(doc(db, "ivrCalls", activeIvrCall.id));
+      await IvrCallsRepository.delete(activeIvrCall.id);
     } catch (err) {
       console.error("Error deleting ivrCall document: ", err);
     }
@@ -119,7 +87,7 @@ export function useIVRStore(userId: string | null | undefined) {
     targetUserId: string,
     callData: { callerPhone: string; callerName?: string; leadId?: string }
   ) => {
-    await addDoc(collection(db, "ivrCalls"), {
+    await IvrCallsRepository.add({
       agentId: targetUserId,
       timestamp: new Date().toISOString(),
       callerPhone: callData.callerPhone,

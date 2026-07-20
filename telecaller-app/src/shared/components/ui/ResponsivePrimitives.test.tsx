@@ -44,9 +44,9 @@ describe("Responsive UI Primitives", () => {
   });
 
   describe("Modal / Dialog Responsive Behavior", () => {
-    it("renders full-screen layout wrapper for narrow mobile viewports", () => {
+    it("sheet variant: full-screen layout wrapper for narrow mobile viewports", () => {
       const { container } = render(
-        <Modal isOpen={true} onClose={() => {}} title="Test Modal">
+        <Modal isOpen={true} onClose={() => {}} title="Test Modal" variant="sheet">
           <div>Content</div>
         </Modal>
       );
@@ -54,12 +54,24 @@ describe("Responsive UI Primitives", () => {
       // Verify mobile-specific height and spacing layout classes are applied
       const dialog = container.querySelector('[role="dialog"]');
       expect(dialog?.className).toContain("h-[100dvh]");
-      expect(dialog?.className).toContain("rounded-t-3xl");
+      expect(dialog?.className).toContain("rounded-t-theme");
     });
 
-    it("includes safe area padding adjustments in body container", () => {
+    it("center variant: dialog chrome at all breakpoints (no mobile sheet height)", () => {
       const { container } = render(
-        <Modal isOpen={true} onClose={() => {}} title="Test Modal">
+        <Modal isOpen={true} onClose={() => {}} title="Test Modal" variant="center">
+          <div>Content</div>
+        </Modal>
+      );
+
+      const dialog = container.querySelector('[role="dialog"]');
+      expect(dialog?.className).toContain("rounded-theme");
+      expect(dialog?.className).not.toContain("h-[100dvh]");
+    });
+
+    it("sheet variant: includes safe area padding adjustments in body container", () => {
+      const { container } = render(
+        <Modal isOpen={true} onClose={() => {}} title="Test Modal" variant="sheet">
           <div>Content</div>
         </Modal>
       );

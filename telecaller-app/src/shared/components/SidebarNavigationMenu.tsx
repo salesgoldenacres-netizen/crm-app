@@ -20,6 +20,7 @@ import {
   sidebarIcon,
   sidebarNavItem,
 } from "./sidebar/sidebarNavStyles";
+import { NAV_LABELS } from "@/shared/constants/navTaxonomy";
 
 interface SidebarNavigationMenuProps {
   user: User | null;
@@ -104,10 +105,11 @@ export default function SidebarNavigationMenu({
           <Link
             to="/?tab=company-dashboard"
             className={sidebarNavItem(isCompanyDbActive, isSidebarCollapsed)}
-            title="Dashboard"
+            title={NAV_LABELS.dashboard}
+            aria-label={isSidebarCollapsed ? NAV_LABELS.dashboard : undefined}
           >
-            <BarChart3 className={sidebarIcon("dashboard")} />
-            {!isSidebarCollapsed && <span className="truncate">Dashboard</span>}
+            <BarChart3 className={sidebarIcon("dashboard")} aria-hidden="true" />
+            {!isSidebarCollapsed && <span className="truncate">{NAV_LABELS.dashboard}</span>}
           </Link>
         )}
 
@@ -146,28 +148,31 @@ export default function SidebarNavigationMenu({
         <Link
           to="/?tab=attendance"
           className={sidebarNavItem(isAttendanceActive, isSidebarCollapsed)}
-          title="Attendance"
+          title={NAV_LABELS.attendance}
+          aria-label={isSidebarCollapsed ? NAV_LABELS.attendance : undefined}
         >
-          <Calendar className={sidebarIcon("attendance")} />
-          {!isSidebarCollapsed && <span className="truncate">Attendance</span>}
+          <Calendar className={sidebarIcon("attendance")} aria-hidden="true" />
+          {!isSidebarCollapsed && <span className="truncate">{NAV_LABELS.attendance}</span>}
         </Link>
 
         <Link
           to="/?tab=training"
           className={sidebarNavItem(isTrainingActive, isSidebarCollapsed)}
-          title="Training"
+          title={NAV_LABELS.training}
+          aria-label={isSidebarCollapsed ? NAV_LABELS.training : undefined}
         >
-          <Award className={sidebarIcon("training")} />
-          {!isSidebarCollapsed && <span className="truncate">Training</span>}
+          <Award className={sidebarIcon("training")} aria-hidden="true" />
+          {!isSidebarCollapsed && <span className="truncate">{NAV_LABELS.training}</span>}
         </Link>
 
         <Link
           to="/?tab=profile"
           className={sidebarNavItem(isProfileActive, isSidebarCollapsed)}
-          title="My Profile"
+          title={NAV_LABELS.profile}
+          aria-label={isSidebarCollapsed ? NAV_LABELS.profile : undefined}
         >
-          <UserRound className={sidebarIcon("profile")} />
-          {!isSidebarCollapsed && <span className="truncate">My Profile</span>}
+          <UserRound className={sidebarIcon("profile")} aria-hidden="true" />
+          {!isSidebarCollapsed && <span className="truncate">{NAV_LABELS.profile}</span>}
         </Link>
       </div>
 
@@ -178,34 +183,38 @@ export default function SidebarNavigationMenu({
           type="button"
           onClick={openTemplates}
           className={`w-full text-left bg-transparent border-0 cursor-pointer ${toolBtnClass}`}
-          title="Message Templates"
+          title={NAV_LABELS.templates}
+          aria-label={isSidebarCollapsed ? NAV_LABELS.templates : undefined}
         >
-          <BookOpen className={sidebarIcon("templates")} />
-          {!isSidebarCollapsed && <span className="truncate">Templates</span>}
+          <BookOpen className={sidebarIcon("templates")} aria-hidden="true" />
+          {!isSidebarCollapsed && <span className="truncate">{NAV_LABELS.templates}</span>}
         </button>
 
         <button
           type="button"
           onClick={openShortcuts}
           className={`w-full text-left bg-transparent border-0 cursor-pointer ${toolBtnClass}`}
-          title="Shortcuts"
+          title={NAV_LABELS.shortcuts}
+          aria-label={isSidebarCollapsed ? NAV_LABELS.shortcuts : undefined}
         >
-          <Keyboard className={sidebarIcon("shortcuts")} />
-          {!isSidebarCollapsed && <span className="truncate">Shortcuts</span>}
+          <Keyboard className={sidebarIcon("shortcuts")} aria-hidden="true" />
+          {!isSidebarCollapsed && <span className="truncate">{NAV_LABELS.shortcuts}</span>}
         </button>
 
         <button
           type="button"
           onClick={toggleFullscreen}
           className={`w-full text-left bg-transparent border-0 cursor-pointer ${toolBtnClass}`}
-          title="Toggle Full Screen"
+          title={NAV_LABELS.fullScreen}
+          aria-label={isSidebarCollapsed ? NAV_LABELS.fullScreen : undefined}
+          aria-pressed={isFullscreen}
         >
           {isFullscreen ? (
-            <Minimize2 className={sidebarIcon("fullscreen")} />
+            <Minimize2 className={sidebarIcon("fullscreen")} aria-hidden="true" />
           ) : (
-            <Maximize2 className={sidebarIcon("fullscreen")} />
+            <Maximize2 className={sidebarIcon("fullscreen")} aria-hidden="true" />
           )}
-          {!isSidebarCollapsed && <span className="truncate">Full Screen</span>}
+          {!isSidebarCollapsed && <span className="truncate">{NAV_LABELS.fullScreen}</span>}
         </button>
       </div>
 

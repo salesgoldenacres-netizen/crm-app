@@ -60,14 +60,14 @@ export default function DesktopSidebar({
               <img
                 src={branding.logoUrl}
                 alt={branding.companyName || "Logo"}
-                className="w-7 h-7 rounded-lg object-contain shrink-0 bg-white/10 border border-white/15"
+                className="w-7 h-7 rounded-theme object-contain shrink-0 bg-white/10 border border-white/15"
               />
             )}
             <div className="flex flex-col justify-center min-w-0 gap-1">
-              <span className="text-[12px] font-extrabold text-white leading-none tracking-[0.04em] truncate">
+              <span className="text-[12px] font-semibold text-white leading-none tracking-[0.04em] truncate">
                 {companyLabel}
               </span>
-              <span className="text-[10px] font-semibold text-[#e8c84a] leading-none tracking-[0.16em] truncate">
+              <span className="text-[10px] font-semibold text-theme-warning leading-none tracking-[0.16em] truncate">
                 {tagline}
               </span>
             </div>
@@ -77,13 +77,15 @@ export default function DesktopSidebar({
         <button
           type="button"
           onClick={toggleSidebar}
-          className="shrink-0 w-8 h-8 rounded-lg border border-white/15 bg-white/10 text-white/70 hover:text-white hover:bg-white/15 inline-flex items-center justify-center transition-colors cursor-pointer"
+          className="shrink-0 min-h-11 min-w-11 sm:min-h-0 sm:min-w-0 sm:w-8 sm:h-8 rounded-theme border border-white/15 bg-white/10 text-white/70 hover:text-white hover:bg-white/15 inline-flex items-center justify-center transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-theme-ring"
           title={isSidebarCollapsed ? "Expand Sidebar" : "Collapse Sidebar"}
+          aria-label={isSidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+          aria-expanded={!isSidebarCollapsed}
         >
           {isSidebarCollapsed ? (
-            <ChevronRight className="w-4 h-4" />
+            <ChevronRight className="w-4 h-4" aria-hidden="true" />
           ) : (
-            <ChevronLeft className="w-4 h-4" />
+            <ChevronLeft className="w-4 h-4" aria-hidden="true" />
           )}
         </button>
       </div>

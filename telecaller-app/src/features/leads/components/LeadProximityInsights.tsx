@@ -1,4 +1,4 @@
-import { Map } from "lucide-react";
+﻿import { Map, ChevronDown, ChevronUp } from "lucide-react";
 import { Project } from "@/shared/types";
 
 interface LeadProximityInsightsProps {
@@ -52,91 +52,87 @@ export default function LeadProximityInsights({ activeProj }: LeadProximityInsig
 
   return (
     <div className="space-y-4 text-xs animate-fadeIn">
-      <h4 className="text-xs font-black text-theme-muted uppercase tracking-wider flex items-center mb-1">
-        <Map className="w-4 h-4 mr-1.5 text-blue-500" />
+      <h4 className="type-label text-theme-muted flex items-center mb-1">
+        <Map className="w-4 h-4 mr-1.5 text-theme-accent" aria-hidden="true" />
         Local Area Proximity & Competitors
       </h4>
 
       <div className="grid grid-cols-2 gap-3.5">
-        <div className="bg-blue-500/10 border border-blue-500/15 text-blue-800 dark:text-blue-300 p-3 rounded-xl flex flex-col hover:scale-[1.02] transition-transform duration-200">
-          <span className="text-[10px] text-blue-600 dark:text-blue-400 font-extrabold uppercase tracking-wide mb-1">
+        <div className="bg-sky-50/80 border border-sky-100 text-sky-800 dark:bg-sky-950/30 dark:text-sky-300 dark:border-sky-800 p-3 rounded-theme flex flex-col">
+          <span className="type-label text-sky-700 dark:text-sky-400 mb-1">
             Schools
           </span>
           {items.schools.map((txt, i) => (
-            <span key={i} className="font-semibold text-slate-700 dark:text-slate-200">
+            <span key={i} className="font-semibold text-theme-text">
               {txt}
             </span>
           ))}
           {items.schools.length === 0 && (
-            <span className="font-semibold text-slate-400 italic">None nearby</span>
+            <span className="font-semibold text-theme-muted">None nearby</span>
           )}
         </div>
-        <div className="bg-rose-500/10 border border-rose-500/15 text-rose-800 dark:text-rose-300 p-3 rounded-xl flex flex-col hover:scale-[1.02] transition-transform duration-200">
-          <span className="text-[10px] text-theme-danger font-extrabold uppercase tracking-wide mb-1">
+        <div className="bg-theme-danger/10 border border-theme-danger/20 text-theme-danger p-3 rounded-theme flex flex-col">
+          <span className="type-label text-theme-danger mb-1">
             Hospitals
           </span>
           {items.hospitals.map((txt, i) => (
-            <span key={i} className="font-semibold text-slate-700 dark:text-slate-200">
+            <span key={i} className="font-semibold text-theme-text">
               {txt}
             </span>
           ))}
           {items.hospitals.length === 0 && (
-            <span className="font-semibold text-slate-400 italic">None nearby</span>
+            <span className="font-semibold text-theme-muted">None nearby</span>
           )}
         </div>
-        <div className="bg-emerald-500/10 border border-emerald-500/15 text-emerald-800 dark:text-emerald-300 p-3 rounded-xl flex flex-col hover:scale-[1.02] transition-transform duration-200">
-          <span className="text-[10px] text-theme-success font-extrabold uppercase tracking-wide mb-1">
+        <div className="bg-theme-success/10 border border-theme-success/20 text-theme-success p-3 rounded-theme flex flex-col">
+          <span className="type-label text-theme-success mb-1">
             Transit
           </span>
           {items.transit.map((txt, i) => (
-            <span key={i} className="font-semibold text-slate-700 dark:text-slate-200">
+            <span key={i} className="font-semibold text-theme-text">
               {txt}
             </span>
           ))}
           {items.transit.length === 0 && (
-            <span className="font-semibold text-slate-400 italic">None nearby</span>
+            <span className="font-semibold text-theme-muted">None nearby</span>
           )}
         </div>
-        <div className="bg-purple-500/10 border border-purple-500/15 text-purple-800 dark:text-purple-300 p-3 rounded-xl flex flex-col hover:scale-[1.02] transition-transform duration-200">
-          <span className="text-[10px] text-purple-600 dark:text-purple-400 font-extrabold uppercase tracking-wide mb-1">
+        <div className="bg-theme-accent-muted border border-theme-border text-theme-accent p-3 rounded-theme flex flex-col">
+          <span className="type-label text-theme-accent mb-1">
             Tech Parks
           </span>
           {items.tech_parks.map((txt, i) => (
-            <span key={i} className="font-semibold text-slate-700 dark:text-slate-200">
+            <span key={i} className="font-semibold text-theme-text">
               {txt}
             </span>
           ))}
           {items.tech_parks.length === 0 && (
-            <span className="font-semibold text-slate-400 italic">None nearby</span>
+            <span className="font-semibold text-theme-muted">None nearby</span>
           )}
         </div>
       </div>
 
-      <div className="space-y-2 pt-3 border-t border-slate-100 dark:border-slate-800">
-        <span className="text-[10px] text-theme-muted font-bold uppercase tracking-wider block mb-1">
+      <div className="space-y-2 pt-3 border-t border-theme-border">
+        <span className="type-label text-theme-muted block mb-1">
           Vs. Local Competitors
         </span>
 
         {competitorsList.map((item, idx) => (
           <details
             key={idx}
-            className="bg-theme-surface border border-slate-200 dark:border-slate-900 rounded-xl group cursor-pointer transition-all"
+            className="bg-theme-surface border border-theme-border rounded-theme group cursor-pointer transition-all"
           >
-            <summary className="text-[11px] font-black text-theme-text p-3 outline-none list-none flex justify-between items-center group-open:border-b group-open:border-slate-200 dark:group-open:border-slate-900">
+            <summary className="text-[11px] font-semibold text-theme-text p-3 outline-none list-none flex justify-between items-center group-open:border-b group-open:border-theme-border focus-visible:ring-2 focus-visible:ring-theme-ring rounded-theme">
               Vs. {item.name}
-              <span className="text-indigo-500 group-open:hidden transition-transform duration-200">
-                ▼
-              </span>
-              <span className="text-indigo-500 hidden group-open:inline transition-transform duration-200">
-                ▲
-              </span>
+              <ChevronDown className="w-3.5 h-3.5 text-theme-accent group-open:hidden" aria-hidden="true" />
+              <ChevronUp className="w-3.5 h-3.5 text-theme-accent hidden group-open:inline" aria-hidden="true" />
             </summary>
-            <div className="p-3.5 text-[11px] text-slate-600 dark:text-slate-400 space-y-1.5 leading-relaxed">
+            <div className="p-3.5 text-[11px] text-theme-muted space-y-1.5 leading-relaxed">
               <p>
-                ✅ <strong>Our Advantage:</strong> {item.advantage}
+                <strong className="text-theme-success">Our Advantage:</strong> {item.advantage}
               </p>
               <p>
-                ❌ <strong>Their Pitch:</strong> {item.pitch}
+                <strong className="text-theme-danger">Their Pitch:</strong> {item.pitch}
               </p>
             </div>
           </details>

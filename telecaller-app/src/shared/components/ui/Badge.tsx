@@ -16,7 +16,7 @@ export default function Badge({ children, className, variant = "default", ...pro
     success: "bg-theme-success/10 text-theme-success border-theme-success/20",
     warning: "bg-theme-warning/10 text-theme-warning border-theme-warning/20",
     danger: "bg-theme-danger/10 text-theme-danger border-theme-danger/20",
-    info: "bg-sky-50 text-sky-700 border-sky-100",
+    info: "bg-theme-info/10 text-theme-info border-theme-info/20",
   };
 
   return (

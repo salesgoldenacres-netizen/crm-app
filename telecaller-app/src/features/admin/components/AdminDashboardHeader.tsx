@@ -1,4 +1,4 @@
-import { Activity, Clock } from "lucide-react";
+﻿import { Activity, Clock } from "lucide-react";
 
 interface AdminDashboardHeaderProps {
   currentTime: Date;
@@ -10,10 +10,10 @@ export default function AdminDashboardHeader({
   pendingCount = 0,
 }: AdminDashboardHeaderProps) {
   return (
-    <div className="shrink-0 rounded-xl border border-theme-border bg-theme-card px-3 py-2.5 flex flex-col sm:flex-row sm:items-center gap-2.5 sm:gap-3">
+    <div className="shrink-0 rounded-theme border border-theme-border bg-theme-card shadow-elevation-sm px-3 py-2.5 flex flex-col sm:flex-row sm:items-center gap-2.5 sm:gap-3">
       <div className="min-w-0 flex-1">
         <div className="flex items-baseline gap-2 flex-wrap">
-          <h1 className="text-sm font-black text-theme-text tracking-tight flex items-center gap-1.5">
+          <h1 className="text-sm font-bold text-theme-text tracking-tight flex items-center gap-1.5">
             <Activity className="w-3.5 h-3.5 text-theme-accent shrink-0" />
             Company Overview
           </h1>

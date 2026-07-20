@@ -17,6 +17,8 @@ export interface DrawerProps {
   descriptionId?: string;
   /** Backdrop click dismisses. Default true. */
   closeOnBackdrop?: boolean;
+  /** Accessible name for the header dismiss control. Default "Close". */
+  closeLabel?: string;
 }
 
 export default function Drawer({
@@ -30,6 +32,7 @@ export default function Drawer({
   className,
   descriptionId,
   closeOnBackdrop = true,
+  closeLabel = "Close",
 }: DrawerProps) {
   const titleId = useId();
   const panelRef = useRef<HTMLDivElement>(null);
@@ -64,9 +67,9 @@ export default function Drawer({
   // Side edges use theme radius via CSS var (no rounded-l/r-theme utility exists yet).
   const radiusClasses =
     position === "bottom"
-      ? "rounded-t-3xl border-t"
+      ? "rounded-t-theme border-t"
       : clsx(
-          "rounded-t-3xl border-t border-theme-border md:rounded-t-none",
+          "rounded-t-theme border-t border-theme-border md:rounded-t-none",
           position === "left"
             ? "md:rounded-r-[var(--radius)] md:border-r md:border-t-0"
             : "md:rounded-l-[var(--radius)] md:border-l md:border-t-0"
@@ -127,7 +130,7 @@ export default function Drawer({
             <button
               type="button"
               onClick={onClose}
-              aria-label="Close"
+              aria-label={closeLabel}
               className={
                 "p-2 min-h-11 min-w-11 inline-flex items-center justify-center rounded-theme text-theme-muted hover:text-theme-text transition-colors cursor-pointer " +
                 "border-0 bg-transparent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-theme-ring"

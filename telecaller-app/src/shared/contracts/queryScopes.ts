@@ -19,10 +19,20 @@ import { db } from "@/shared/services/firebase";
 import { COLLECTIONS } from "@/shared/constants";
 import { isManagerial } from "@/shared/utils/roleUtils";
 import type { CustomRole } from "@/shared/types";
+import { AGENT_OPEN_LEADS_REALTIME_BOUND } from "@/shared/services/leads/leadQueryConstants";
 
 export interface LeadScopeOptions {
-  /** Max docs for the live listener / page. */
+  /**
+   * Max docs for a **realtime listener** only.
+   * Default is AGENT_OPEN_LEADS_REALTIME_BOUND (not 500).
+   * Pagination must set `omitLimit: true` and apply pageSize via FirestorePaginationProvider.
+   */
   limit?: number;
+  /**
+   * When true, do not attach fsLimit — the pagination provider applies pageSize+1.
+   * Required for cursor pagination (avoids double-limit / hidden 500 cliff).
+   */
+  omitLimit?: boolean;
   /** Field to order by (default updatedAt). */
   orderField?: "updatedAt" | "createdAt" | "followUpDate";
   orderDirection?: "asc" | "desc";
@@ -114,15 +124,18 @@ export function buildAgentLeadsQuery(
   }
   constraints.push(where("assignedTo", "==", uid));
   constraints.push(orderBy(orderField, direction));
-  // Default bound — never mount an unbounded agent leads listener.
-  const lim = options.limit ?? 500;
-  constraints.push(fsLimit(lim));
+  if (!options.omitLimit) {
+    // Realtime path only — never mount an unbounded agent leads listener.
+    const lim = options.limit ?? AGENT_OPEN_LEADS_REALTIME_BOUND;
+    constraints.push(fsLimit(lim));
+  }
   return query(leadsCollection(), ...constraints);
 }
 
 /**
- * Manager/admin leads: bounded full collection (order + limit only).
- * Prefer pagination cursors in a later phase; never omit limit in new listeners.
+ * Manager/admin leads: order + optional bound.
+ * Production list reads must use LeadQueryService (omitLimit + cursor pages).
+ * Realtime listeners must pass an explicit `limit` — there is no company-wide default of 500.
  */
 export function buildManagerLeadsQuery(options: LeadScopeOptions = {}): Query {
   if ("offset" in options && (options as any).offset !== undefined) {
@@ -135,8 +148,14 @@ export function buildManagerLeadsQuery(options: LeadScopeOptions = {}): Query {
     constraints.push(where("projectId", "==", options.projectId));
   }
   constraints.push(orderBy(orderField, direction));
-  const lim = options.limit ?? 500;
-  constraints.push(fsLimit(lim));
+  if (!options.omitLimit) {
+    if (options.limit == null) {
+      throw new Error(
+        "buildManagerLeadsQuery requires an explicit limit for realtime listeners, or omitLimit for pagination.",
+      );
+    }
+    constraints.push(fsLimit(options.limit));
+  }
   return query(leadsCollection(), ...constraints);
 }
 

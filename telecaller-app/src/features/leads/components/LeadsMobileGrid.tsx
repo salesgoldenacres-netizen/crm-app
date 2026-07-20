@@ -47,7 +47,7 @@ export default function LeadsMobileGrid({
                   {lead.name}
                 </h4>
                 <span className="text-[10px] font-semibold text-theme-muted">
-                  {lead.leadNumber || "No ID"}
+                  {lead.leadReference ? lead.leadReference.substring(0, 10) + "..." : lead.leadNumber || "No ID"}
                 </span>
               </div>
               <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded-theme border border-theme-border bg-theme-surface text-theme-muted uppercase tracking-wider shrink-0">

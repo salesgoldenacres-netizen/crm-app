@@ -3,11 +3,9 @@ import { useState, useEffect } from "react";
 import { useLeadsStore } from "@/features/leads/hooks/useLeadsStore";
 import { useAttendanceStore } from "@/features/attendance/hooks/useAttendanceStore";
 import { useLeaveRequestsStore } from "@/features/attendance/hooks/useLeaveRequestsStore";
-import { useProjectsStore } from "@/features/plots/hooks/useProjectsStore";
 import { useUsersStore } from "@/features/employees/hooks/useUsersStore";
 import { useAgentStatusStore } from "@/features/employees/hooks/useAgentStatusStore";
 import {
-  useTeamsStore,
   useGoalsStore,
   useCustomRolesStore,
   useAgentProductivityStore,
@@ -26,9 +24,7 @@ import ApprovalsCenter from "../components/ApprovalsCenter";
 import ProductivityTelemetry from "../components/ProductivityTelemetry";
 import AdminDashboardHeader from "../components/AdminDashboardHeader";
 import AdminDashboardKPICards from "../components/AdminDashboardKPICards";
-import AcquisitionChannelsWidget from "../components/AcquisitionChannelsWidget";
-import TeamsGoalsWidget from "../components/TeamsGoalsWidget";
-import AdminPipelineFunnelWidget from "../components/AdminPipelineFunnelWidget";
+import AggregateUnavailable from "../components/AggregateUnavailable";
 
 type ConfirmDialog = {
   title: string;
@@ -43,12 +39,10 @@ export default function AdminDashboard({ user }: { user: import("@/shared/types"
   const isManagerial = (roleCode: string) => isManagerialUtil(roleCode, customRoles);
   const { toast } = useToast();
 
-  const { projects } = useProjectsStore();
   const { users } = useUsersStore();
-  const { leads, updateLead } = useLeadsStore();
+  const { updateLead } = useLeadsStore();
   const { allAttendance, forceClockOut } = useAttendanceStore();
   const { leaveRequests, updateLeaveStatus } = useLeaveRequestsStore();
-  const { teams } = useTeamsStore();
   const { goals } = useGoalsStore();
   const { agentStatuses } = useAgentStatusStore();
   const { productivity } = useAgentProductivityStore();
@@ -66,44 +60,22 @@ export default function AdminDashboard({ user }: { user: import("@/shared/types"
     return new Date(dateVal.getTime() + offset).toISOString().split("T")[0];
   };
 
-  const parsePrice = (priceStr: string | number | null | undefined): number => {
-    if (!priceStr) return 0;
-    const str = priceStr.toString().trim().toLowerCase();
-
-    let multiplier = 1;
-    if (str.includes("cr") || str.includes("crore")) {
-      multiplier = 10000000;
-    } else if (str.includes("l") || str.includes("lakh")) {
-      multiplier = 100000;
-    }
-
-    const cleaned = str.replace(/[^0-9.]/g, "");
-    const parsed = parseFloat(cleaned) || 0;
-    return parsed * multiplier;
-  };
-
   const todayStr = getLocalDateStr(currentTime);
 
-  let totalRevenue = 0;
-  leads.forEach((l) => {
-    if ((l.status === "booked" || l.status === "reserved") && l.projectId) {
-      const project = projects[l.projectId];
-      if (project) {
-        const plot = project.plots?.find(
-          (p: { id?: string; number?: string; price?: string | number; size?: string; rate?: string }) =>
-            p.id === l.plotId || p.number === l.plotId
-        );
-        if (plot) {
-          const cleanPrice = parsePrice(plot.price);
-          if (cleanPrice > 0) {
-            totalRevenue += cleanPrice;
-          } else if (plot.size && plot.rate) {
-            totalRevenue += parseFloat(plot.size) * parseFloat(plot.rate) || 0;
-          }
-        }
-      }
-    }
-  });
+  // Tier 2 lead aggregates — never compute from empty global store.
+  // Use agentProductivity rollups for call activity; lead KPIs → See Reports.
+  const productivityToday = Object.values(productivity).filter((p) => p.date === todayStr);
+  const totalCallsTodayCount = productivityToday.reduce(
+    (acc, p) => acc + (p.totalCalls || 0),
+    0,
+  );
+  const totalTalkTime = productivityToday.reduce(
+    (acc, p) => acc + (p.totalTalkTimeSeconds || 0),
+    0,
+  );
+  const avgCallDurationSecs =
+    totalCallsTodayCount > 0 ? Math.round(totalTalkTime / totalCallsTodayCount) : 0;
+  const formattedAvgDuration = `${Math.floor(avgCallDurationSecs / 60)}m ${avgCallDurationSecs % 60}s`;
 
   const formatRevenue = (value: number): string => {
     if (value >= 10000000) return `₹${(value / 10000000).toFixed(2)} Cr`;
@@ -111,62 +83,17 @@ export default function AdminDashboard({ user }: { user: import("@/shared/types"
     return `₹${value.toLocaleString("en-IN")}`;
   };
 
-  const totalLeadsCount = leads.length;
-  const bookedLeadsCount = leads.filter((l) => l.status === "booked").length;
-  const conversionRate =
-    totalLeadsCount > 0
-      ? ((bookedLeadsCount / totalLeadsCount) * 100).toFixed(1)
-      : "0";
-  const hotLeadsCount = leads.filter((l) => l.priority === "hot").length;
-
-  let totalCallDurationSeconds = 0;
-  let totalCallsTodayCount = 0;
-  leads.forEach((l) => {
-    (l.callLogs || []).forEach((log) => {
-      const logDateVal = log.date
-        ? new Date(log.date)
-        : log.timestamp
-          ? new Date(log.timestamp)
-          : null;
-      if (logDateVal) {
-        const logDateStr = getLocalDateStr(logDateVal);
-        if (logDateStr === todayStr) {
-          const hasCallFields =
-            log.duration !== undefined ||
-            log.callType !== undefined ||
-            log.picked !== undefined;
-          const noteText = log.note || "";
-          const hasCallNote =
-            noteText.includes("[Call Log") || noteText.includes("Duration:");
-
-          if (hasCallFields || hasCallNote) {
-            totalCallsTodayCount++;
-            if (typeof log.duration === "number") {
-              totalCallDurationSeconds += log.duration;
-            } else {
-              const match = noteText.match(/Duration:\s*(\d+):(\d+)/);
-              if (match) {
-                const mins = parseInt(match[1]) || 0;
-                const secs = parseInt(match[2]) || 0;
-                totalCallDurationSeconds += mins * 60 + secs;
-              }
-            }
-          }
-        }
-      }
-    });
-  });
-  const avgCallDurationSecs =
-    totalCallsTodayCount > 0
-      ? Math.round(totalCallDurationSeconds / totalCallsTodayCount)
-      : 0;
-  const formattedAvgDuration = `${Math.floor(avgCallDurationSecs / 60)}m ${avgCallDurationSecs % 60}s`;
+  const totalRevenue = 0;
+  const totalLeadsCount = 0;
+  const bookedLeadsCount = 0;
+  const conversionRate = "—";
+  const hotLeadsCount = 0;
+  const targetRevenue = goals.targetRevenue || 5000000;
+  const targetPercent = 0;
 
   const pendingLeaves = leaveRequests.filter((r) => r.status === "pending");
-  const pendingDiscounts = leads.filter(
-    (l) => l.discountRequest && l.discountRequest.status === "pending"
-  );
-  const pendingCount = pendingLeaves.length + pendingDiscounts.length;
+  const pendingDiscounts: import("@/shared/types").Lead[] = [];
+  const pendingCount = pendingLeaves.length;
 
   const handleForceClockOut = async (targetUserId: string, targetUsername: string) => {
     setConfirmDialog({
@@ -249,52 +176,6 @@ export default function AdminDashboard({ user }: { user: import("@/shared/types"
     });
   };
 
-  const sourceStats: Record<string, number> = {
-    google: 0,
-    meta: 0,
-    bulk: 0,
-    direct: 0,
-  };
-  const sourceBookings: Record<string, number> = {
-    google: 0,
-    meta: 0,
-    bulk: 0,
-    direct: 0,
-  };
-  leads.forEach((l) => {
-    const notes = l.notes || "";
-    let channel = "direct";
-    if (
-      notes.includes("Google_Ads_Lead_Form") ||
-      notes.includes("google_ads_webhook")
-    )
-      channel = "google";
-    else if (
-      notes.includes("Meta_Lead_Ads") ||
-      notes.includes("meta_ads_webhook")
-    )
-      channel = "meta";
-    else if (notes.includes("Bulk imported")) channel = "bulk";
-
-    sourceStats[channel]++;
-    if (l.status === "booked") {
-      sourceBookings[channel]++;
-    }
-  });
-
-  const getSourceDetails = (source: string) => {
-    const count = sourceStats[source];
-    const bookings = sourceBookings[source];
-    const rate = count > 0 ? ((bookings / count) * 100).toFixed(1) : "0";
-    return { count, rate };
-  };
-
-  const targetRevenue = goals.targetRevenue || 5000000;
-  const targetPercent = Math.min(
-    100,
-    Math.round((totalRevenue / targetRevenue) * 100)
-  );
-
   return (
     <div className="flex flex-col gap-3 text-theme-text">
       <AdminDashboardHeader
@@ -349,17 +230,18 @@ export default function AdminDashboard({ user }: { user: import("@/shared/types"
       />
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
-        <AcquisitionChannelsWidget
-          totalLeadsCount={totalLeadsCount}
-          getSourceDetails={getSourceDetails}
+        <AggregateUnavailable
+          title="Acquisition channel mix unavailable"
+          detail="Channel rollups need summary counters — not an empty leads store."
         />
-
-        <AdminPipelineFunnelWidget
-          leads={leads}
-          totalLeadsCount={totalLeadsCount}
+        <AggregateUnavailable
+          title="Pipeline funnel unavailable"
+          detail="Funnel stages require bounded LeadQueryService windows or Reports."
         />
-
-        <TeamsGoalsWidget teams={teams} leads={leads} goals={goals} />
+        <AggregateUnavailable
+          title="Team booking goals unavailable"
+          detail="Team booking counts from global leads are retired. See Reports."
+        />
       </div>
 
       <Dialog

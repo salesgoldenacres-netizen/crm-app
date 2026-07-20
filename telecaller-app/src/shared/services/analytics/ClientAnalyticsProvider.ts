@@ -18,17 +18,20 @@ export class ClientAnalyticsProvider implements AnalyticsProvider {
   private getUsers: () => User[];
   private getTargets: () => Record<string, { targetCount?: number }>;
   private getGoals: () => { target?: number; achieved?: number; label?: string }[];
+  private isManagerial: boolean;
 
   constructor(
     getLeads: () => Lead[],
     getUsers: () => User[],
     getTargets: () => Record<string, { targetCount?: number }>,
-    getGoals: () => { target?: number; achieved?: number; label?: string }[]
+    getGoals: () => { target?: number; achieved?: number; label?: string }[],
+    isManagerial = false
   ) {
     this.getLeads = getLeads;
     this.getUsers = getUsers;
     this.getTargets = getTargets;
     this.getGoals = getGoals;
+    this.isManagerial = isManagerial;
   }
 
   private getISTDateStr(dateVal: Date) {
@@ -37,6 +40,9 @@ export class ClientAnalyticsProvider implements AnalyticsProvider {
   }
 
   public async getDashboardMetrics(projectId?: string, username?: string): Promise<DashboardMetrics> {
+    if (this.isManagerial) {
+      throw new Error("In-memory compute unavailable for managerial scope");
+    }
     const leads = this.getLeads();
     const todayStr = this.getISTDateStr(new Date());
 
@@ -115,6 +121,9 @@ export class ClientAnalyticsProvider implements AnalyticsProvider {
   }
 
   public async getActivityMetrics(projectId?: string, username?: string): Promise<ActivityMetrics> {
+    if (this.isManagerial) {
+      throw new Error("In-memory compute unavailable for managerial scope");
+    }
     const leads = this.getLeads();
     const todayStr = this.getISTDateStr(new Date());
 
@@ -151,6 +160,9 @@ export class ClientAnalyticsProvider implements AnalyticsProvider {
   }
 
   public async getPipelineMetrics(projectId?: string): Promise<LeadPipelineMetrics> {
+    if (this.isManagerial) {
+      throw new Error("In-memory compute unavailable for managerial scope");
+    }
     const leads = this.getLeads();
     const filteredLeads = projectId ? leads.filter((l) => l.projectId === projectId) : leads;
 
@@ -168,6 +180,9 @@ export class ClientAnalyticsProvider implements AnalyticsProvider {
   }
 
   public async getBookingMetrics(projectId?: string): Promise<BookingMetrics> {
+    if (this.isManagerial) {
+      throw new Error("In-memory compute unavailable for managerial scope");
+    }
     const leads = this.getLeads();
     const filteredLeads = projectId ? leads.filter((l) => l.projectId === projectId) : leads;
 
@@ -183,6 +198,9 @@ export class ClientAnalyticsProvider implements AnalyticsProvider {
   }
 
   public async getTeamMetrics(_projectId?: string): Promise<TeamMetrics> {
+    if (this.isManagerial) {
+      throw new Error("In-memory compute unavailable for managerial scope");
+    }
     const rawGoals = this.getGoals();
     const teamGoals = rawGoals.map((g) => ({
       target: g.target || 0,

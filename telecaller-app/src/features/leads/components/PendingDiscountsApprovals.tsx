@@ -1,4 +1,4 @@
-import { useState } from "react";
+﻿import { useState } from "react";
 import { Briefcase } from "lucide-react";
 import { Lead, Project, User } from "@/shared/types";
 import {
@@ -43,7 +43,7 @@ export default function PendingDiscountsApprovals({
   return (
     <>
       {pendingDiscounts.length > 0 && (
-        <div className="bg-theme-card rounded-xl shadow-sm border border-yellow-200 dark:border-yellow-900 p-5 mb-6 text-sm">
+        <div className="bg-theme-card rounded-theme shadow-sm border border-yellow-200 dark:border-yellow-900 p-5 mb-6 text-sm">
           <h3 className="text-sm font-bold text-yellow-800 dark:text-yellow-400 uppercase tracking-wider mb-3 flex items-center">
             <Briefcase className="w-4 h-4 mr-2 text-yellow-500" />
             Pending Discount Approvals ({pendingDiscounts.length})
@@ -127,7 +127,7 @@ export default function PendingDiscountsApprovals({
                         }}
                         className="bg-green-600 hover:bg-green-700 text-white font-bold px-2 py-1 rounded text-[10px] cursor-pointer"
                       >
-                        Approve ✅
+                        Approve
                       </button>
                       <button
                         type="button"
@@ -170,7 +170,7 @@ export default function PendingDiscountsApprovals({
                         }}
                         className="bg-red-650 hover:bg-red-700 text-white font-bold px-2 py-1 rounded text-[10px] cursor-pointer"
                       >
-                        Reject ❌
+                        Reject
                       </button>
                     </td>
                   </tr>

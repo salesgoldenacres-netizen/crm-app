@@ -1,13 +1,5 @@
 import { useEffect, useState } from "react";
-import {
-  collection,
-  onSnapshot,
-  orderBy,
-  query,
-  where,
-  limit as fsLimit,
-} from "firebase/firestore";
-import { db } from "@/shared/services/firebase";
+import { TimelineEventsRepository } from "@/shared/services/firebase/repositories";
 import type { TimelineEvent } from "../timelineTypes";
 
 export function useTimelineEvents(leadId: string | null | undefined, max = 100) {
@@ -23,47 +15,15 @@ export function useTimelineEvents(leadId: string | null | undefined, max = 100) 
       if (!cancelled) setLoading(true);
     }, 0);
 
-    const q = query(
-      collection(db, "timelineEvents"),
-      where("leadId", "==", leadId),
-      orderBy("timestamp", "desc"),
-      fsLimit(max),
-    );
-
-    const unsub = onSnapshot(
-      q,
-      (snap) => {
+    const unsub = TimelineEventsRepository.subscribe(
+      leadId,
+      max,
+      (list) => {
         if (cancelled) return;
-        setEvents(
-          snap.docs.map((d) => {
-            const data = d.data();
-            return {
-              id: d.id,
-              leadId: String(data.leadId || leadId),
-              type: data.type,
-              source: data.source || "system",
-              sourceId: data.sourceId,
-              conversationId: data.conversationId,
-              messageId: data.messageId,
-              summary: String(data.summary || ""),
-              icon: data.icon || "note",
-              actorId: data.actorId,
-              actorName: data.actorName,
-              metadata: data.metadata,
-              timestamp: String(data.timestamp || data.createdAt || ""),
-              createdAt: String(data.createdAt || data.timestamp || ""),
-            } as TimelineEvent;
-          }),
-        );
+        setEvents(list);
         setError(null);
         setLoading(false);
-      },
-      (err) => {
-        if (cancelled) return;
-        console.error("timelineEvents subscribe failed", err);
-        setError(err.message || "Failed to load timeline");
-        setLoading(false);
-      },
+      }
     );
 
     return () => {

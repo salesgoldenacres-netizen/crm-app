@@ -174,7 +174,7 @@ export default function RolesSettingsTab({
         </Button>
       </div>
 
-      <div className="bg-theme-warning/10 border border-theme-warning/30 rounded-xl p-4 flex items-start space-x-3 text-theme-warning">
+      <div className="bg-theme-warning/10 border border-theme-warning/30 rounded-theme p-4 flex items-start space-x-3 text-theme-warning">
         <AlertTriangle className="w-5 h-5 mt-0.5 flex-shrink-0" aria-hidden="true" />
         <div>
           <h4 className="type-label font-semibold uppercase tracking-wider">
@@ -197,7 +197,7 @@ export default function RolesSettingsTab({
         </div>
       </div>
 
-      <div className="bg-theme-card rounded-xl border border-theme-border shadow-sm overflow-hidden">
+      <div className="bg-theme-card rounded-theme border border-theme-border shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-theme-border">
             <thead className="bg-theme-surface/40">
@@ -316,6 +316,7 @@ export default function RolesSettingsTab({
         title={
           editingRole ? `Edit Role: ${editingRole.name}` : "Create Custom Role"
         }
+        variant="sheet"
         footer={
           <FormActions>
             <Button

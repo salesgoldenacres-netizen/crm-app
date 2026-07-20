@@ -1,6 +1,10 @@
-import { Link } from "react-router-dom";
+﻿import { Link } from "react-router-dom";
+import { useState } from "react";
 import { Search, Map, MapPin } from "lucide-react";
 import { Project, Plot } from "@/shared/types";
+import InteractionDialog, {
+  type InteractionDialogState,
+} from "@/shared/components/ui/InteractionDialog";
 
 interface ProjectMapsViewProps {
   activeTab: "projects" | "map";
@@ -24,6 +28,8 @@ export default function ProjectMapsView({
   mapSelectedProject,
   setMapSelectedProject,
 }: ProjectMapsViewProps) {
+  const [interaction, setInteraction] =
+    useState<InteractionDialogState | null>(null);
   if (activeTab === "projects") {
     const query = projectSearchQuery.toLowerCase();
     const filteredProjects = Object.values(projects).filter(
@@ -46,9 +52,9 @@ export default function ProjectMapsView({
 
     return (
       <div className="space-y-3">
-        <div className="rounded-xl border border-theme-border bg-theme-card px-3 py-2.5 flex flex-col sm:flex-row sm:items-center gap-2.5">
+        <div className="rounded-theme border border-theme-border bg-theme-card px-3 py-2.5 flex flex-col sm:flex-row sm:items-center gap-2.5">
           <div className="min-w-0 flex-1">
-            <h1 className="text-sm font-black text-theme-text tracking-tight leading-tight">
+            <h1 className="text-sm font-bold text-theme-text tracking-tight leading-tight">
               {projectSearchQuery ? "Matching Projects" : "Available Projects"}
             </h1>
             <p className="text-[10px] text-theme-muted mt-0.5 leading-snug">
@@ -75,7 +81,7 @@ export default function ProjectMapsView({
             <h2 className="text-xs font-bold text-theme-text mb-2">
               Plots matching "{projectSearchQuery}"
             </h2>
-            <div className="bg-theme-card rounded-xl overflow-hidden border border-theme-border transition-colors">
+            <div className="bg-theme-card rounded-theme overflow-hidden border border-theme-border transition-colors">
               <ul className="divide-y divide-theme-border">
                 {matchedPlots.map(({ project, plot }, idx) => (
                   <li
@@ -130,7 +136,7 @@ export default function ProjectMapsView({
             return (
               <div
                 key={project.id}
-                className="bg-theme-card overflow-hidden shadow-sm border border-theme-border rounded-xl hover:shadow-md transition-all"
+                className="bg-theme-card overflow-hidden shadow-sm border border-theme-border rounded-theme hover:shadow-md transition-all"
               >
                 <div className="p-3.5">
                   <div className="flex items-center">
@@ -183,9 +189,9 @@ export default function ProjectMapsView({
   // Renders "map" view
   return (
     <div className="w-full max-w-full mx-auto space-y-3">
-      <div className="rounded-xl border border-theme-border bg-theme-card px-3 py-2.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+      <div className="rounded-theme border border-theme-border bg-theme-card px-3 py-2.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
         <div className="min-w-0">
-          <h2 className="text-sm font-black text-theme-text tracking-tight leading-tight flex items-center gap-1.5">
+          <h2 className="text-sm font-bold text-theme-text tracking-tight leading-tight flex items-center gap-1.5">
             <MapPin className="w-3.5 h-3.5 text-amber-500 dark:text-amber-400 shrink-0" />
             Interactive Inventory Map
           </h2>
@@ -207,7 +213,7 @@ export default function ProjectMapsView({
       </div>
 
       {mapSelectedProject && projects[mapSelectedProject] ? (
-        <div className="bg-theme-card rounded-xl shadow border border-theme-border p-4">
+        <div className="bg-theme-card rounded-theme shadow border border-theme-border p-4">
           <div className="relative w-full aspect-[4/3] bg-theme-surface rounded-lg overflow-hidden border border-theme-border">
             <div
               className="absolute inset-0 bg-contain bg-no-repeat bg-center"
@@ -253,9 +259,11 @@ export default function ProjectMapsView({
                     strokeWidth="0.2"
                     className="transition-opacity hover:opacity-80 cursor-pointer"
                     onClick={() => {
-                      alert(
-                        `Plot ${plot.number}\nStatus: ${plot.status}\nSize: ${plot.size} sqft\nPrice: ₹${plot.price || "N/A"}`
-                      );
+                      setInteraction({
+                        mode: "alert",
+                        title: `Plot ${plot.number}`,
+                        description: `Status: ${plot.status} · Size: ${plot.size} sqft · Price: ₹${plot.price || "N/A"}`,
+                      });
                     }}
                   />
                 ))}
@@ -264,10 +272,15 @@ export default function ProjectMapsView({
           </div>
         </div>
       ) : (
-        <div className="text-center py-12 text-gray-500">
+        <div className="text-center py-12 text-theme-muted">
           Please select a project to view its map.
         </div>
       )}
+
+      <InteractionDialog
+        state={interaction}
+        onClose={() => setInteraction(null)}
+      />
     </div>
   );
 }

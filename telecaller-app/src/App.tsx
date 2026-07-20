@@ -6,6 +6,7 @@ import AppShell from "./shared/layouts/AppShell";
 import { useCustomRolesStore, useBrandingStore } from "./features/admin/hooks/adminStores";
 import { DatabaseProvider } from "./shared/services/DatabaseContext";
 import { useAuth } from "./features/auth/hooks/useAuth";
+import BrandedBootScreen from "@/shared/components/BrandedBootScreen";
 
 // Import Modal Registry and Feature components/stores
 import { ModalRegistryContext } from "@/shared/layouts/ModalRegistryContext";
@@ -27,10 +28,9 @@ interface AuthenticatedShellProps {
 }
 
 function AuthenticatedShell({ user, children }: AuthenticatedShellProps) {
-  // Call hooks at composition root
+  // Call hooks at composition root (branding is applied at App root for login/boot)
   useThemeStore(user.id);
   useNotificationsStore(user.id);
-  useBrandingStore(); // apply branding fonts/colors app-wide
 
   const projectsStore = useProjectsStore();
   const leadsStore = useLeadsStore();
@@ -68,6 +68,9 @@ const NotFound = lazy(() => import("./shared/components/NotFound"));
 function App() {
   const { user, loading, logout: handleLogout } = useAuth();
   const { roles: customRoles } = useCustomRolesStore();
+  // Apply Brand Customizer tokens before auth so login + boot screens theme
+  const { branding } = useBrandingStore();
+  const brandTitle = branding.companyName?.trim() || "Golden Acres";
 
   useEffect(() => {
     // Hide splash screen as soon as the app mounts
@@ -85,19 +88,10 @@ function App() {
 
   if (loading) {
     return (
-      <div className="flex h-screen items-center justify-center bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 transition-colors duration-300">
-        <div className="flex flex-col items-center gap-4">
-          <div className="h-12 w-12 animate-spin rounded-full border-4 border-emerald-500 border-t-transparent"></div>
-          <div className="text-center">
-            <h2 className="text-xl font-bold text-slate-800 dark:text-slate-100">
-              Golden Acres
-            </h2>
-            <p className="text-sm font-medium text-slate-500 dark:text-slate-400 mt-1">
-              Connecting to Firebase...
-            </p>
-          </div>
-        </div>
-      </div>
+      <BrandedBootScreen
+        title={brandTitle}
+        message="Connecting to Firebase..."
+      />
     );
   }
 
@@ -110,19 +104,10 @@ function App() {
       >
         <Suspense
           fallback={
-            <div className="flex h-screen items-center justify-center bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 transition-colors duration-300">
-              <div className="flex flex-col items-center gap-4">
-                <div className="h-12 w-12 animate-spin rounded-full border-4 border-emerald-500 border-t-transparent"></div>
-                <div className="text-center">
-                  <h2 className="text-xl font-bold text-slate-800 dark:text-slate-100">
-                    Golden Acres
-                  </h2>
-                  <p className="text-sm font-medium text-slate-500 dark:text-slate-400 mt-1">
-                    Loading page content...
-                  </p>
-                </div>
-              </div>
-            </div>
+            <BrandedBootScreen
+              title={brandTitle}
+              message="Loading page content..."
+            />
           }
         >
           <Routes>

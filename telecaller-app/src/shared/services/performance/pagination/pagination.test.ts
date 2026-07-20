@@ -155,8 +155,23 @@ describe("Query Scopes & Prohibitions", () => {
     const options: LeadScopeOptions = {
       projectId: "project-123",
       pageSize: 25,
+      omitLimit: true,
     };
     const q = buildRoleScopedLeadsQuery("user123", "agent", [], options);
     expect(q).toBeDefined();
+  });
+
+  it("requires explicit limit or omitLimit for managerial realtime queries", () => {
+    expect(() =>
+      buildRoleScopedLeadsQuery("user123", "admin", [], {
+        projectId: "p1",
+      }),
+    ).toThrow(/explicit limit|omitLimit/);
+
+    expect(() =>
+      buildRoleScopedLeadsQuery("user123", "admin", [], {
+        omitLimit: true,
+      }),
+    ).not.toThrow();
   });
 });

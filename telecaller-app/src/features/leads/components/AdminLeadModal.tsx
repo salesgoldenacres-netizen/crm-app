@@ -93,6 +93,7 @@ export default function AdminLeadModal({
       isOpen={isOpen}
       onClose={onClose}
       title={editingLead ? "Edit Lead Details" : "Add New Lead"}
+      variant="sheet"
       size="md"
       footer={
         <FormActions>

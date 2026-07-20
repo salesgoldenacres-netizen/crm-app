@@ -1,13 +1,15 @@
 import React, { useState, useEffect } from "react";
-import { doc, getDoc, setDoc, onSnapshot } from "firebase/firestore";
-import { db } from "@/shared/services/firebase";
+import { SettingsRepository } from "@/shared/services/firebase/repositories";
 import { User, Lead, AuditLog } from "@/shared/types";
+import { LeadRepository } from "@/shared/services/firebase/repositories";
+import { normalizePhone } from "@/shared/utils/formatUtils";
 import { useToast } from "@/shared/components/Toast";
 
 interface UseIntegrationsSettingsProps {
   user: User;
   users: User[];
-  leads: Lead[];
+  /** @deprecated Ignored — phone lookup uses LeadRepository.findByPhone. */
+  leads?: Lead[];
   addLead: (leadData: Partial<Lead> & { name: string; phone: string }) => Promise<Lead | { isDuplicate: boolean }>;
   logAuditEvent: (eventData: Partial<AuditLog>) => Promise<void>;
   isManagerial: (role: string) => boolean;
@@ -17,7 +19,6 @@ interface UseIntegrationsSettingsProps {
 export function useIntegrationsSettings({
   user,
   users,
-  leads,
   addLead,
   logAuditEvent,
   isManagerial,
@@ -104,16 +105,13 @@ export function useIntegrationsSettings({
 
   // Sync Remote Config settings
   useEffect(() => {
-    const unsubscribe = onSnapshot(doc(db, "settings", "remoteConfig"), (docSnap) => {
-      if (docSnap.exists()) {
-        const data = docSnap.data();
-        setRemoteSettings({
-          announcement_text: data.announcement_text || "",
-          show_announcement: !!data.show_announcement,
-          default_rate_per_sqft: parseInt(data.default_rate_per_sqft) || 3500,
-          follow_up_reminder_days: parseInt(data.follow_up_reminder_days) || 1,
-        });
-      }
+    const unsubscribe = SettingsRepository.subscribeRemoteConfig((data) => {
+      setRemoteSettings({
+        announcement_text: String(data.announcement_text ?? ""),
+        show_announcement: !!data.show_announcement,
+        default_rate_per_sqft: parseInt(String(data.default_rate_per_sqft ?? ""), 10) || 3500,
+        follow_up_reminder_days: parseInt(String(data.follow_up_reminder_days ?? ""), 10) || 1,
+      });
     });
     return () => unsubscribe();
   }, []);
@@ -123,27 +121,30 @@ export function useIntegrationsSettings({
     let active = true;
     const loadSettings = async () => {
       try {
-        const docRef = doc(db, "settings", "integrations");
-        const docSnap = await getDoc(docRef);
-
-        const secretRef = doc(db, "settings", "integrations_secrets");
-        const secretSnap = await getDoc(secretRef);
+        const integrationsData = await SettingsRepository.getIntegrations();
+        const secretsData = await SettingsRepository.getIntegrationsSecrets();
 
         if (!active) return;
 
         let combined = {};
-        if (docSnap.exists()) {
-          combined = { ...combined, ...docSnap.data() };
+        if (integrationsData) {
+          combined = { ...combined, ...integrationsData };
         }
-        if (secretSnap.exists()) {
-          combined = { ...combined, ...secretSnap.data() };
+        if (secretsData) {
+          combined = { ...combined, ...secretsData };
         }
         setIntegrationSettings((prev) => ({ ...prev, ...combined }));
 
-        const routingRef = doc(db, "settings", "routing");
-        const routingSnap = await getDoc(routingRef);
-        if (routingSnap.exists() && active) {
-          setRoutingSettings(routingSnap.data() as RoutingSettings);
+        const routingData = await SettingsRepository.getRouting();
+        if (routingData && active) {
+          const enableRoundRobin = routingData.enableRoundRobin;
+          const activeAgents = routingData.activeAgents;
+          if (typeof enableRoundRobin === "boolean" && Array.isArray(activeAgents)) {
+            setRoutingSettings({
+              enableRoundRobin,
+              activeAgents: activeAgents.filter((id): id is string => typeof id === "string"),
+            });
+          }
         }
       } catch (err) {
         console.error("Error loading settings: ", err);
@@ -235,15 +236,9 @@ export function useIntegrationsSettings({
         evolutionWebhookSecret: integrationSettings.evolutionWebhookSecret ?? "",
       };
 
-      await setDoc(doc(db, "settings", "integrations"), publicFields, {
-        merge: true,
-      });
-      await setDoc(doc(db, "settings", "integrations_secrets"), secretFields, {
-        merge: true,
-      });
-
-      const routingRef = doc(db, "settings", "routing");
-      await setDoc(routingRef, routingSettings);
+      await SettingsRepository.setIntegrations(publicFields);
+      await SettingsRepository.setIntegrationsSecrets(secretFields);
+      await SettingsRepository.setRouting({ ...routingSettings });
 
       await logAuditEvent({
         action: "Update Integration Settings",
@@ -261,14 +256,10 @@ export function useIntegrationsSettings({
   const handleSaveRemoteConfig = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await setDoc(
-        doc(db, "settings", "remoteConfig"),
-        {
-          ...remoteSettings,
-          updatedAt: new Date().toISOString(),
-        },
-        { merge: true }
-      );
+      await SettingsRepository.setRemoteConfig({
+        ...remoteSettings,
+        updatedAt: new Date().toISOString(),
+      });
       await logAuditEvent({
         action: "Update Remote Config Settings",
         details: JSON.stringify(remoteSettings),
@@ -304,10 +295,7 @@ export function useIntegrationsSettings({
           : telecallers;
 
       if (pool.length > 0) {
-        const lastLead = leads[0];
-        const lastAgentId = lastLead ? lastLead.assignedTo : "";
-        const lastIndex = pool.findIndex((tc) => tc.id === lastAgentId);
-        const nextIndex = (lastIndex + 1) % pool.length;
+        const nextIndex = Math.floor(Math.random() * pool.length);
         const targetAgent = pool[nextIndex];
         assignedTo = targetAgent.id;
         assignedToName = targetAgent.username;
@@ -330,11 +318,13 @@ export function useIntegrationsSettings({
       log(`Searching leads collection for Caller Phone: "${simulatorForm.phone}"...`);
       await new Promise((r) => setTimeout(r, 400));
 
-      const matchedLead = leads.find((l) => {
-        const cleanLPhone = l.phone.replace(/[^0-9]/g, "");
-        const cleanSPhone = simulatorForm.phone.replace(/[^0-9]/g, "");
-        return cleanLPhone.includes(cleanSPhone) || cleanSPhone.includes(cleanLPhone);
-      });
+      let matchedLead: Lead | undefined;
+      try {
+        const phone = normalizePhone(simulatorForm.phone);
+        matchedLead = (await LeadRepository.findByPhone(phone, 1))[0];
+      } catch {
+        matchedLead = undefined;
+      }
 
       let callerName = simulatorForm.name;
       let leadId = "";

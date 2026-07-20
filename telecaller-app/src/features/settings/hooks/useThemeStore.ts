@@ -1,37 +1,27 @@
 import { useState, useEffect } from "react";
-import { doc, onSnapshot, setDoc } from "firebase/firestore";
-import { db } from "@/shared/services/firebase";
+import { ThemesRepository } from "@/shared/services/firebase/repositories";
+import {
+  BRAND_PALETTE,
+  resolveStructuralTokens,
+} from "@/shared/constants/brandPalette";
 
 export type Appearance = "light" | "dark" | "system";
 export type ResolvedMode = "light" | "dark";
 
+/** Fired after structural tokens + dark class are applied (branding re-syncs). */
+export const APPEARANCE_CHANGED_EVENT = "ga:appearance-changed";
+
 const APPEARANCE_KEY = "appearance";
 const LEGACY_THEME_KEY = "theme";
 
-/** Structural semantic tokens written by the appearance layer only. */
-const STRUCTURAL_LIGHT: Record<string, string> = {
-  "--theme-bg": "#f3f6f4",
-  "--theme-surface": "#e8efeb",
-  "--theme-card": "#ffffff",
-  "--theme-text": "#0f172a",
-  "--theme-muted": "#5a6b63",
-  "--theme-border": "#d5e0da",
-  "--theme-ring": "#b8d9d0",
-  "--theme-overlay": "rgba(11, 26, 22, 0.45)",
-};
+/**
+ * Bootstrap structural defaults (forest/sage). Branding Customizer overwrites
+ * these via applyBrandingToDom after load / on APPEARANCE_CHANGED_EVENT.
+ */
+const STRUCTURAL_LIGHT = resolveStructuralTokens({}, "light");
+const STRUCTURAL_DARK = resolveStructuralTokens({}, "dark");
 
-const STRUCTURAL_DARK: Record<string, string> = {
-  "--theme-bg": "#0b1a16",
-  "--theme-surface": "#122821",
-  "--theme-card": "#143029",
-  "--theme-text": "#f3f6f4",
-  "--theme-muted": "#9bb0a6",
-  "--theme-border": "#1e3d34",
-  "--theme-ring": "#0f5c4c",
-  "--theme-overlay": "rgba(2, 12, 10, 0.7)",
-};
-
-const DEFAULT_ACCENT = "#0f5c4c";
+const DEFAULT_ACCENT = BRAND_PALETTE.primary;
 
 export function getSystemMode(): ResolvedMode {
   if (typeof window === "undefined") return "light";
@@ -99,6 +89,8 @@ export function applyAppearance(appearance: Appearance): ResolvedMode {
   // Keep legacy key in sync for older bootstrap paths
   localStorage.setItem(LEGACY_THEME_KEY, resolved);
 
+  window.dispatchEvent(new CustomEvent(APPEARANCE_CHANGED_EVENT));
+
   return resolved;
 }
 
@@ -124,7 +116,7 @@ async function persistAppearance(appearance: Appearance, userId?: string) {
   const uid = userId ?? activeUserId;
   if (uid) {
     try {
-      await setDoc(doc(db, "themes", uid), { appearance }, { merge: true });
+      await ThemesRepository.set(uid, appearance);
     } catch (err) {
       console.error("Error updating appearance in Firestore: ", err);
     }
@@ -188,18 +180,22 @@ export function useAppearanceStore(userId?: string) {
       return;
     }
     activeUserId = userId;
-    const unsubscribe = onSnapshot(doc(db, "themes", userId), (docSnap) => {
-      if (docSnap.exists()) {
-        const data = docSnap.data();
-        let appearance: Appearance = "system";
-        if (data.appearance === "light" || data.appearance === "dark" || data.appearance === "system") {
-          appearance = data.appearance;
-        } else if (data.theme === "light" || data.theme === "dark") {
-          // Legacy field migration
-          appearance = data.theme;
-        }
-        notify(appearance);
+    const unsubscribe = ThemesRepository.subscribe(userId, (data) => {
+      if (!data) {
+        notify(readStoredAppearance());
+        setIsLoaded(true);
+        return;
       }
+      let appearance: Appearance = "system";
+      if (data.appearance === "light" || data.appearance === "dark" || data.appearance === "system") {
+        appearance = data.appearance;
+      } else {
+        const legacy = data as { appearance?: Appearance; theme?: string };
+        if (legacy.theme === "light" || legacy.theme === "dark") {
+          appearance = legacy.theme;
+        }
+      }
+      notify(appearance);
       setIsLoaded(true);
     });
     return () => {

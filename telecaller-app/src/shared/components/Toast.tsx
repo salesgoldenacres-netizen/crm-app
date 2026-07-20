@@ -39,7 +39,7 @@ const COLORS: Record<ToastType, string> = {
   success: "bg-emerald-600 text-white",
   error: "bg-red-600 text-white",
   warning: "bg-amber-500 text-white",
-  info: "bg-indigo-600 text-white",
+  info: "bg-theme-accent text-theme-accent-fg",
 };
 
 interface ToastItemProps {
@@ -62,7 +62,7 @@ function ToastItem({ id, message, type = "info", onDismiss }: ToastItemProps) {
       role="alert"
       aria-live="polite"
       className={`
-        flex items-center gap-3 px-4 py-3 rounded-xl shadow-lg shadow-black/20
+        flex items-center gap-3 px-4 py-3 rounded-theme shadow-lg shadow-black/20
         min-w-[240px] max-w-[340px] w-full text-sm font-medium
         ${COLORS[type]}
         ${exiting ? "toast-exit" : "toast-enter"}

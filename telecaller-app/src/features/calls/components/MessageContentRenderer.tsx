@@ -1,4 +1,4 @@
-import { FileText } from "lucide-react";
+﻿import { FileText } from "lucide-react";
 
 interface MessageContentRendererProps {
   note: string;
@@ -30,27 +30,28 @@ export default function MessageContentRenderer({
         <button
           type="button"
           onClick={() => togglePlayVoiceNote(noteId)}
-          className={`w-7 h-7 rounded-full flex items-center justify-center cursor-pointer transition-all flex-shrink-0 hover:scale-105 active:scale-95 ${
+          className={`w-7 h-7 rounded-full flex items-center justify-center cursor-pointer transition-all flex-shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-theme-ring ${
             isMe
               ? "bg-white/20 hover:bg-white/30 text-white"
-              : "bg-indigo-50 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-100 dark:hover:bg-indigo-900/50"
+              : "bg-theme-accent-muted text-theme-accent hover:opacity-90"
           }`}
         >
           {isPlaying ? (
             <div className="flex space-x-0.5 justify-center items-center">
               <div
-                className={`w-0.5 h-2 ${isMe ? "bg-white" : "bg-indigo-600 dark:bg-indigo-400"}`}
-              ></div>
+                className={`w-0.5 h-2 ${isMe ? "bg-white" : "bg-theme-accent"}`}
+              />
               <div
-                className={`w-0.5 h-2 ${isMe ? "bg-white" : "bg-indigo-600 dark:bg-indigo-400"}`}
-              ></div>
+                className={`w-0.5 h-2 ${isMe ? "bg-white" : "bg-theme-accent"}`}
+              />
             </div>
           ) : (
-            <span className="text-[10px] pl-[2px] text-current">▶</span>
+            <span className="text-[10px] pl-[2px] text-current" aria-hidden="true">
+              ▶
+            </span>
           )}
         </button>
         <div className="flex-1 min-w-[120px]">
-          {/* Waveform visual */}
           <div className="flex items-end space-x-0.5 h-5">
             {[25, 50, 35, 75, 60, 30, 55, 65, 40, 55, 30, 70, 45, 25].map((h, i) => {
               const isActive = i <= activeBarCount;
@@ -59,8 +60,8 @@ export default function MessageContentRenderer({
                   ? "bg-white"
                   : "bg-white/30"
                 : isActive
-                  ? "bg-indigo-600 dark:bg-indigo-400"
-                  : "bg-indigo-200 dark:bg-indigo-800";
+                  ? "bg-theme-accent"
+                  : "bg-theme-accent/30";
               return (
                 <div
                   key={i}
@@ -71,10 +72,10 @@ export default function MessageContentRenderer({
             })}
           </div>
           <div className="flex justify-between items-center mt-1">
-            <span className={`text-[8px] ${isMe ? "text-indigo-200" : "text-slate-400 dark:text-slate-500"}`}>
+            <span className={`text-[8px] ${isMe ? "text-white/70" : "text-theme-muted"}`}>
               {isPlaying ? "Playing..." : "Voice Note"}
             </span>
-            <span className={`text-[8px] ${isMe ? "text-indigo-200" : "text-slate-400 dark:text-slate-500"}`}>
+            <span className={`text-[8px] ${isMe ? "text-white/70" : "text-theme-muted"}`}>
               {duration}
             </span>
           </div>
@@ -94,36 +95,36 @@ export default function MessageContentRenderer({
 
     return (
       <div
-        className={`p-2.5 rounded-xl border flex items-center space-x-3 w-full ${
+        className={`p-2.5 rounded-theme border flex items-center space-x-3 w-full ${
           isMe
             ? "bg-white/10 border-white/20 text-white"
-            : "bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-100"
+            : "bg-theme-surface border-theme-border text-theme-text"
         }`}
       >
         <div
-          className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${
-            isMe ? "bg-white/10 text-white" : "bg-red-50 dark:bg-red-955/40 text-red-500"
+          className={`w-9 h-9 rounded-theme flex items-center justify-center shrink-0 ${
+            isMe ? "bg-white/10 text-white" : "bg-theme-danger/10 text-theme-danger"
           }`}
         >
-          <FileText className="w-5 h-5" />
+          <FileText className="w-5 h-5" aria-hidden="true" />
         </div>
         <div className="flex-1 min-w-0">
-          <p className="text-[11px] font-bold truncate leading-tight">{docName}</p>
-          <p className={`text-[9px] mt-0.5 ${isMe ? "text-indigo-200" : "text-slate-400"}`}>
+          <p className="text-[11px] font-semibold truncate leading-tight">{docName}</p>
+          <p className={`text-[9px] mt-0.5 ${isMe ? "text-white/70" : "text-theme-muted"}`}>
             PDF Brochure • 4.8 MB
           </p>
         </div>
         <a
           href={fileUrl}
           download={docName.endsWith(".pdf") ? docName : `${docName}.pdf`}
-          className={`p-1.5 rounded-lg cursor-pointer ${
+          className={`p-1.5 rounded-theme cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-theme-ring ${
             isMe
               ? "hover:bg-white/15 text-white"
-              : "hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-400"
+              : "hover:bg-theme-surface text-theme-muted"
           }`}
           title="Download"
         >
-          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
             <path
               strokeLinecap="round"
               strokeLinejoin="round"
@@ -144,14 +145,14 @@ export default function MessageContentRenderer({
 
     return (
       <div className="space-y-1.5 w-full">
-        <div className="rounded-lg overflow-hidden border border-slate-200/60 dark:border-slate-700/80 max-h-36 bg-slate-100 dark:bg-slate-800">
+        <div className="rounded-theme overflow-hidden border border-theme-border max-h-36 bg-theme-surface">
           <img
             src={src}
             alt={mapName}
-            className="w-full h-full object-cover hover:scale-105 transition-all duration-300"
+            className="w-full h-full object-cover"
           />
         </div>
-        <p className="text-[10px] font-bold truncate text-gray-700 dark:text-gray-300">{mapName}</p>
+        <p className="text-[10px] font-semibold truncate text-theme-text">{mapName}</p>
       </div>
     );
   }

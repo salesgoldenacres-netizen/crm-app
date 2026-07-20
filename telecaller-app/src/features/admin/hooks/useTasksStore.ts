@@ -1,8 +1,6 @@
 import { useState, useEffect } from "react";
-import { onSnapshot } from "firebase/firestore";
 import { TaskItem } from "@/shared/types";
 import { TasksRepository } from "@/shared/services/firebase/repositories";
-import { buildUserTasksQuery } from "@/shared/contracts";
 
 export interface UseTasksStoreOptions {
   /**
@@ -30,12 +28,7 @@ export function useTasksStore(
   useEffect(() => {
     if (!userId || !enabled) return;
 
-    const tasksQuery = buildUserTasksQuery(userId);
-    const unsubscribe = onSnapshot(tasksQuery, (snapshot) => {
-      const list: TaskItem[] = [];
-      snapshot.forEach((d) => {
-        list.push({ id: d.id, ...d.data() } as TaskItem);
-      });
+    const unsubscribe = TasksRepository.subscribeUserTasks(userId, (list) => {
       // Query orders by createdAt asc; keep client fallback
       list.sort(
         (a, b) =>

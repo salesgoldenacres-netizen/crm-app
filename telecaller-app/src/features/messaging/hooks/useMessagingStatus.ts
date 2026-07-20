@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { doc, onSnapshot } from "firebase/firestore";
-import { db } from "@/shared/services/firebase";
+import { SettingsRepository } from "@/shared/services/firebase/repositories";
 import {
   DEFAULT_MESSAGING_PUBLIC,
   normalizeConnectionStatus,
@@ -90,12 +89,8 @@ export function useMessagingStatus(pollOnMount = true) {
   const [actionLoading, setActionLoading] = useState(false);
 
   useEffect(() => {
-    const unsub = onSnapshot(doc(db, "settings", "integrations"), (snap) => {
-      if (!snap.exists()) {
-        setPublicConfig(DEFAULT_MESSAGING_PUBLIC);
-        return;
-      }
-      setPublicConfig(mapPublicConfig(snap.data() as Record<string, unknown>));
+    const unsub = SettingsRepository.subscribeIntegrations((data) => {
+      setPublicConfig(mapPublicConfig(data));
     });
     return () => unsub();
   }, []);

@@ -1,5 +1,8 @@
+import { useState, useEffect } from "react";
 import EmptyState from "@/shared/components/ui/EmptyState";
-import { Lead, User } from "@/shared/types";
+import { CallLogsRepository } from "@/shared/services/firebase/CallLogsRepository";
+import { AGENT_OPEN_LEADS_REALTIME_BOUND } from "@/shared/services/leads/leadQueryConstants";
+import { Lead, User, CallLogDocument } from "@/shared/types";
 
 interface RecentCall {
   leadName: string;
@@ -18,6 +21,15 @@ interface CallLogsWidgetProps {
   safeFormatTime: (dateVal: string | Date | null | undefined, options?: Intl.DateTimeFormatOptions) => string;
 }
 
+const RECENT_CALLS_LIMIT = 10;
+const CALL_LOGS_PAGE_SIZE = 20;
+
+function agentMatchesLog(log: CallLogDocument, user: User): boolean {
+  const agent = log.agent;
+  if (!agent) return false;
+  return agent === user.username || agent.startsWith(user.username);
+}
+
 function statusChipClass(status: string): string {
   if (status === "booked") {
     return "bg-theme-success/15 text-theme-success border-theme-success/25";
@@ -32,32 +44,63 @@ function statusChipClass(status: string): string {
 }
 
 export default function CallLogsWidget({ leads, user, setActiveLead, safeFormatTime }: CallLogsWidgetProps) {
-  const myRecentCalls: RecentCall[] = [];
-  leads.forEach((l) => {
-    (l.callLogs || []).forEach((log) => {
-      if (
-        log.agent === user.username ||
-        (log.agent && log.agent.startsWith(user.username))
-      ) {
-        myRecentCalls.push({
-          leadName: l.name,
-          leadId: l.id,
-          ...log,
-        });
-      }
-    });
-  });
+  const [myRecentCalls, setMyRecentCalls] = useState<RecentCall[]>([]);
+  const [loaded, setLoaded] = useState(false);
 
-  myRecentCalls.sort(
-    (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
-  );
+  // Phase C dual-read: top-level callLogs + embedded fallback per bounded open lead.
+  useEffect(() => {
+    let cancelled = false;
+    const leadsToScan = leads.slice(0, AGENT_OPEN_LEADS_REALTIME_BOUND);
+
+    async function loadRecentCalls() {
+      setLoaded(false);
+      try {
+        const batches = await Promise.all(
+          leadsToScan.map(async (lead) => {
+            const logs = await CallLogsRepository.listByLeadIdWithFallback(lead, {
+              pageSize: CALL_LOGS_PAGE_SIZE,
+            });
+            return logs
+              .filter((log) => agentMatchesLog(log, user))
+              .map((log) => ({
+                leadName: lead.name,
+                leadId: lead.id,
+                date: log.date,
+                status: log.status,
+                agent: log.agent ?? "",
+                note: log.note ?? "",
+                duration: log.duration,
+              }));
+          })
+        );
+
+        if (cancelled) return;
+
+        const sorted = batches
+          .flat()
+          .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+          .slice(0, RECENT_CALLS_LIMIT);
+
+        setMyRecentCalls(sorted);
+      } catch {
+        if (!cancelled) setMyRecentCalls([]);
+      } finally {
+        if (!cancelled) setLoaded(true);
+      }
+    }
+
+    void loadRecentCalls();
+    return () => {
+      cancelled = true;
+    };
+  }, [leads, user]);
 
   return (
     <div className="flex h-full w-full flex-col justify-start gap-widget overflow-hidden">
       <div className="max-h-[220px] flex-1 space-y-2 overflow-y-auto pr-0.5">
-        {myRecentCalls.slice(0, 10).map((call, idx) => (
+        {myRecentCalls.map((call) => (
           <div
-            key={idx}
+            key={`${call.leadId}-${call.date}-${call.status}`}
             className="flex items-start justify-between border-b border-theme-border pb-2 text-[11px] last:border-0 last:pb-0"
           >
             <div className="min-w-0 flex-1 pr-3">
@@ -94,7 +137,7 @@ export default function CallLogsWidget({ leads, user, setActiveLead, safeFormatT
             </div>
           </div>
         ))}
-        {myRecentCalls.length === 0 && (
+        {loaded && myRecentCalls.length === 0 && (
           <EmptyState
             variant="compact"
             preset="activity"

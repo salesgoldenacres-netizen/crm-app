@@ -132,7 +132,7 @@ export default function QuickAccessStatusTabs({
               key={tab.id}
               type="button"
               onClick={() => setLeadStatusFilter(tab.id)}
-              className={`whitespace-nowrap py-2.5 px-1 border-b-2 font-semibold text-sm flex items-center gap-2 transition-colors cursor-pointer bg-transparent ${FOCUS_RING} ${
+              className={`whitespace-nowrap min-h-11 px-1.5 border-b-2 font-semibold text-sm inline-flex items-center gap-2 transition-colors cursor-pointer bg-transparent ${FOCUS_RING} ${
                 isActive
                   ? "border-theme-accent text-theme-accent"
                   : "border-transparent text-theme-muted hover:text-theme-text hover:border-theme-border"

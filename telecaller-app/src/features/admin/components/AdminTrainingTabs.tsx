@@ -1,4 +1,4 @@
-import { useState } from "react";
+﻿import { useState } from "react";
 import {
   Lightbulb,
   Gift,
@@ -54,7 +54,7 @@ export default function AdminTrainingTabs({
     return (
       <div className="space-y-3 animate-fadeIn text-sm">
 
-      <div className="max-w-2xl bg-theme-card rounded-xl border border-theme-border p-4 shadow-sm space-y-4">
+      <div className="max-w-2xl bg-theme-card rounded-theme border border-theme-border p-4 shadow-sm space-y-4">
           <h3 className="text-[10px] font-bold uppercase tracking-wider text-theme-muted border-b border-theme-border pb-2">
             Daily Coaching Tip (Shown to Telecallers)
           </h3>
@@ -67,13 +67,13 @@ export default function AdminTrainingTabs({
               rows={4}
               value={coachingTipDraft}
               onChange={(e) => setCoachingTipDraft(e.target.value)}
-              placeholder="e.g. Keep pushing for site visits today team! Consistency is key! 🚀"
-              className="w-full border border-theme-border dark:bg-gray-900 dark:text-white rounded-lg text-sm p-3 focus:ring-theme-ring focus:border-theme-accent"
+              placeholder="e.g. Keep pushing for site visits today team! Consistency is key."
+              className="w-full border border-theme-border dark:bg-theme-surface dark:text-theme-text rounded-lg text-sm p-3 focus:ring-theme-ring focus:border-theme-accent"
             />
           </div>
           <div className="flex justify-between items-center gap-4">
-            <div className="bg-amber-50 dark:bg-amber-955/30 border border-amber-200 dark:border-amber-800 rounded-lg p-3 flex-1">
-              <p className="text-xs font-semibold text-amber-800 dark:text-amber-300 flex items-center">
+            <div className="bg-theme-warning/10 border border-theme-warning/30 rounded-theme p-3 flex-1">
+              <p className="text-xs font-semibold text-theme-warning flex items-center">
                 <Lightbulb className="w-3.5 h-3.5 mr-1.5 flex-shrink-0" />
                 Preview: &quot;
                 {coachingTipDraft || "Your tip will appear here..."}&quot;
@@ -93,9 +93,9 @@ export default function AdminTrainingTabs({
                 });
                 toast("Coaching tip updated!", "success");
               }}
-              className="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-xs font-semibold shadow cursor-pointer whitespace-nowrap"
+              className="px-4 py-2 bg-theme-warning hover:opacity-90 text-white rounded-theme text-xs font-semibold shadow cursor-pointer whitespace-nowrap"
             >
-              Save Tip 💡
+              Save Tip
             </button>
           </div>
         </div>
@@ -108,8 +108,8 @@ export default function AdminTrainingTabs({
     <>
       <div className="space-y-6 animate-fadeIn text-sm">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <div className="bg-theme-card rounded-xl border border-theme-border p-6 shadow-sm space-y-4">
-            <h3 className="text-sm font-bold uppercase tracking-wider text-gray-400 border-b dark:border-gray-700 pb-2">
+          <div className="bg-theme-card rounded-theme border border-theme-border p-6 shadow-sm space-y-4">
+            <h3 className="text-sm font-bold uppercase tracking-wider text-theme-muted border-b border-theme-border pb-2">
               Add Birthday / Anniversary
             </h3>
             <p className="text-xs text-theme-muted">
@@ -117,7 +117,7 @@ export default function AdminTrainingTabs({
               prompting them to call.
             </p>
             <div>
-              <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">
+              <label className="block text-xs font-semibold text-theme-muted uppercase mb-1">
                 Client Name *
               </label>
               <input
@@ -127,11 +127,11 @@ export default function AdminTrainingTabs({
                   setNewEventForm({ ...newEventForm, name: e.target.value })
                 }
                 placeholder="e.g. Arjun Mehta (Lead #102)"
-                className="w-full border border-theme-border dark:bg-gray-900 dark:text-white rounded-lg text-xs p-2.5"
+                className="w-full border border-theme-border dark:bg-theme-surface dark:text-theme-text rounded-lg text-xs p-2.5"
               />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">
+              <label className="block text-xs font-semibold text-theme-muted uppercase mb-1">
                 Date (MM-DD) *
               </label>
               <input
@@ -142,27 +142,27 @@ export default function AdminTrainingTabs({
                 }
                 placeholder="e.g. 06-04"
                 maxLength={5}
-                className="w-full border border-theme-border dark:bg-gray-900 dark:text-white rounded-lg text-xs p-2.5 font-mono"
+                className="w-full border border-theme-border dark:bg-theme-surface dark:text-theme-text rounded-lg text-xs p-2.5 font-mono"
               />
-              <p className="text-[10px] text-gray-400 mt-1">
+              <p className="text-[10px] text-theme-muted mt-1">
                 Format: MM-DD (e.g. 06-04 for June 4th)
               </p>
             </div>
             <div>
-              <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">
+              <label className="block text-xs font-semibold text-theme-muted uppercase mb-1">
                 Type
               </label>
               <div className="flex space-x-3">
                 {[
-                  { val: "birthday", label: "🎂 Birthday" },
-                  { val: "anniversary", label: "💍 Anniversary" },
+                  { val: "birthday", label: "Birthday" },
+                  { val: "anniversary", label: "Anniversary" },
                 ].map((t) => (
                   <button
                     key={t.val}
                     onClick={() =>
                       setNewEventForm({ ...newEventForm, type: t.val })
                     }
-                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold border cursor-pointer transition-all ${newEventForm.type === t.val ? "bg-rose-100 text-rose-800 border-rose-300 dark:bg-rose-955/40 dark:text-rose-300" : "bg-theme-surface text-gray-500 border-gray-300 hover:bg-gray-100"}`}
+                    className={`px-3 py-1.5 rounded-theme text-xs font-semibold border cursor-pointer transition-colors ${newEventForm.type === t.val ? "bg-theme-danger/15 text-theme-danger border-theme-danger/30" : "bg-theme-surface text-theme-muted border-theme-border hover:bg-theme-card"}`}
                   >
                     {t.label}
                   </button>
@@ -188,18 +188,18 @@ export default function AdminTrainingTabs({
                 setNewEventForm({ name: "", date: "", type: "birthday" });
                 toast("Event added!", "success");
               }}
-              className="w-full py-2 bg-rose-500 hover:bg-rose-600 text-white rounded-lg text-xs font-semibold shadow cursor-pointer"
+              className="w-full py-2 bg-theme-danger hover:opacity-90 text-white rounded-theme text-xs font-semibold shadow cursor-pointer"
             >
               + Add Event Reminder
             </button>
           </div>
 
-          <div className="bg-theme-card rounded-xl border border-theme-border p-6 shadow-sm space-y-3">
-            <h3 className="text-sm font-bold uppercase tracking-wider text-gray-400 border-b dark:border-gray-700 pb-2">
+          <div className="bg-theme-card rounded-theme border border-theme-border p-6 shadow-sm space-y-3">
+            <h3 className="text-sm font-bold uppercase tracking-wider text-theme-muted border-b border-theme-border pb-2">
               Saved Events ({calendarEvents.length})
             </h3>
             {calendarEvents.length === 0 ? (
-              <div className="py-8 text-center text-gray-400 italic text-xs">
+              <div className="py-8 text-center text-theme-muted italic text-xs">
                 No events saved yet.
               </div>
             ) : (
@@ -209,19 +209,19 @@ export default function AdminTrainingTabs({
                   .map((ev) => (
                     <div
                       key={ev.id}
-                      className="flex items-center justify-between p-3 bg-theme-surface rounded-lg border dark:border-gray-700"
+                      className="flex items-center justify-between p-3 bg-theme-surface rounded-lg border border-theme-border"
                     >
                       <div className="flex items-center space-x-3">
                         {ev.type === "birthday" ? (
                           <Cake className="w-4 h-4 text-pink-500 flex-shrink-0" />
                         ) : (
-                          <Gift className="w-4 h-4 text-rose-500 flex-shrink-0" />
+                          <Gift className="w-4 h-4 text-theme-danger flex-shrink-0" aria-hidden="true" />
                         )}
                         <div>
                           <p className="text-xs font-semibold text-theme-text">
                             {ev.name}
                           </p>
-                          <p className="text-[10px] text-gray-500 capitalize">
+                          <p className="text-[10px] text-theme-muted capitalize">
                             {ev.type} — {ev.date}
                           </p>
                         </div>
@@ -230,9 +230,9 @@ export default function AdminTrainingTabs({
                         type="button"
                         onClick={() => {
                           setDeleteEventId(ev.id);
-                          setDeleteEventName(ev.name);
+                          setDeleteEventName(ev.name ?? ev.title ?? "");
                         }}
-                        className="text-red-500 hover:text-red-700 p-1 cursor-pointer"
+                        className="text-theme-danger hover:text-theme-danger/80 p-1 cursor-pointer"
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>
@@ -272,7 +272,7 @@ export default function AdminTrainingTabs({
 
   if (tab === "training") {
     return (
-      <div className="bg-theme-card rounded-xl shadow-sm border border-theme-border overflow-hidden mt-6">
+      <div className="bg-theme-card rounded-theme shadow-sm border border-theme-border overflow-hidden mt-6">
         <div className="px-6 py-4 border-b border-theme-border bg-theme-surface flex justify-between items-center">
           <h2 className="text-lg font-bold text-theme-text flex items-center">
             <BookOpen className="w-5 h-5 mr-2 text-theme-accent" />
@@ -283,14 +283,14 @@ export default function AdminTrainingTabs({
         <div className="p-6 space-y-8">
           {/* Quick Reference Docs */}
           <div className="space-y-4">
-            <h3 className="text-md font-bold text-theme-text flex items-center border-b dark:border-gray-700 pb-2">
-              <FileText className="w-4 h-4 mr-2 text-indigo-500" />
+            <h3 className="text-md font-bold text-theme-text flex items-center border-b border-theme-border pb-2">
+              <FileText className="w-4 h-4 mr-2 text-theme-accent" aria-hidden="true" />
               Quick Reference Docs
             </h3>
 
-            <div className="bg-theme-surface p-4 rounded-lg border dark:border-gray-700 flex flex-col md:flex-row gap-3 items-end">
+            <div className="bg-theme-surface p-4 rounded-lg border border-theme-border flex flex-col md:flex-row gap-3 items-end">
               <div className="flex-1">
-                <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1">
+                <label className="block text-xs font-semibold text-theme-muted mb-1">
                   Document Title
                 </label>
                 <input
@@ -300,11 +300,11 @@ export default function AdminTrainingTabs({
                     setNewDocForm({ ...newDocForm, title: e.target.value })
                   }
                   placeholder="e.g. Project Brochure PDF"
-                  className="w-full text-sm border-theme-border dark:bg-gray-850 rounded-md p-2"
+                  className="w-full text-sm border border-theme-border bg-theme-surface text-theme-text rounded-theme p-2"
                 />
               </div>
               <div className="flex-1">
-                <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1">
+                <label className="block text-xs font-semibold text-theme-muted mb-1">
                   URL / Link
                 </label>
                 <input
@@ -314,7 +314,7 @@ export default function AdminTrainingTabs({
                     setNewDocForm({ ...newDocForm, url: e.target.value })
                   }
                   placeholder="https://..."
-                  className="w-full text-sm border-theme-border dark:bg-gray-800 rounded-md p-2"
+                  className="w-full text-sm border-theme-border dark:bg-theme-surface rounded-md p-2"
                 />
               </div>
               <button
@@ -341,10 +341,10 @@ export default function AdminTrainingTabs({
               {(trainingData?.documents || []).map((doc: any) => (
                 <div
                   key={doc.id}
-                  className="flex justify-between items-center bg-theme-card p-3 rounded border dark:border-gray-700"
+                  className="flex justify-between items-center bg-theme-card p-3 rounded border border-theme-border"
                 >
                   <div className="flex items-center text-sm">
-                    <Download className="w-4 h-4 mr-2 text-indigo-500" />
+                    <Download className="w-4 h-4 mr-2 text-theme-accent" aria-hidden="true" />
                     <a
                       href={doc.url}
                       target="_blank"
@@ -363,7 +363,7 @@ export default function AdminTrainingTabs({
                         ),
                       })
                     }
-                    className="text-red-500 hover:text-red-700 p-1 cursor-pointer"
+                    className="text-theme-danger hover:text-theme-danger/80 p-1 cursor-pointer"
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>
@@ -374,14 +374,14 @@ export default function AdminTrainingTabs({
 
           {/* Video Modules */}
           <div className="space-y-4">
-            <h3 className="text-md font-bold text-theme-text flex items-center border-b dark:border-gray-700 pb-2">
-              <Globe className="w-4 h-4 mr-2 text-indigo-500" />
+            <h3 className="text-md font-bold text-theme-text flex items-center border-b border-theme-border pb-2">
+              <Globe className="w-4 h-4 mr-2 text-theme-accent" aria-hidden="true" />
               Training Videos
             </h3>
 
-            <div className="bg-theme-surface p-4 rounded-lg border dark:border-gray-700 flex flex-col md:flex-row gap-3 items-end">
+            <div className="bg-theme-surface p-4 rounded-lg border border-theme-border flex flex-col md:flex-row gap-3 items-end">
               <div className="flex-1">
-                <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1">
+                <label className="block text-xs font-semibold text-theme-muted mb-1">
                   Video Title
                 </label>
                 <input
@@ -391,11 +391,11 @@ export default function AdminTrainingTabs({
                     setNewVideoForm({ ...newVideoForm, title: e.target.value })
                   }
                   placeholder="e.g. How to Close on Site Visits"
-                  className="w-full text-sm border-theme-border dark:bg-gray-800 rounded-md p-2"
+                  className="w-full text-sm border-theme-border dark:bg-theme-surface rounded-md p-2"
                 />
               </div>
               <div className="flex-1">
-                <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1">
+                <label className="block text-xs font-semibold text-theme-muted mb-1">
                   Video URL (YouTube/Drive)
                 </label>
                 <input
@@ -405,7 +405,7 @@ export default function AdminTrainingTabs({
                     setNewVideoForm({ ...newVideoForm, url: e.target.value })
                   }
                   placeholder="https://..."
-                  className="w-full text-sm border-theme-border dark:bg-gray-800 rounded-md p-2"
+                  className="w-full text-sm border-theme-border dark:bg-theme-surface rounded-md p-2"
                 />
               </div>
               <button
@@ -432,7 +432,7 @@ export default function AdminTrainingTabs({
               {(trainingData?.videos || []).map((video: any) => (
                 <div
                   key={video.id}
-                  className="relative bg-theme-card p-4 rounded border dark:border-gray-700 text-center"
+                  className="relative bg-theme-card p-4 rounded border border-theme-border text-center"
                 >
                   <button
                     onClick={() =>
@@ -443,12 +443,12 @@ export default function AdminTrainingTabs({
                         ),
                       })
                     }
-                    className="absolute top-2 right-2 text-red-500 hover:text-red-700 p-1 bg-theme-card rounded-full shadow cursor-pointer"
+                    className="absolute top-2 right-2 text-theme-danger hover:text-theme-danger/80 p-1 bg-theme-card rounded-full shadow cursor-pointer"
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>
-                  <div className="h-24 bg-gray-100 dark:bg-gray-900 rounded flex items-center justify-center mb-3">
-                    <Globe className="w-8 h-8 text-gray-400" />
+                  <div className="h-24 bg-theme-surface rounded flex items-center justify-center mb-3">
+                    <Globe className="w-8 h-8 text-theme-muted" />
                   </div>
                   <a
                     href={video.url}
@@ -465,14 +465,14 @@ export default function AdminTrainingTabs({
 
           {/* Objections & Pitches */}
           <div className="space-y-4">
-            <h3 className="text-md font-bold text-theme-text flex items-center border-b dark:border-gray-700 pb-2">
-              <MessageCircle className="w-4 h-4 mr-2 text-indigo-500" />
+            <h3 className="text-md font-bold text-theme-text flex items-center border-b border-theme-border pb-2">
+              <MessageCircle className="w-4 h-4 mr-2 text-theme-accent" aria-hidden="true" />
               Pitches & Objections
             </h3>
 
-            <div className="bg-theme-surface p-4 rounded-lg border dark:border-gray-700 flex flex-col gap-3">
+            <div className="bg-theme-surface p-4 rounded-lg border border-theme-border flex flex-col gap-3">
               <div>
-                <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1">
+                <label className="block text-xs font-semibold text-theme-muted mb-1">
                   Title
                 </label>
                 <input
@@ -485,11 +485,11 @@ export default function AdminTrainingTabs({
                     })
                   }
                   placeholder="e.g. Handling 'Not interested right now'"
-                  className="w-full text-sm border-theme-border dark:bg-gray-800 rounded-md p-2"
+                  className="w-full text-sm border-theme-border dark:bg-theme-surface rounded-md p-2"
                 />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1">
+                <label className="block text-xs font-semibold text-theme-muted mb-1">
                   Content (Use empty lines for paragraphs)
                 </label>
                 <textarea
@@ -502,7 +502,7 @@ export default function AdminTrainingTabs({
                   }
                   placeholder="Paragraph 1...\n\nParagraph 2..."
                   rows={4}
-                  className="w-full text-sm border-gray-350 dark:border-gray-700 dark:bg-gray-800 rounded-md p-2 font-mono"
+                  className="w-full text-sm border border-theme-border bg-theme-surface text-theme-text rounded-theme p-2 font-mono"
                 />
               </div>
               <div className="flex justify-end">
@@ -540,7 +540,7 @@ export default function AdminTrainingTabs({
               {(trainingData?.objections || []).map((obj: any) => (
                 <div
                   key={obj.id}
-                  className="bg-theme-card rounded-xl shadow-sm border border-theme-border overflow-hidden relative"
+                  className="bg-theme-card rounded-theme shadow-sm border border-theme-border overflow-hidden relative"
                 >
                   <button
                     onClick={() =>
@@ -551,7 +551,7 @@ export default function AdminTrainingTabs({
                         ),
                       })
                     }
-                    className="absolute top-4 right-4 text-red-500 hover:text-red-700 p-1 cursor-pointer"
+                    className="absolute top-4 right-4 text-theme-danger hover:text-theme-danger/80 p-1 cursor-pointer"
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>
@@ -570,7 +570,7 @@ export default function AdminTrainingTabs({
                               ? ""
                               : p.startsWith("Step")
                                 ? "font-medium"
-                                : "italic bg-rose-50 dark:bg-rose-900/20 p-3 rounded border border-rose-200 dark:border-rose-700"
+                                : "italic bg-theme-danger/10 p-3 rounded-theme border border-theme-danger/20"
                           }
                         >
                           {p}

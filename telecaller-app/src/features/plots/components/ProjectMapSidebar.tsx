@@ -13,6 +13,9 @@ import {
 } from "lucide-react";
 import clsx from "clsx";
 import { Plot, Project, Lead, User } from "@/shared/types";
+import Drawer from "@/shared/components/ui/Drawer";
+import Button from "@/shared/components/ui/Button";
+import { useMediaQuery } from "@/shared/hooks/useMediaQuery";
 
 interface ProjectMapSidebarProps {
   selectedPlot: Plot | null;
@@ -45,14 +48,146 @@ interface ProjectMapSidebarProps {
   }) => void;
 }
 
-export default function ProjectMapSidebar({
-  selectedPlot,
-  setSelectedPlot,
+const iconBtn =
+  "min-h-11 min-w-11 inline-flex items-center justify-center rounded-theme " +
+  "text-theme-muted hover:text-theme-text hover:bg-theme-surface transition-colors cursor-pointer " +
+  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-theme-ring";
+
+export default function ProjectMapSidebar(props: ProjectMapSidebarProps) {
+  const { selectedPlot, setSelectedPlot } = props;
+  const isMdUp = useMediaQuery("(min-width: 768px)");
+
+  const searchFilters = <SearchAndFilters {...props} />;
+  const plotDetails = selectedPlot ? (
+    <PlotDetailsBody {...props} selectedPlot={selectedPlot} showClose={isMdUp} />
+  ) : (
+    <EmptyPlotHint />
+  );
+
+  if (!isMdUp) {
+    return (
+      <>
+        <div className="w-full bg-theme-card border-t border-theme-border z-10 shadow-lg">
+          <div className="p-3 space-y-3">{searchFilters}</div>
+        </div>
+        <Drawer
+          isOpen={!!selectedPlot}
+          onClose={() => setSelectedPlot(null)}
+          title={
+            selectedPlot
+              ? ["road", "market", "park"].includes(selectedPlot.status)
+                ? selectedPlot.status.toUpperCase()
+                : `Plot ${selectedPlot.number}`
+              : "Plot details"
+          }
+          position="bottom"
+          size="lg"
+        >
+          {selectedPlot && (
+            <PlotDetailsBody {...props} selectedPlot={selectedPlot} showClose={false} />
+          )}
+        </Drawer>
+      </>
+    );
+  }
+
+  return (
+    <aside
+      className="hidden md:flex w-80 h-full bg-theme-card border-l border-theme-border flex-col transition-all duration-300 z-10 shadow-xl"
+      aria-label="Map plot details"
+    >
+      <div className="p-4 border-b border-theme-border space-y-4">{searchFilters}</div>
+      <div className="flex-1 overflow-y-auto p-4 scrollbar-thin">{plotDetails}</div>
+    </aside>
+  );
+}
+
+function SearchAndFilters({
   searchQuery,
   setSearchQuery,
+  handleSearchPlot,
   filter,
   setFilter,
-  handleSearchPlot,
+}: Pick<
+  ProjectMapSidebarProps,
+  "searchQuery" | "setSearchQuery" | "handleSearchPlot" | "filter" | "setFilter"
+>) {
+  return (
+    <>
+      <div>
+        <label className="block text-[10px] font-semibold text-theme-muted uppercase tracking-widest mb-1.5 flex items-center">
+          <Search className="w-3.5 h-3.5 mr-1 text-theme-accent" aria-hidden="true" /> Search
+          Plot
+        </label>
+        <div className="relative flex items-center bg-theme-bg rounded-theme px-3 min-h-11 border border-theme-border hover:border-theme-accent/40 transition-colors">
+          <input
+            type="text"
+            placeholder="Enter plot number..."
+            value={searchQuery}
+            onChange={(e) => {
+              setSearchQuery(e.target.value);
+              handleSearchPlot(e.target.value);
+            }}
+            aria-label="Search plot by number"
+            className="bg-transparent border-none outline-none text-xs text-theme-text w-full pr-10 font-medium placeholder:text-theme-muted"
+          />
+          {searchQuery && (
+            <button
+              type="button"
+              onClick={() => setSearchQuery("")}
+              aria-label="Clear search"
+              className={clsx(iconBtn, "absolute right-1")}
+            >
+              <X className="w-3.5 h-3.5" aria-hidden="true" />
+            </button>
+          )}
+        </div>
+      </div>
+
+      <div>
+        <h2 className="text-[10px] font-semibold text-theme-muted uppercase tracking-widest flex items-center">
+          <Filter className="w-3.5 h-3.5 mr-1 text-theme-accent" aria-hidden="true" /> Filters
+        </h2>
+        <div className="mt-2 flex flex-wrap gap-1.5" role="group" aria-label="Plot status filters">
+          {["all", "available", "sold", "reserved", "road", "market", "park"].map((f) => (
+            <button
+              key={f}
+              type="button"
+              onClick={() => setFilter(f)}
+              aria-pressed={filter === f}
+              className={clsx(
+                "min-h-11 px-3 py-2 rounded-theme text-[10px] font-semibold capitalize transition-all duration-200 border cursor-pointer",
+                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-theme-ring",
+                filter === f
+                  ? "bg-theme-accent border-theme-accent text-theme-accent-fg"
+                  : "bg-theme-surface border-theme-border text-theme-muted hover:bg-theme-card hover:text-theme-text"
+              )}
+            >
+              {f}
+            </button>
+          ))}
+        </div>
+      </div>
+    </>
+  );
+}
+
+function EmptyPlotHint() {
+  return (
+    <div className="h-full flex flex-col items-center justify-center text-theme-muted text-center py-8">
+      <Info className="w-12 h-12 mb-2 opacity-35 text-theme-accent" aria-hidden="true" />
+      <p className="text-xs font-semibold leading-relaxed">
+        Select an area on the map
+        <br />
+        to view details
+      </p>
+    </div>
+  );
+}
+
+function PlotDetailsBody({
+  selectedPlot,
+  setSelectedPlot,
   getStatusBadge,
   calculatePolygonArea,
   project,
@@ -65,287 +200,229 @@ export default function ProjectMapSidebar({
   setLeadLinkMode,
   setSelectedExistingLeadId,
   setNewLeadForm,
-}: ProjectMapSidebarProps) {
+  showClose,
+}: ProjectMapSidebarProps & { selectedPlot: Plot; showClose: boolean }) {
   return (
-    <div className="w-full md:w-80 h-1/2 md:h-full bg-theme-card border-t md:border-t-0 md:border-l border-theme-border flex flex-col transition-all duration-300 z-10 shadow-2xl">
-      <div className="p-3 md:p-4 border-b border-theme-border space-y-4">
-        {/* Quick Search */}
-        <div>
-          <label className="block text-[10px] font-extrabold text-slate-400 dark:text-slate-400 uppercase tracking-widest mb-1.5 flex items-center">
-            <Search className="w-3.5 h-3.5 mr-1 text-indigo-500 dark:text-indigo-400" />{" "}
-            Search Plot
-          </label>
-          <div className="relative flex items-center bg-theme-bg rounded-xl px-3 py-2 border border-theme-border hover:border-slate-300 dark:hover:border-slate-700 transition-colors">
-            <input
-              type="text"
-              placeholder="Enter plot number..."
-              value={searchQuery}
-              onChange={(e) => {
-                setSearchQuery(e.target.value);
-                handleSearchPlot(e.target.value);
-              }}
-              className="bg-transparent border-none outline-none text-xs text-slate-800 dark:text-slate-100 w-full pr-6 font-medium placeholder-slate-400 dark:placeholder-slate-600"
-            />
-            {searchQuery && (
-              <button
-                onClick={() => setSearchQuery("")}
-                className="absolute right-3 text-slate-400 hover:text-white"
-              >
-                <X className="w-3.5 h-3.5" />
-              </button>
+    <div className="space-y-4 animate-fadeIn">
+      {showClose && (
+        <div className="flex items-center justify-between border-b border-theme-border pb-3">
+          <h3 className="text-lg font-bold text-theme-text">
+            {["road", "market", "park"].includes(selectedPlot.status)
+              ? selectedPlot.status.toUpperCase()
+              : `Plot ${selectedPlot.number}`}
+          </h3>
+          <div className="flex items-center space-x-2">
+            <span
+              className={clsx(
+                "px-2 py-0.5 rounded-theme text-[10px] font-semibold uppercase border tracking-wider",
+                getStatusBadge(selectedPlot.status)
+              )}
+            >
+              {selectedPlot.status}
+            </span>
+            <button
+              type="button"
+              onClick={() => setSelectedPlot(null)}
+              aria-label="Clear plot selection"
+              className={iconBtn}
+            >
+              <X className="w-4 h-4" aria-hidden="true" />
+            </button>
+          </div>
+        </div>
+      )}
+
+      {!showClose && (
+        <div className="flex items-center gap-2 pb-2">
+          <span
+            className={clsx(
+              "px-2 py-0.5 rounded-theme text-[10px] font-semibold uppercase border tracking-wider",
+              getStatusBadge(selectedPlot.status)
             )}
-          </div>
+          >
+            {selectedPlot.status}
+          </span>
         </div>
+      )}
 
-        <div>
-          <h2 className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest flex items-center">
-            <Filter className="w-3.5 h-3.5 mr-1 text-indigo-400" /> Filters
-          </h2>
-          <div className="mt-2 flex flex-wrap gap-1.5">
-            {[
-              "all",
-              "available",
-              "sold",
-              "reserved",
-              "road",
-              "market",
-              "park",
-            ].map((f) => (
-              <button
-                key={f}
-                onClick={() => setFilter(f)}
-                className={clsx(
-                  "px-3 py-1 rounded-full text-[10px] font-bold capitalize transition-all duration-200 border cursor-pointer",
-                  filter === f
-                    ? "bg-indigo-600 border-indigo-500 text-white shadow-lg shadow-indigo-600/15"
-                    : "bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-800 dark:hover:text-slate-200"
-                )}
-              >
-                {f}
-              </button>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      <div className="flex-1 overflow-y-auto p-4 scrollbar-thin">
-        {selectedPlot ? (
-          <div className="space-y-4 animate-fadeIn">
-            <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800/80 pb-3">
-              <h3 className="text-lg font-black text-slate-800 dark:text-white">
-                {["road", "market", "park"].includes(selectedPlot.status)
-                  ? selectedPlot.status.toUpperCase()
-                  : `Plot ${selectedPlot.number}`}
-              </h3>
-              <div className="flex items-center space-x-2">
-                <span
-                  className={clsx(
-                    "px-2 py-0.5 rounded text-[10px] font-extrabold uppercase border tracking-wider",
-                    getStatusBadge(selectedPlot.status)
-                  )}
-                >
-                  {selectedPlot.status}
-                </span>
-                <button
-                  onClick={() => setSelectedPlot(null)}
-                  className="p-1 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg text-slate-400 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white transition-colors cursor-pointer"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-            </div>
-
-            <div className="space-y-2.5 text-xs">
-              {selectedPlot.number && (
-                <div className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-900">
-                  <span className="text-slate-500 dark:text-slate-400 font-medium flex items-center">
-                    <MapPin className="w-3.5 h-3.5 mr-1.5 text-indigo-500 dark:text-indigo-400" />{" "}
-                    ID / Number
-                  </span>
-                  <span className="font-bold text-slate-800 dark:text-white">
-                    {selectedPlot.number}
-                  </span>
-                </div>
-              )}
-              {(selectedPlot.size || project.scaleRatio) && (
-                <div className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-900">
-                  <span className="text-slate-500 dark:text-slate-400 font-medium flex items-center">
-                    <Ruler className="w-3.5 h-3.5 mr-1.5 text-indigo-500 dark:text-indigo-400" />{" "}
-                    Size
-                  </span>
-                  <span className="font-bold text-slate-800 dark:text-white">
-                    {selectedPlot.size
-                      ? selectedPlot.size
-                      : calculatePolygonArea(
-                          selectedPlot.points,
-                          project.scaleRatio
-                        )}{" "}
-                    Sq.Ft
-                  </span>
-                </div>
-              )}
-              {selectedPlot.rate && (
-                <div className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-900">
-                  <span className="text-slate-500 dark:text-slate-400 font-medium flex items-center">
-                    <IndianRupee className="w-3.5 h-3.5 mr-1.5 text-indigo-500 dark:text-indigo-400" />{" "}
-                    Rate/Sq.Ft
-                  </span>
-                  <span className="font-bold text-slate-800 dark:text-white">
-                    ₹{selectedPlot.rate}
-                  </span>
-                </div>
-              )}
-              {(selectedPlot.price ||
-                (selectedPlot.rate && project.scaleRatio)) && (
-                <div className="flex items-center justify-between p-3 rounded-xl bg-indigo-50 dark:bg-theme-accent-muted border border-indigo-100 dark:border-indigo-900/30">
-                  <span className="text-indigo-600 dark:text-indigo-400 font-bold flex items-center">
-                    <IndianRupee className="w-3.5 h-3.5 mr-1.5" /> Total
-                    Price
-                  </span>
-                  <span className="font-black text-base text-indigo-600 dark:text-indigo-300">
-                    ₹
-                    {selectedPlot.price
-                      ? selectedPlot.price
-                      : (
-                          calculatePolygonArea(
-                            selectedPlot.points,
-                            project.scaleRatio
-                          ) * parseFloat(selectedPlot.rate)
-                        ).toLocaleString("en-IN")}
-                  </span>
-                </div>
-              )}
-            </div>
-
-            <div className="pt-2 space-y-4">
-              {user.role === "admin" && (
-                <Link
-                  to={`/admin/project/${project.id}/edit`}
-                  className="block w-full text-center py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300 hover:text-slate-800 dark:hover:text-white rounded-xl hover:bg-slate-100 dark:hover:bg-slate-900 font-bold text-xs transition-colors"
-                >
-                  Edit Area Details
-                </Link>
-              )}
-
-              {/* Lead Integration Section */}
-              {!["road", "market", "park"].includes(selectedPlot.status) &&
-                (() => {
-                  const plotLeads = leads.filter(
-                    (leadItem) =>
-                      leadItem.projectId === project.id &&
-                      (leadItem.plotId === selectedPlot.number ||
-                        leadItem.plotId === selectedPlot.id)
-                  );
-                  return (
-                    <div className="pt-4 border-t border-slate-200 dark:border-slate-800/80 space-y-3 text-xs">
-                      <h4 className="text-[10px] font-extrabold text-slate-400 dark:text-slate-400 uppercase tracking-widest flex items-center">
-                        <ClipboardList className="w-3.5 h-3.5 mr-1 text-indigo-500 dark:text-indigo-400" />
-                        Associated Leads ({plotLeads.length})
-                      </h4>
-
-                      {plotLeads.length > 0 ? (
-                        <div className="space-y-2">
-                          {plotLeads.map((leadItem) => (
-                            <div
-                              key={leadItem.id}
-                              className="p-3 bg-slate-50 dark:bg-slate-950/60 rounded-xl border border-slate-200 dark:border-slate-900 text-xs"
-                            >
-                              <div className="flex justify-between items-start">
-                                <div>
-                                  <span className="font-bold text-slate-800 dark:text-white text-sm flex items-center">
-                                    {leadItem.name}
-                                    {leadItem.priority === "hot" && (
-                                      <span className="ml-1.5 inline-flex items-center px-1.5 py-0.5 rounded text-[8px] font-extrabold bg-amber-500/10 text-amber-400 border border-amber-500/20 animate-pulse">
-                                        HOT 🔥
-                                      </span>
-                                    )}
-                                    {leadItem.priority === "cold" && (
-                                      <span className="ml-1.5 inline-flex items-center px-1.5 py-0.5 rounded text-[8px] font-extrabold bg-blue-500/10 text-blue-400 border border-blue-500/20">
-                                        COLD ❄️
-                                      </span>
-                                    )}
-                                  </span>
-                                  <div className="text-theme-muted mt-0.5 font-bold">
-                                    {leadItem.phone}
-                                  </div>
-                                </div>
-                                <span
-                                  className={`px-2 py-0.5 text-[9px] font-bold rounded uppercase border ${getStatusBadge(leadItem.status)}`}
-                                >
-                                  {leadItem.status}
-                                </span>
-                              </div>
-                              {leadItem.notes && (
-                                <p className="text-slate-500 dark:text-slate-400 mt-2 italic bg-slate-100 dark:bg-slate-950 p-2 rounded-xl border border-slate-200 dark:border-slate-900">
-                                  {leadItem.notes}
-                                </p>
-                              )}
-                              <div className="mt-3 flex items-center justify-between gap-2 border-t border-slate-200 dark:border-slate-900 pt-2.5">
-                                <button
-                                  type="button"
-                                  onClick={() => handleStartCall(leadItem)}
-                                  className="inline-flex items-center text-indigo-550 dark:text-indigo-400 font-bold hover:underline cursor-pointer border-0 bg-transparent"
-                                >
-                                  <Phone className="w-3.5 h-3.5 mr-1" />{" "}
-                                  Call Client
-                                </button>
-                                <button
-                                  onClick={() => {
-                                    setActiveMapLead(leadItem);
-                                    setCallLogForm({
-                                      note: "",
-                                      status: leadItem.status,
-                                      followUpDate: leadItem.followUpDate || "",
-                                    });
-                                  }}
-                                  className="inline-flex items-center bg-indigo-600 hover:bg-theme-accent text-white px-2.5 py-1.5 rounded-lg text-[10px] font-bold transition-all cursor-pointer shadow-md shadow-indigo-600/10 border-0"
-                                >
-                                  Log Call
-                                </button>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      ) : (
-                        <div className="text-center py-2 text-slate-500 bg-slate-50 dark:bg-slate-950/20 border border-slate-200 dark:border-slate-900 rounded-xl p-3">
-                          <p className="mb-2 text-xs font-medium">
-                            No customer leads linked to this plot.
-                          </p>
-                          <button
-                            onClick={() => {
-                              setIsLinkLeadModalOpen(true);
-                              setLeadLinkMode("existing");
-                              setSelectedExistingLeadId("");
-                              setNewLeadForm({
-                                name: "",
-                                phone: "",
-                                email: "",
-                                notes: "",
-                                priority: "warm",
-                              });
-                            }}
-                            className="inline-flex items-center px-3 py-1.5 bg-indigo-600/10 hover:bg-indigo-600/20 text-indigo-400 border border-indigo-500/20 rounded-xl text-xs font-bold transition-all cursor-pointer"
-                          >
-                            <PlusCircle className="w-3.5 h-3.5 mr-1.5" />
-                            <span>Link or Create Lead</span>
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  );
-                })()}
-            </div>
-          </div>
-        ) : (
-          <div className="h-full flex flex-col items-center justify-center text-theme-muted text-center">
-            <Info className="w-12 h-12 mb-2 opacity-35 text-indigo-400" />
-            <p className="text-xs font-semibold leading-relaxed">
-              Select an area on the map
-              <br />
-              to view details
-            </p>
+      <div className="space-y-2.5 text-xs">
+        {selectedPlot.number && (
+          <div className="flex items-center justify-between p-2.5 rounded-theme bg-theme-surface border border-theme-border">
+            <span className="text-theme-muted font-medium flex items-center">
+              <MapPin className="w-3.5 h-3.5 mr-1.5 text-theme-accent" aria-hidden="true" /> ID /
+              Number
+            </span>
+            <span className="font-bold text-theme-text">{selectedPlot.number}</span>
           </div>
         )}
+        {(selectedPlot.size || project.scaleRatio) && (
+          <div className="flex items-center justify-between p-2.5 rounded-theme bg-theme-surface border border-theme-border">
+            <span className="text-theme-muted font-medium flex items-center">
+              <Ruler className="w-3.5 h-3.5 mr-1.5 text-theme-accent" aria-hidden="true" /> Size
+            </span>
+            <span className="font-bold text-theme-text">
+              {selectedPlot.size
+                ? selectedPlot.size
+                : calculatePolygonArea(selectedPlot.points, project.scaleRatio)}{" "}
+              Sq.Ft
+            </span>
+          </div>
+        )}
+        {selectedPlot.rate && (
+          <div className="flex items-center justify-between p-2.5 rounded-theme bg-theme-surface border border-theme-border">
+            <span className="text-theme-muted font-medium flex items-center">
+              <IndianRupee className="w-3.5 h-3.5 mr-1.5 text-theme-accent" aria-hidden="true" />{" "}
+              Rate/Sq.Ft
+            </span>
+            <span className="font-bold text-theme-text">₹{selectedPlot.rate}</span>
+          </div>
+        )}
+        {(selectedPlot.price || (selectedPlot.rate && project.scaleRatio)) && (
+          <div className="flex items-center justify-between p-3 rounded-theme bg-theme-accent-muted border border-theme-border">
+            <span className="text-theme-accent font-bold flex items-center">
+              <IndianRupee className="w-3.5 h-3.5 mr-1.5" aria-hidden="true" /> Total Price
+            </span>
+            <span className="font-bold text-base text-theme-accent">
+              ₹
+              {selectedPlot.price
+                ? selectedPlot.price
+                : (
+                    calculatePolygonArea(selectedPlot.points, project.scaleRatio) *
+                    parseFloat(selectedPlot.rate)
+                  ).toLocaleString("en-IN")}
+            </span>
+          </div>
+        )}
+      </div>
+
+      <div className="pt-2 space-y-4">
+        {user.role === "admin" && (
+          <Link
+            to={`/admin/project/${project.id}/edit`}
+            className={
+              "block w-full text-center min-h-11 py-2.5 bg-theme-surface border border-theme-border text-theme-muted " +
+              "hover:text-theme-text rounded-theme hover:bg-theme-card font-semibold text-xs transition-colors " +
+              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-theme-ring"
+            }
+          >
+            Edit Area Details
+          </Link>
+        )}
+
+        {!["road", "market", "park"].includes(selectedPlot.status) &&
+          (() => {
+            const plotLeads = leads.filter(
+              (leadItem) =>
+                leadItem.projectId === project.id &&
+                (leadItem.plotId === selectedPlot.number || leadItem.plotId === selectedPlot.id)
+            );
+            return (
+              <div className="pt-4 border-t border-theme-border space-y-3 text-xs">
+                <h4 className="text-[10px] font-semibold text-theme-muted uppercase tracking-widest flex items-center">
+                  <ClipboardList
+                    className="w-3.5 h-3.5 mr-1 text-theme-accent"
+                    aria-hidden="true"
+                  />
+                  Associated Leads ({plotLeads.length})
+                </h4>
+
+                {plotLeads.length > 0 ? (
+                  <div className="space-y-2">
+                    {plotLeads.map((leadItem) => (
+                      <div
+                        key={leadItem.id}
+                        className="p-3 bg-theme-surface rounded-theme border border-theme-border text-xs"
+                      >
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <span className="font-bold text-theme-text text-sm flex items-center flex-wrap gap-1">
+                              {leadItem.name}
+                              {leadItem.priority === "hot" && (
+                                <span className="inline-flex items-center px-1.5 py-0.5 rounded-theme text-[8px] font-semibold bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
+                                  HOT
+                                </span>
+                              )}
+                              {leadItem.priority === "cold" && (
+                                <span className="inline-flex items-center px-1.5 py-0.5 rounded-theme text-[8px] font-semibold bg-sky-500/10 text-sky-600 dark:text-sky-400 border border-sky-500/20">
+                                  COLD
+                                </span>
+                              )}
+                            </span>
+                            <div className="text-theme-muted mt-0.5 font-semibold">
+                              {leadItem.phone}
+                            </div>
+                          </div>
+                          <span
+                            className={`px-2 py-0.5 text-[9px] font-semibold rounded-theme uppercase border ${getStatusBadge(leadItem.status)}`}
+                          >
+                            {leadItem.status}
+                          </span>
+                        </div>
+                        {leadItem.notes && (
+                          <p className="text-theme-muted mt-2 italic bg-theme-bg p-2 rounded-theme border border-theme-border">
+                            {leadItem.notes}
+                          </p>
+                        )}
+                        <div className="mt-3 flex items-center justify-between gap-2 border-t border-theme-border pt-2.5">
+                          <button
+                            type="button"
+                            onClick={() => handleStartCall(leadItem)}
+                            className="inline-flex items-center min-h-11 text-theme-accent font-semibold hover:underline cursor-pointer border-0 bg-transparent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-theme-ring rounded-theme px-1"
+                          >
+                            <Phone className="w-3.5 h-3.5 mr-1" aria-hidden="true" /> Call Client
+                          </button>
+                          <Button
+                            type="button"
+                            variant="primary"
+                            size="sm"
+                            onClick={() => {
+                              setActiveMapLead(leadItem);
+                              setCallLogForm({
+                                note: "",
+                                status: leadItem.status,
+                                followUpDate: leadItem.followUpDate || "",
+                              });
+                            }}
+                          >
+                            Log Call
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-2 text-theme-muted bg-theme-surface border border-theme-border rounded-theme p-3">
+                    <p className="mb-2 text-xs font-medium">
+                      No customer leads linked to this plot.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsLinkLeadModalOpen(true);
+                        setLeadLinkMode("existing");
+                        setSelectedExistingLeadId("");
+                        setNewLeadForm({
+                          name: "",
+                          phone: "",
+                          email: "",
+                          notes: "",
+                          priority: "warm",
+                        });
+                      }}
+                      className={
+                        "inline-flex items-center min-h-11 px-3 py-2 bg-theme-accent-muted hover:opacity-90 text-theme-accent " +
+                        "border border-theme-border rounded-theme text-xs font-semibold transition-all cursor-pointer " +
+                        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-theme-ring"
+                      }
+                    >
+                      <PlusCircle className="w-3.5 h-3.5 mr-1.5" aria-hidden="true" />
+                      <span>Link or Create Lead</span>
+                    </button>
+                  </div>
+                )}
+              </div>
+            );
+          })()}
       </div>
     </div>
   );

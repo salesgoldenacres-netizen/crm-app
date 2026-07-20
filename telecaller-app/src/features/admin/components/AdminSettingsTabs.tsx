@@ -24,7 +24,6 @@ interface AdminSettingsTabsProps {
   }) => Promise<void>;
   updateCustomRole: (id: string, roleData: Partial<CustomRole>) => Promise<void>;
   deleteCustomRole: (id: string) => Promise<void>;
-  leads: Lead[];
   addLead: (leadData: Partial<Lead> & { name: string; phone: string }) => Promise<Lead | { isDuplicate: boolean }>;
   updateLeadInStore: (
     id: string,
@@ -32,6 +31,11 @@ interface AdminSettingsTabsProps {
     options?: { suppressTimeline?: boolean },
   ) => Promise<void>;
   deleteLead: (id: string) => Promise<void>;
+  mergeLeads: (
+    targetId: string,
+    sourceId: string,
+    customSelections?: Partial<Lead> | null,
+  ) => Promise<void>;
   projects: Record<string, Project>;
   isManagerial: (role: string) => boolean;
   safeFormatDateTime: (dateStr: string, showTime?: boolean) => string;
@@ -45,10 +49,10 @@ export default function AdminSettingsTabs({
   addCustomRole,
   updateCustomRole,
   deleteCustomRole,
-  leads,
   addLead,
-  updateLeadInStore,
-  deleteLead,
+  updateLeadInStore: _updateLeadInStore,
+  deleteLead: _deleteLead,
+  mergeLeads,
   projects,
   isManagerial: checkIsManagerial,
   safeFormatDateTime: formatDt,
@@ -86,10 +90,8 @@ export default function AdminSettingsTabs({
   if (tab === "merge") {
     return (
       <MergeSettingsTab
-        leads={leads}
         projects={projects}
-        updateLeadInStore={updateLeadInStore}
-        deleteLead={deleteLead}
+        mergeLeads={mergeLeads}
         logAuditEvent={logAuditEvent}
         user={user}
       />
@@ -114,7 +116,7 @@ export default function AdminSettingsTabs({
       <IntegrationsSettingsTab
         user={user}
         users={users}
-        leads={leads}
+        leads={[]}
         addLead={addLead}
         logAuditEvent={logAuditEvent}
         isManagerial={checkIsManagerial}

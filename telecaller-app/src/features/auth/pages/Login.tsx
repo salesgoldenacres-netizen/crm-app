@@ -15,6 +15,7 @@ import {
   FIELD_HELPER_CLASS,
   FIELD_LABEL_CLASS,
 } from "@/shared/components/ui/formField";
+import { useBrandingStore } from "@/features/admin/hooks/useBrandingStore";
 
 const LOGIN_ERROR_ID = "login-form-error";
 const LOGIN_INFO_ID = "login-form-info";
@@ -32,6 +33,12 @@ export default function Login() {
   const [error, setError] = useState("");
   const [infoMessage, setInfoMessage] = useState("");
   const navigate = useNavigate();
+  const { branding } = useBrandingStore();
+  const companyName = branding.companyName?.trim() || "Golden Acres";
+  const brandMark = companyName.toUpperCase();
+  const tagline =
+    branding.tagline?.trim() || "Golden Acres Real Estate Portal";
+  const logoUrl = branding.logoUrl?.trim() || "";
 
   const handleLogin = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -114,19 +121,36 @@ export default function Login() {
     }
   };
 
+  const skipLinkClassName =
+    "sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-[100] focus:px-4 focus:py-2 focus:bg-theme-accent focus:text-theme-accent-fg focus:rounded-theme focus:outline-none focus:ring-2 focus:ring-theme-ring focus:ring-offset-2 focus:ring-offset-theme-bg";
+
   return (
     <div className="min-h-screen flex app-canvas transition-colors duration-300">
+      <a href="#main-content" className={skipLinkClassName}>
+        Skip to main content
+      </a>
       {/* LEFT COLUMN: Login Form */}
-      <div className="w-full md:w-[50%] lg:w-[45%] xl:w-[40%] flex flex-col justify-between min-h-screen p-6 sm:p-12 lg:p-16 relative">
+      <main
+        id="main-content"
+        className="w-full md:w-[50%] lg:w-[45%] xl:w-[40%] flex flex-col justify-between min-h-screen p-6 sm:p-12 lg:p-16 relative"
+      >
         {/* Top Header Row */}
         <div className="flex justify-between items-center w-full login-header-safe">
           {/* Brand visible on Mobile */}
           <div className="flex items-center space-x-2 md:hidden">
-            <div className="p-2 bg-brand-gradient rounded-xl shadow-sm">
-              <Compass className="h-5 w-5 text-white" />
-            </div>
+            {logoUrl ? (
+              <img
+                src={logoUrl}
+                alt=""
+                className="h-9 w-9 rounded-theme object-contain bg-theme-card border border-theme-border"
+              />
+            ) : (
+              <div className="p-2 bg-brand-gradient rounded-theme shadow-sm">
+                <Compass className="h-5 w-5 text-white" />
+              </div>
+            )}
             <span className="font-bold text-sm tracking-wider text-brand-gradient">
-              GOLDEN ACRES
+              {brandMark}
             </span>
           </div>
           <div className="ml-auto">
@@ -140,9 +164,7 @@ export default function Login() {
             <h2 className="text-3xl font-semibold tracking-tight text-theme-text font-display-premium">
               Welcome back
             </h2>
-            <p className="text-sm text-theme-muted">
-              Golden Acres Real Estate Portal
-            </p>
+            <p className="text-sm text-theme-muted">{tagline}</p>
           </div>
 
           {/* Form Card */}
@@ -322,23 +344,37 @@ export default function Login() {
 
         {/* Footer branding */}
         <div className="text-center text-xs text-theme-muted md:text-left">
-          Golden Acres Management Console &bull; Secure Connection
+          {companyName} Management Console &bull; Secure Connection
         </div>
-      </div>
+      </main>
 
-      {/* RIGHT COLUMN: Brand Media Panel (Desktop Only) */}
+      {/* RIGHT COLUMN: Brand Media Panel (Desktop Only) — sidebar + primary/secondary gradients */}
       <div className="hidden md:flex md:w-[50%] lg:w-[55%] xl:w-[60%] sidebar-brand-rail relative overflow-hidden flex-col justify-between p-12 lg:p-16 text-white border-l border-white/10">
-        <div className="absolute top-1/4 left-1/4 w-80 h-80 bg-[#0f5c4c]/40 rounded-full blur-[100px] animate-pulse"></div>
-        <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-[#c9a227]/20 rounded-full blur-[120px] animate-pulse duration-[6000ms]"></div>
+        <div
+          className="absolute top-1/4 left-1/4 w-80 h-80 rounded-full blur-[100px] opacity-40 pointer-events-none"
+          style={{ background: "color-mix(in srgb, var(--theme-accent) 55%, transparent)" }}
+        />
+        <div
+          className="absolute bottom-1/4 right-1/4 w-96 h-96 rounded-full blur-[120px] opacity-25 pointer-events-none"
+          style={{ background: "color-mix(in srgb, var(--theme-secondary) 45%, transparent)" }}
+        />
 
-        <div className="absolute inset-0 opacity-[0.04] pointer-events-none bg-[radial-gradient(#e5e7eb_1px,transparent_1px)] [background-size:16px_16px]"></div>
+        <div className="absolute inset-0 opacity-[0.06] pointer-events-none bg-[radial-gradient(rgba(255,255,255,0.35)_1px,transparent_1px)] [background-size:16px_16px]"></div>
 
         <div className="relative z-10 flex items-center space-x-2">
-          <div className="p-2.5 bg-brand-gradient rounded-xl shadow-md">
-            <Compass className="h-6 w-6 text-white" />
-          </div>
+          {logoUrl ? (
+            <img
+              src={logoUrl}
+              alt=""
+              className="h-11 w-11 rounded-theme object-contain bg-white/10 border border-white/15"
+            />
+          ) : (
+            <div className="p-2.5 bg-brand-gradient rounded-theme shadow-elevation-sm">
+              <Compass className="h-6 w-6 text-white" />
+            </div>
+          )}
           <span className="font-semibold text-lg tracking-wider text-white">
-            GOLDEN ACRES
+            {brandMark}
           </span>
         </div>
 
@@ -347,16 +383,22 @@ export default function Login() {
             Manage plots and leads with intelligence.
           </h1>
           <p className="text-base text-white/70 font-light leading-relaxed">
-            A high-performance portal designed specifically for Golden Acres
-            sales teams, telecallers, and administrators to track real-time plot
-            bookings and customer pipelines.
+            A high-performance portal designed for {companyName} sales teams,
+            telecallers, and administrators to track real-time plot bookings and
+            customer pipelines.
           </p>
 
           <div className="space-y-4 pt-6 border-t border-white/10">
             <div className="flex items-start space-x-3">
-              <div className="mt-1 p-1 bg-[#c9a227]/15 rounded border border-[#c9a227]/30">
+              <div
+                className="mt-1 p-1 rounded-theme border"
+                style={{
+                  background: "color-mix(in srgb, var(--theme-secondary) 15%, transparent)",
+                  borderColor: "color-mix(in srgb, var(--theme-secondary) 30%, transparent)",
+                }}
+              >
                 <svg
-                  className="w-3.5 h-3.5 text-[#e8c84a]"
+                  className="w-3.5 h-3.5 text-theme-secondary"
                   fill="none"
                   viewBox="0 0 24 24"
                   stroke="currentColor"
@@ -380,9 +422,15 @@ export default function Login() {
             </div>
 
             <div className="flex items-start space-x-3">
-              <div className="mt-1 p-1 bg-[#c9a227]/15 rounded border border-[#c9a227]/30">
+              <div
+                className="mt-1 p-1 rounded-theme border"
+                style={{
+                  background: "color-mix(in srgb, var(--theme-secondary) 15%, transparent)",
+                  borderColor: "color-mix(in srgb, var(--theme-secondary) 30%, transparent)",
+                }}
+              >
                 <svg
-                  className="w-3.5 h-3.5 text-[#e8c84a]"
+                  className="w-3.5 h-3.5 text-theme-secondary"
                   fill="none"
                   viewBox="0 0 24 24"
                   stroke="currentColor"
@@ -408,8 +456,7 @@ export default function Login() {
         </div>
 
         <div className="relative z-10 text-xs text-white/40">
-          &copy; {new Date().getFullYear()} Golden Acres Developers. All rights
-          reserved.
+          &copy; {new Date().getFullYear()} {companyName}. All rights reserved.
         </div>
       </div>
     </div>

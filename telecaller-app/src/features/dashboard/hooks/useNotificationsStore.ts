@@ -1,10 +1,9 @@
 import { useState, useEffect } from "react";
-import { onSnapshot } from "firebase/firestore";
+
 import { logger } from "@/shared/utils/logger";
 import { NotificationItem } from "@/shared/types";
 import { NotificationsRepository } from "@/shared/services/firebase/repositories";
 import {
-  buildUserNotificationsQuery,
   publishNotification,
 } from "@/shared/contracts";
 
@@ -23,15 +22,9 @@ export function useNotificationsStore(userId?: string) {
   useEffect(() => {
     if (!userId) return;
 
-    const userQuery = buildUserNotificationsQuery(userId);
-
-    const unsubscribe = onSnapshot(
-      userQuery,
-      (snapshot) => {
-        const list: NotificationItem[] = [];
-        snapshot.forEach((d) => {
-          list.push({ id: d.id, ...d.data() } as NotificationItem);
-        });
+    const unsubscribe = NotificationsRepository.subscribeUserNotifications(
+      userId,
+      (list) => {
         // Query already orders by createdAt desc; keep stable client sort as fallback
         list.sort(
           (a, b) =>

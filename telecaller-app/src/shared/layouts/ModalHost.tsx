@@ -441,7 +441,7 @@ export default function ModalHost({
           projects={projects || {}}
         />
       )}
-      {CallLogModal && (
+      {CallLogModal && callLogLead && (
         <CallLogModal
           isOpen={isCallLogModalOpen}
           onClose={() => setIsCallLogModalOpen(false)}
@@ -454,11 +454,14 @@ export default function ModalHost({
       )}
       {user && (
         <button
+          type="button"
           onClick={() => setIsDialPadOpen((prev) => !prev)}
-          className="fixed bottom-20 md:bottom-6 right-6 z-40 w-12 h-12 bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white rounded-full flex items-center justify-center shadow-lg shadow-indigo-600/30 hover:shadow-indigo-600/50 hover:scale-105 transition-all cursor-pointer border border-indigo-500/20"
+          className="fixed bottom-20 md:bottom-6 right-6 z-40 w-12 h-12 bg-theme-accent hover:opacity-90 active:scale-95 text-theme-accent-fg rounded-full flex items-center justify-center shadow-lg hover:scale-105 transition-all cursor-pointer border border-theme-accent/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-theme-ring focus-visible:ring-offset-2 focus-visible:ring-offset-theme-bg"
           title="Open Phone Dialer"
+          aria-label="Open phone dialer"
+          aria-expanded={isDialPadOpen}
         >
-          <Phone className="w-5 h-5 fill-current text-white" />
+          <Phone className="w-5 h-5 fill-current" aria-hidden="true" />
         </button>
       )}
     </AppShellContext.Provider>

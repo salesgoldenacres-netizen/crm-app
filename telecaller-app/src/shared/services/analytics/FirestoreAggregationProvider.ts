@@ -20,7 +20,7 @@ export class FirestoreAggregationProvider implements AnalyticsProvider {
     return collection(db, "leads");
   }
 
-  private async getFilterCount(conditions: { field: string; value: any }[]): Promise<number> {
+  private async getFilterCount(conditions: { field: string; value: unknown }[]): Promise<number> {
     try {
       let q = query(this.getLeadsCollection());
       conditions.forEach((c) => {
@@ -28,8 +28,9 @@ export class FirestoreAggregationProvider implements AnalyticsProvider {
       });
       const snap = await getCountFromServer(q);
       return snap.data().count;
-    } catch (err: any) {
-      throw new AnalyticsError("COUNT_FAILED", err.message || "Firestore aggregation count query failed.");
+    } catch (err: unknown) {
+      const errMsg = err instanceof Error ? err.message : "Firestore aggregation count query failed.";
+      throw new AnalyticsError("COUNT_FAILED", errMsg);
     }
   }
 
@@ -65,9 +66,10 @@ export class FirestoreAggregationProvider implements AnalyticsProvider {
         },
         leaderboard: [],
       };
-    } catch (err: any) {
+    } catch (err: unknown) {
       if (err instanceof AnalyticsError) throw err;
-      throw new AnalyticsError("PROVIDER_UNAVAILABLE", err.message || "Aggregation provider failed.");
+      const errMsg = err instanceof Error ? err.message : "Aggregation provider failed.";
+      throw new AnalyticsError("PROVIDER_UNAVAILABLE", errMsg);
     }
   }
 
@@ -89,9 +91,10 @@ export class FirestoreAggregationProvider implements AnalyticsProvider {
         dialerMinutes: 0,
         timelineActivities: [],
       };
-    } catch (err: any) {
+    } catch (err: unknown) {
       if (err instanceof AnalyticsError) throw err;
-      throw new AnalyticsError("PROVIDER_UNAVAILABLE", err.message || "Aggregation provider failed.");
+      const errMsg = err instanceof Error ? err.message : "Aggregation provider failed.";
+      throw new AnalyticsError("PROVIDER_UNAVAILABLE", errMsg);
     }
   }
 
@@ -117,9 +120,10 @@ export class FirestoreAggregationProvider implements AnalyticsProvider {
         totalCount,
         unassignedCount: 0,
       };
-    } catch (err: any) {
+    } catch (err: unknown) {
       if (err instanceof AnalyticsError) throw err;
-      throw new AnalyticsError("PROVIDER_UNAVAILABLE", err.message || "Aggregation provider failed.");
+      const errMsg = err instanceof Error ? err.message : "Aggregation provider failed.";
+      throw new AnalyticsError("PROVIDER_UNAVAILABLE", errMsg);
     }
   }
 
@@ -139,9 +143,10 @@ export class FirestoreAggregationProvider implements AnalyticsProvider {
         totalReserved,
         conversionRate: totalCount > 0 ? (totalBookings / totalCount) * 100 : 0,
       };
-    } catch (err: any) {
+    } catch (err: unknown) {
       if (err instanceof AnalyticsError) throw err;
-      throw new AnalyticsError("PROVIDER_UNAVAILABLE", err.message || "Aggregation provider failed.");
+      const errMsg = err instanceof Error ? err.message : "Aggregation provider failed.";
+      throw new AnalyticsError("PROVIDER_UNAVAILABLE", errMsg);
     }
   }
 

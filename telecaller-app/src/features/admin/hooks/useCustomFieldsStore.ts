@@ -1,6 +1,4 @@
 import { useState, useEffect } from "react";
-import { doc, onSnapshot } from "firebase/firestore";
-import { db } from "@/shared/services/firebase";
 import { CustomField } from "@/shared/types";
 import { SettingsRepository } from "@/shared/services/firebase/repositories";
 
@@ -9,13 +7,10 @@ export function useCustomFieldsStore() {
   const [isLoaded, setIsLoaded] = useState(false);
 
   useEffect(() => {
-    const unsubscribe = onSnapshot(
-      doc(db, "settings", "customFields"),
-      (docSnap) => {
-        setCustomFields(docSnap.exists() ? docSnap.data().fields || [] : []);
-        setIsLoaded(true);
-      }
-    );
+    const unsubscribe = SettingsRepository.subscribeCustomFields((fields) => {
+      setCustomFields(fields);
+      setIsLoaded(true);
+    });
     return () => unsubscribe();
   }, []);
 

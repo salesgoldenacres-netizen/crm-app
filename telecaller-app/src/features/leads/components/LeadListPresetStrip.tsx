@@ -8,13 +8,14 @@ interface LeadListPresetStripProps {
   onSelect: (id: LeadListPresetId) => void;
 }
 
+/** Work-queue chips — flush inside command bar (no nested card chrome). */
 export default function LeadListPresetStrip({
   activePresetId,
   onSelect,
 }: LeadListPresetStripProps) {
   return (
     <div
-      className="inline-flex items-center gap-0.5 p-0.5 rounded-theme border border-theme-border bg-theme-surface overflow-x-auto max-w-full scrollbar-none"
+      className="inline-flex items-center gap-0.5 p-0.5 rounded-theme bg-theme-surface overflow-x-auto max-w-full scrollbar-none"
       role="tablist"
       aria-label="Work queues"
     >
@@ -27,9 +28,9 @@ export default function LeadListPresetStrip({
             role="tab"
             aria-selected={active}
             onClick={() => onSelect(preset.id)}
-            className={`shrink-0 px-2.5 py-1 rounded-theme text-[11px] font-semibold transition-colors cursor-pointer border-0 whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-theme-ring ${
+            className={`shrink-0 inline-flex items-center min-h-11 px-2.5 py-2 sm:min-h-0 sm:py-1.5 rounded-theme text-[11px] font-semibold transition-colors cursor-pointer border-0 whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-theme-ring ${
               active
-                ? "bg-theme-card text-theme-accent"
+                ? "bg-theme-card text-theme-accent shadow-sm"
                 : "bg-transparent text-theme-muted hover:text-theme-text"
             }`}
           >
@@ -38,7 +39,7 @@ export default function LeadListPresetStrip({
         );
       })}
       {activePresetId === "custom" && (
-        <span className="shrink-0 px-2.5 py-1 rounded-theme text-[11px] font-semibold text-theme-muted border border-dashed border-theme-border ml-0.5">
+        <span className="shrink-0 px-2.5 py-1.5 rounded-theme text-[11px] font-semibold text-theme-muted border border-dashed border-theme-border ml-0.5">
           Custom
         </span>
       )}

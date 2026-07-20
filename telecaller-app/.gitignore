@@ -29,6 +29,9 @@ dist-ssr
 # Build artifacts
 *.apk
 
+# Test coverage (regenerated)
+coverage/
+
 # Archived unused source (kept for reference, not bundled)
 .archive/
 

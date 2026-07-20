@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+﻿import { useState, useMemo, useEffect } from "react";
 import {
   FileText,
   Search,
@@ -19,9 +19,10 @@ import {
 import { safeFormatDateTime } from "@/shared/utils/dateUtils";
 import { getLeadStatusColor } from "@/features/leads/utils/leadColors";
 import CallRecordingPlayer from "@/shared/components/CallRecordingPlayer";
-import { Lead } from "@/shared/types";
+import { Lead, CallLogDocument } from "@/shared/types";
 import { useTimelineEvents } from "@/features/messaging";
 import type { TimelineEvent } from "@/features/messaging";
+import { CallLogsRepository } from "@/shared/services/firebase/CallLogsRepository";
 
 interface LeadInteractionHistoryProps {
   activeLead: Lead;
@@ -61,17 +62,17 @@ function TimelineIcon({ event }: { event: TimelineEvent }) {
 }
 
 function iconBg(event: TimelineEvent): string {
-  if (event.type.startsWith("whatsapp")) return "bg-green-500";
+  if (event.type.startsWith("whatsapp")) return "bg-theme-success";
   if (event.type === "call_completed") return "bg-theme-accent";
-  if (event.type.includes("assign")) return "bg-violet-500";
-  if (event.type.includes("followup")) return "bg-amber-500";
-  if (event.type.startsWith("site_visit")) return "bg-teal-600";
-  if (event.type.startsWith("discount")) return "bg-orange-500";
-  if (event.type === "lead_merged") return "bg-indigo-500";
+  if (event.type.includes("assign")) return "bg-theme-accent";
+  if (event.type.includes("followup")) return "bg-theme-warning";
+  if (event.type.startsWith("site_visit")) return "bg-theme-accent";
+  if (event.type.startsWith("discount")) return "bg-theme-warning";
+  if (event.type === "lead_merged") return "bg-theme-accent";
   if (event.type.includes("book") || event.type.includes("convert"))
-    return "bg-emerald-600";
-  if (event.type === "note_added") return "bg-sky-500";
-  return "bg-slate-500";
+    return "bg-theme-success";
+  if (event.type === "note_added") return "bg-theme-accent";
+  return "bg-theme-muted";
 }
 
 function isSystemTimelineEvent(ev: TimelineEvent): boolean {
@@ -97,9 +98,25 @@ export default function LeadInteractionHistory({
   const [timelineFilter, setTimelineFilter] = useState("all");
   /** null = derive from timeline presence (collapse when activity stream has events). */
   const [legacyOverride, setLegacyOverride] = useState<boolean | null>(null);
+  const [callLogs, setCallLogs] = useState<CallLogDocument[]>([]);
 
   const { events, loading } = useTimelineEvents(activeLead.id, 150);
   const showLegacy = legacyOverride ?? events.length === 0;
+
+  // Phase C dual-read: top-level callLogs + embedded fallback (flag-gated).
+  useEffect(() => {
+    let cancelled = false;
+    void CallLogsRepository.listByLeadIdWithFallback(activeLead)
+      .then((logs) => {
+        if (!cancelled) setCallLogs(logs);
+      })
+      .catch(() => {
+        if (!cancelled) setCallLogs([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [activeLead.id, activeLead.callLogs]);
 
   const filteredEvents = useMemo(() => {
     return events.filter((ev) => {
@@ -122,8 +139,8 @@ export default function LeadInteractionHistory({
   }, [events, notesSearch, timelineFilter]);
 
   const filteredLogs = useMemo(() => {
-    if (!activeLead.callLogs) return [];
-    return [...activeLead.callLogs]
+    if (!callLogs.length) return [];
+    return [...callLogs]
       .reverse()
       .filter((log) => {
         if (notesSearch.trim()) {
@@ -166,17 +183,17 @@ export default function LeadInteractionHistory({
 
         return true;
       });
-  }, [activeLead.callLogs, notesSearch, timelineFilter]);
+  }, [callLogs, notesSearch, timelineFilter]);
 
   return (
-    <div className="space-y-4 animate-fadeIn">
+    <div className="space-y-4">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-theme-border">
-        <h4 className="text-xs font-black text-theme-muted uppercase tracking-wider flex items-center">
-          <FileText className="w-3.5 h-3.5 mr-1.5 text-theme-accent" />
+        <h4 className="type-label text-[10px] font-semibold text-theme-muted uppercase tracking-wider flex items-center">
+          <FileText className="w-3.5 h-3.5 mr-1.5 text-theme-accent" aria-hidden />
           Lead Timeline
         </h4>
 
-        <div className="flex items-center space-x-1 bg-theme-surface p-0.5 rounded-xl border border-theme-border text-[10px]">
+        <div className="flex items-center gap-0.5 bg-theme-surface p-0.5 rounded-theme border border-theme-border text-[10px]">
           {[
             { id: "all", label: "All" },
             { id: "calls", label: "Calls" },
@@ -187,10 +204,10 @@ export default function LeadInteractionHistory({
               key={tab.id}
               type="button"
               onClick={() => setTimelineFilter(tab.id)}
-              className={`px-2.5 py-1 rounded-lg font-bold cursor-pointer transition-all ${
+              className={`px-2.5 py-1.5 min-h-9 rounded-theme font-semibold cursor-pointer transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-theme-ring ${
                 timelineFilter === tab.id
-                  ? "bg-brand-gradient text-white shadow-md border border-transparent"
-                  : "text-theme-muted hover:text-theme-text hover:bg-theme-card"
+                  ? "bg-theme-card text-theme-accent shadow-sm border border-theme-border"
+                  : "text-theme-muted hover:text-theme-text hover:bg-theme-card/60 border border-transparent"
               }`}
             >
               {tab.label}
@@ -201,52 +218,54 @@ export default function LeadInteractionHistory({
         <div className="relative w-full sm:w-40">
           <input
             type="text"
-            placeholder="Filter..."
+            placeholder="Filter…"
             value={notesSearch}
             onChange={(e) => setNotesSearch(e.target.value)}
-            className="w-full text-[10px] py-1.5 pl-8 pr-3 bg-theme-card border border-slate-200 dark:border-slate-850 rounded-xl focus:ring-2 focus:ring-theme-ring/20 focus:border-theme-accent text-slate-700 dark:text-slate-200 outline-none transition-all font-semibold"
+            className="w-full text-[10px] py-1.5 pl-8 pr-3 bg-theme-card border border-theme-border rounded-theme focus:ring-2 focus:ring-theme-ring/30 focus:border-theme-accent text-theme-text outline-none transition-colors font-semibold placeholder:text-theme-muted"
           />
-          <Search className="w-3.5 h-3.5 text-slate-500 absolute left-2.5 top-2" />
+          <Search className="w-3.5 h-3.5 text-theme-muted absolute left-2.5 top-2" aria-hidden />
         </div>
       </div>
 
       {/* Primary: timelineEvents */}
       <div>
-        <p className="text-[10px] font-bold uppercase tracking-wider text-theme-muted mb-2">
+        <p className="type-label text-[10px] font-semibold uppercase tracking-wider text-theme-muted mb-2">
           Activity stream
         </p>
         <div className="relative border-l border-theme-border pl-6 ml-3 space-y-4 max-h-[280px] overflow-y-auto pr-1 scrollbar-thin">
           {loading && (
-            <p className="text-xs text-slate-400 italic">Loading timeline…</p>
+            <p className="text-xs text-theme-muted" role="status">
+              Loading timeline…
+            </p>
           )}
           {!loading && filteredEvents.length === 0 && (
-            <p className="text-xs text-slate-400 italic">
+            <p className="text-xs text-theme-muted">
               No timeline events yet — new CRM activity appears here.
             </p>
           )}
           {filteredEvents.map((ev) => (
-            <div key={ev.id} className="relative group/item transition-all">
+            <div key={ev.id} className="relative transition-colors">
               <span
-                className={`absolute -left-[28px] top-1.5 ${iconBg(ev)} w-5.5 h-5.5 flex items-center justify-center rounded-full ring-4 ring-white dark:ring-slate-900 transition-transform group-hover/item:scale-110 shadow-sm`}
+                className={`absolute -left-[28px] top-1.5 ${iconBg(ev)} w-5.5 h-5.5 flex items-center justify-center rounded-full ring-4 ring-theme-card shadow-sm`}
               >
                 <TimelineIcon event={ev} />
               </span>
-              <div className="text-[10px] text-theme-muted flex items-center space-x-2 font-bold uppercase tracking-wider">
+              <div className="text-[10px] text-theme-muted flex items-center space-x-2 font-semibold uppercase tracking-wider">
                 <span>{safeFormatDateTime(ev.timestamp)}</span>
                 {ev.actorName && (
                   <>
                     <span>•</span>
-                    <span className="text-slate-600 dark:text-slate-400">
+                    <span className="text-theme-muted">
                       By {ev.actorName}
                     </span>
                   </>
                 )}
                 <span>•</span>
-                <span className="px-2 py-0.5 rounded-full font-black border border-theme-border text-theme-muted">
+                <span className="px-2 py-0.5 rounded-theme font-semibold border border-theme-border text-theme-muted normal-case tracking-normal">
                   {ev.type.replace(/_/g, " ")}
                 </span>
               </div>
-              <p className="mt-2 text-sm font-medium text-slate-800 dark:text-slate-200 bg-slate-50/40 dark:bg-slate-950/40 p-3.5 rounded-xl border border-slate-100 dark:border-slate-800/80 whitespace-pre-line leading-relaxed shadow-sm">
+              <p className="mt-2 text-sm font-medium text-theme-text bg-theme-surface/60 p-3.5 rounded-theme border border-theme-border whitespace-pre-line leading-relaxed">
                 {ev.summary}
               </p>
             </div>
@@ -254,14 +273,14 @@ export default function LeadInteractionHistory({
         </div>
       </div>
 
-      {/* Legacy: callLogs (read-only compatibility) */}
+      {/* Call history: top-level callLogs (+ embedded dual-read fallback) */}
       <div className="pt-2 border-t border-theme-border">
         <button
           type="button"
           onClick={() => setLegacyOverride((v) => !(v ?? events.length === 0))}
-          className="text-[10px] font-bold uppercase tracking-wider text-theme-muted mb-2 cursor-pointer hover:text-theme-text"
+          className="type-label text-[10px] font-semibold uppercase tracking-wider text-theme-muted mb-2 cursor-pointer hover:text-theme-text border-0 bg-transparent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-theme-ring rounded-theme"
         >
-          Legacy history (call logs) {showLegacy ? "▾" : "▸"}
+          Call history {showLegacy ? "▾" : "▸"}
         </button>
         {showLegacy && (
           <div className="relative border-l border-theme-border pl-6 ml-3 space-y-4 max-h-[220px] overflow-y-auto pr-1 scrollbar-thin opacity-90">
@@ -280,39 +299,39 @@ export default function LeadInteractionHistory({
 
                 if (isWA) {
                   icon = <MessageCircle className="w-2.5 h-2.5 text-white" />;
-                  bgColor = "bg-green-500";
+                  bgColor = "bg-theme-success";
                 } else if (isSMS) {
                   icon = <MessageCircle className="w-2.5 h-2.5 text-white" />;
-                  bgColor = "bg-amber-500";
+                  bgColor = "bg-theme-warning";
                 } else if (isEmail) {
                   icon = <Mail className="w-2.5 h-2.5 text-white" />;
-                  bgColor = "bg-blue-500";
+                  bgColor = "bg-theme-accent";
                 } else if (isSystem) {
                   icon = <AlertCircle className="w-2.5 h-2.5 text-white" />;
-                  bgColor = "bg-slate-500";
+                  bgColor = "bg-theme-muted";
                 }
 
                 return (
-                  <div key={idx} className="relative group/item transition-all">
+                  <div key={log.id || idx} className="relative transition-colors">
                     <span
-                      className={`absolute -left-[28px] top-1.5 ${bgColor} w-5.5 h-5.5 flex items-center justify-center rounded-full ring-4 ring-white dark:ring-slate-900 transition-transform group-hover/item:scale-110 shadow-sm`}
+                      className={`absolute -left-[28px] top-1.5 ${bgColor} w-5.5 h-5.5 flex items-center justify-center rounded-full ring-4 ring-theme-card shadow-sm`}
                     >
                       {icon}
                     </span>
-                    <div className="text-[10px] text-theme-muted flex items-center space-x-2 font-bold uppercase tracking-wider">
+                    <div className="text-[10px] text-theme-muted flex items-center space-x-2 font-semibold uppercase tracking-wider">
                       <span>{safeFormatDateTime(log.date)}</span>
                       <span>•</span>
-                      <span className="text-slate-600 dark:text-slate-400">
+                      <span className="text-theme-muted">
                         By {log.agent}
                       </span>
                       <span>•</span>
                       <span
-                        className={`px-2 py-0.5 rounded-full font-black border ${getLeadStatusColor(log.status)}`}
+                        className={`px-2 py-0.5 rounded-theme font-semibold border ${getLeadStatusColor(log.status)}`}
                       >
                         {log.status}
                       </span>
                     </div>
-                    <p className="mt-2 text-sm font-medium text-slate-800 dark:text-slate-200 bg-slate-50/40 dark:bg-slate-950/40 p-3.5 rounded-xl border border-slate-100 dark:border-slate-800/80 whitespace-pre-line leading-relaxed shadow-sm hover:border-slate-200 dark:hover:border-slate-700 transition-colors">
+                    <p className="mt-2 text-sm font-medium text-theme-text bg-theme-surface/60 p-3.5 rounded-theme border border-theme-border whitespace-pre-line leading-relaxed hover:border-theme-accent/30 transition-colors">
                       {log.note || "No notes logged"}
                     </p>
 
@@ -331,7 +350,7 @@ export default function LeadInteractionHistory({
                 );
               })
             ) : (
-              <p className="text-xs text-slate-400 italic">
+              <p className="text-xs text-theme-muted">
                 No matching legacy logs
               </p>
             )}

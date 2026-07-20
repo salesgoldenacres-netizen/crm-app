@@ -1,4 +1,6 @@
 import React, { createContext, useContext } from "react";
+import { User, Lead, Project, CallLog } from "@/shared/types";
+import { IVRActiveCall, IVRSettings } from "@/features/calls/hooks/useIVRStore";
 
 export interface ModalRegistry {
   TemplateCenterModal?: React.ComponentType<{
@@ -12,13 +14,13 @@ export interface ModalRegistry {
   DialPadDrawer?: React.ComponentType<{
     isOpen: boolean;
     onClose: () => void;
-    leads: any[];
-    onStartCall: (lead: any) => void;
-    projects?: any;
-    addLead: (lead: any) => Promise<any>;
+    leads: Lead[];
+    onStartCall: (lead: Lead) => void;
+    projects?: Record<string, Project>;
+    addLead: (lead: Partial<Lead>) => Promise<Lead | null>;
   }>;
   DialerOverlay?: React.ComponentType<{
-    activeDialerLead: any;
+    activeDialerLead: Lead | null;
     dialerStatus: string;
     dialerSeconds: number;
     dialerMuted: boolean;
@@ -26,21 +28,21 @@ export interface ModalRegistry {
     dialerSpeaker: boolean;
     setDialerSpeaker: (speaker: boolean) => void;
     handleEndCall: () => void;
-    activeIvrCall: any;
-    ivrSettings: any;
-    matchedIvrLead: any;
-    projects: any;
+    activeIvrCall: IVRActiveCall | null;
+    ivrSettings: IVRSettings | null;
+    matchedIvrLead: Lead | null;
+    projects: Record<string, Project>;
     clearActiveIvrCall: () => Promise<void>;
     handleAnswerIvrCall: () => Promise<void>;
   }>;
   CallLogModal?: React.ComponentType<{
     isOpen: boolean;
     onClose: () => void;
-    lead: any;
+    lead: Lead;
     durationSeconds: number;
-    logCall: (leadId: string, call: any) => Promise<any>;
-    updateLead: (id: string, data: any) => Promise<any>;
-    user: any;
+    logCall: (leadId: string, call: Partial<CallLog>) => Promise<void>;
+    updateLead: (id: string, data: Partial<Lead>) => Promise<void>;
+    user: User;
   }>;
 }
 

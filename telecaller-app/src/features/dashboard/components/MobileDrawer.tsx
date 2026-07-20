@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 import {
   X,
   BarChart3,
@@ -6,10 +7,11 @@ import {
   Map,
   Calendar,
   BookOpen,
-  Award,
+  UserRound,
   LayoutDashboard,
 } from "lucide-react";
 import { User } from "@/shared/types";
+import { NAV_LABELS } from "@/shared/constants/navTaxonomy";
 
 interface MobileDrawerProps {
   isOpen: boolean;
@@ -17,7 +19,6 @@ interface MobileDrawerProps {
   user: User;
   isManagerial: (role: string) => boolean;
   activeTab: string;
-  setActiveTab: (tab: string) => void;
 }
 
 function navClass(active: boolean) {
@@ -34,14 +35,19 @@ export default function MobileDrawer({
   user,
   isManagerial,
   activeTab,
-  setActiveTab,
 }: MobileDrawerProps) {
   if (!isOpen) return null;
 
-  const go = (tab: string) => {
-    setActiveTab(tab);
-    onClose();
-  };
+  const item = (tab: string, label: string, Icon: typeof BarChart3) => (
+    <Link
+      to={`/?tab=${tab}`}
+      onClick={onClose}
+      className={navClass(activeTab === tab)}
+    >
+      <Icon className="w-4.5 h-4.5 mr-2.5 text-theme-accent" aria-hidden />
+      <span className="text-xs">{label}</span>
+    </Link>
+  );
 
   return (
     <>
@@ -56,7 +62,7 @@ export default function MobileDrawer({
               <LayoutDashboard className="w-4 h-4" aria-hidden />
             </div>
             <span className="type-card-title text-sm tracking-wide text-theme-text">
-              Workspace
+              {NAV_LABELS.workspace}
             </span>
           </div>
           <button
@@ -70,64 +76,18 @@ export default function MobileDrawer({
         </div>
 
         <nav className="flex-1 px-2.5 py-3 space-y-1 overflow-y-auto">
-          {isManagerial(user.role) && (
-            <button
-              type="button"
-              onClick={() => go("company-dashboard")}
-              className={navClass(activeTab === "company-dashboard")}
-            >
-              <BarChart3 className="w-4.5 h-4.5 mr-2.5 text-theme-accent" />
-              <span className="text-xs">Company Overview</span>
-            </button>
-          )}
+          {isManagerial(user.role) &&
+            item("company-dashboard", NAV_LABELS.dashboard, BarChart3)}
 
-          <button type="button" onClick={() => go("leads")} className={navClass(activeTab === "leads")}>
-            <UserCheck className="w-4.5 h-4.5 mr-2.5 text-theme-accent" />
-            <span className="text-xs">Leads CRM</span>
-          </button>
-
-          <button type="button" onClick={() => go("calls")} className={navClass(activeTab === "calls")}>
-            <PhoneCall className="w-4.5 h-4.5 mr-2.5 text-theme-accent" />
-            <span className="text-xs">Calls Hub</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => go("projects")}
-            className={navClass(activeTab === "projects")}
-          >
-            <Map className="w-4.5 h-4.5 mr-2.5 text-theme-accent" />
-            <span className="text-xs">Project Maps</span>
-          </button>
+          {item("leads", NAV_LABELS.leads, UserCheck)}
+          {item("calls", NAV_LABELS.calls, PhoneCall)}
+          {item("projects", NAV_LABELS.maps, Map)}
 
           {!isManagerial(user.role) && (
             <>
-              <button
-                type="button"
-                onClick={() => go("attendance")}
-                className={navClass(activeTab === "attendance")}
-              >
-                <Calendar className="w-4.5 h-4.5 mr-2.5 text-theme-accent" />
-                <span className="text-xs">Attendance</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => go("training")}
-                className={navClass(activeTab === "training")}
-              >
-                <BookOpen className="w-4.5 h-4.5 mr-2.5 text-theme-accent" />
-                <span className="text-xs">Training HQ</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => go("profile")}
-                className={navClass(activeTab === "profile")}
-              >
-                <Award className="w-4.5 h-4.5 mr-2.5 text-theme-accent" />
-                <span className="text-xs">My Profile</span>
-              </button>
+              {item("attendance", NAV_LABELS.attendance, Calendar)}
+              {item("training", NAV_LABELS.training, BookOpen)}
+              {item("profile", NAV_LABELS.profile, UserRound)}
             </>
           )}
         </nav>

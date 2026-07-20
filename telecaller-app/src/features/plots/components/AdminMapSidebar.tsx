@@ -1,5 +1,8 @@
 import { X, Trash2, Copy, Scissors, Grid } from "lucide-react";
 import { Project, Plot, EditingPlot } from "@/shared/types";
+import Drawer from "@/shared/components/ui/Drawer";
+import Button from "@/shared/components/ui/Button";
+import { useMediaQuery } from "@/shared/hooks/useMediaQuery";
 
 interface AdminMapSidebarProps {
   editingPlot: EditingPlot;
@@ -13,13 +16,15 @@ interface AdminMapSidebarProps {
     direction: string;
     method: string;
   };
-  setSubdivisionForm: React.Dispatch<React.SetStateAction<{
-    mode: string;
-    count: number;
-    targetSize: number;
-    direction: string;
-    method: string;
-  }>>;
+  setSubdivisionForm: React.Dispatch<
+    React.SetStateAction<{
+      mode: string;
+      count: number;
+      targetSize: number;
+      direction: string;
+      method: string;
+    }>
+  >;
   executeSubdivision: () => void;
   plotForm: {
     number: string;
@@ -29,14 +34,16 @@ interface AdminMapSidebarProps {
     status: string;
     labelRotation: number;
   };
-  setPlotForm: React.Dispatch<React.SetStateAction<{
-    number: string;
-    size: string;
-    rate: string;
-    price: string;
-    status: string;
-    labelRotation: number;
-  }>>;
+  setPlotForm: React.Dispatch<
+    React.SetStateAction<{
+      number: string;
+      size: string;
+      rate: string;
+      price: string;
+      status: string;
+      labelRotation: number;
+    }>
+  >;
   handleSavePlot: (e: React.FormEvent) => void;
   handleDeletePlot: () => void;
   handleEditShapeClick: () => void;
@@ -48,7 +55,62 @@ interface AdminMapSidebarProps {
   handleVertexManualDelete: (idx: number) => void;
 }
 
-export default function AdminMapSidebar({
+const fieldClass =
+  "mt-1 block w-full rounded-theme border border-theme-border bg-theme-card text-theme-text shadow-sm " +
+  "focus:border-theme-accent focus:ring-2 focus:ring-theme-ring text-xs sm:text-sm p-2.5 min-h-11";
+
+const labelClass = "block text-sm font-medium text-theme-text";
+const labelCapsClass =
+  "block text-xs font-semibold text-theme-muted uppercase tracking-wider";
+
+export default function AdminMapSidebar(props: AdminMapSidebarProps) {
+  const {
+    editingPlot,
+    setEditingPlot,
+    subdivisionActive,
+    setSubdivisionActive,
+  } = props;
+
+  const isMdUp = useMediaQuery("(min-width: 768px)");
+
+  const title = subdivisionActive
+    ? "Subdivide Area"
+    : editingPlot.isNew
+      ? "New Area Details"
+      : "Edit Area";
+
+  const body = (
+    <AdminMapSidebarBody {...props} showInlineHeader={isMdUp} />
+  );
+
+  if (!isMdUp) {
+    return (
+      <Drawer
+        isOpen={!!editingPlot}
+        onClose={() => {
+          setSubdivisionActive(false);
+          setEditingPlot(null);
+        }}
+        title={title}
+        position="bottom"
+        size="lg"
+      >
+        {body}
+      </Drawer>
+    );
+  }
+
+  return (
+    <aside
+      className="hidden md:flex w-96 h-full bg-theme-card border-l border-theme-border shadow-xl overflow-y-auto flex-col p-6 z-10 flex-shrink-0 transition-all duration-300"
+      aria-label="Area edit panel"
+    >
+      {body}
+    </aside>
+  );
+}
+
+function AdminMapSidebarBody({
   editingPlot,
   setEditingPlot,
   subdivisionActive,
@@ -67,7 +129,8 @@ export default function AdminMapSidebar({
   handleAutoCalculateSize,
   handleVertexManualEdit,
   handleVertexManualDelete,
-}: AdminMapSidebarProps) {
+  showInlineHeader,
+}: AdminMapSidebarProps & { showInlineHeader: boolean }) {
   const calculatePrice = (size: string, rate: string, currentPrice: string) => {
     const s = parseFloat(size);
     const r = parseFloat(rate);
@@ -76,32 +139,37 @@ export default function AdminMapSidebar({
   };
 
   return (
-    <div className="w-full md:w-96 h-1/2 md:h-full bg-white dark:bg-gray-850 border-t md:border-t-0 md:border-l border-gray-200 dark:border-gray-700 shadow-xl overflow-y-auto flex flex-col p-6 z-10 flex-shrink-0 transition-all duration-300">
-      <div className="flex justify-between items-center mb-4">
-        <h2 className="text-xl font-bold dark:text-white">
-          {subdivisionActive
-            ? "Subdivide Area"
-            : editingPlot.isNew
-              ? "New Area Details"
-              : "Edit Area"}
-        </h2>
-        <button
-          type="button"
-          onClick={() => setEditingPlot(null)}
-          className="text-gray-500 hover:text-gray-750 dark:text-gray-400"
-        >
-          <X className="w-5 h-5" />
-        </button>
-      </div>
+    <div className="flex flex-col flex-1 min-h-0">
+      {showInlineHeader && (
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-xl font-bold text-theme-text">
+            {subdivisionActive
+              ? "Subdivide Area"
+              : editingPlot.isNew
+                ? "New Area Details"
+                : "Edit Area"}
+          </h2>
+          <button
+            type="button"
+            onClick={() => setEditingPlot(null)}
+            aria-label="Close edit panel"
+            className={
+              "min-h-11 min-w-11 inline-flex items-center justify-center rounded-theme text-theme-muted " +
+              "hover:text-theme-text hover:bg-theme-surface transition-colors " +
+              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-theme-ring"
+            }
+          >
+            <X className="w-5 h-5" aria-hidden="true" />
+          </button>
+        </div>
+      )}
 
       {subdivisionActive ? (
         <div className="space-y-4 flex-1 flex flex-col justify-between mt-2">
           <div className="space-y-4">
             <div>
-              <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                Subdivide By
-              </label>
-              <div className="mt-1 flex rounded-md shadow-sm">
+              <label className={labelCapsClass}>Subdivide By</label>
+              <div className="mt-1 flex rounded-theme shadow-sm overflow-hidden">
                 <button
                   type="button"
                   onClick={() =>
@@ -110,10 +178,10 @@ export default function AdminMapSidebar({
                       mode: "count",
                     })
                   }
-                  className={`flex-1 px-3 py-1.5 text-xs font-semibold border border-gray-300 dark:border-gray-700 rounded-l-md transition-colors ${
+                  className={`flex-1 min-h-11 px-3 py-2 text-xs font-semibold border border-theme-border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-theme-ring ${
                     subdivisionForm.mode === "count"
-                      ? "bg-indigo-600 text-white border-indigo-600"
-                      : "bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 hover:bg-gray-50"
+                      ? "bg-theme-accent text-theme-accent-fg border-theme-accent"
+                      : "bg-theme-card text-theme-text hover:bg-theme-surface"
                   }`}
                 >
                   Equal Parts
@@ -126,10 +194,10 @@ export default function AdminMapSidebar({
                       mode: "size",
                     })
                   }
-                  className={`flex-1 px-3 py-1.5 text-xs font-semibold border-t border-b border-r border-gray-300 dark:border-gray-700 rounded-r-md transition-colors ${
+                  className={`flex-1 min-h-11 px-3 py-2 text-xs font-semibold border-t border-b border-r border-theme-border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-theme-ring ${
                     subdivisionForm.mode === "size"
-                      ? "bg-indigo-600 text-white border-indigo-600"
-                      : "bg-white dark:bg-gray-900 text-gray-750 dark:text-gray-300 hover:bg-gray-50"
+                      ? "bg-theme-accent text-theme-accent-fg border-theme-accent"
+                      : "bg-theme-card text-theme-text hover:bg-theme-surface"
                   }`}
                 >
                   Target Sq Ft
@@ -139,9 +207,7 @@ export default function AdminMapSidebar({
 
             {subdivisionForm.mode === "count" ? (
               <div>
-                <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                  Number of Divisions
-                </label>
+                <label className={labelCapsClass}>Number of Divisions</label>
                 <input
                   type="number"
                   min="2"
@@ -153,14 +219,12 @@ export default function AdminMapSidebar({
                       count: Math.max(2, parseInt(e.target.value) || 2),
                     })
                   }
-                  className="mt-1 block w-full rounded-md border-gray-350 dark:border-gray-700 dark:bg-gray-900 dark:text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-xs p-2 border"
+                  className={fieldClass}
                 />
               </div>
             ) : (
               <div>
-                <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                  Target Size (Sq Ft)
-                </label>
+                <label className={labelCapsClass}>Target Size (Sq Ft)</label>
                 <input
                   type="number"
                   min="50"
@@ -172,20 +236,18 @@ export default function AdminMapSidebar({
                       targetSize: Math.max(50, parseFloat(e.target.value) || 1000),
                     })
                   }
-                  className="mt-1 block w-full rounded-md border-gray-350 dark:border-gray-700 dark:bg-gray-900 dark:text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-xs p-2 border"
+                  className={fieldClass}
                 />
                 {!project.scaleRatio && (
-                  <span className="text-[10px] text-yellow-600 dark:text-yellow-400 font-semibold block mt-1">
-                    ⚠️ Calibrate scale ruler in settings first.
+                  <span className="text-[10px] text-theme-warning font-semibold block mt-1">
+                    Calibrate scale ruler in settings first.
                   </span>
                 )}
               </div>
             )}
 
             <div>
-              <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                Split Method
-              </label>
+              <label className={labelCapsClass}>Split Method</label>
               <select
                 value={subdivisionForm.method}
                 onChange={(e) =>
@@ -194,7 +256,7 @@ export default function AdminMapSidebar({
                     method: e.target.value,
                   })
                 }
-                className="mt-1 block w-full rounded-md border-gray-350 dark:border-gray-700 dark:bg-gray-900 dark:text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-xs p-2 border"
+                className={fieldClass}
               >
                 <option value="area">Equal Area (Proportional Slicing)</option>
                 <option value="spacing">Equal Spacing (Bounding box intervals)</option>
@@ -202,9 +264,7 @@ export default function AdminMapSidebar({
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                Cut Direction
-              </label>
+              <label className={labelCapsClass}>Cut Direction</label>
               <select
                 value={subdivisionForm.direction}
                 onChange={(e) =>
@@ -213,7 +273,7 @@ export default function AdminMapSidebar({
                     direction: e.target.value,
                   })
                 }
-                className="mt-1 block w-full rounded-md border-gray-350 dark:border-gray-700 dark:bg-gray-900 dark:text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-xs p-2 border"
+                className={fieldClass}
               >
                 <option value="vertical">Vertical Slices (Left-to-Right)</option>
                 <option value="horizontal">Horizontal Slices (Top-to-Bottom)</option>
@@ -221,51 +281,44 @@ export default function AdminMapSidebar({
             </div>
           </div>
 
-          <div className="flex justify-end space-x-2 pt-4 border-t dark:border-gray-700 mt-6 flex-wrap gap-2">
-            <button
+          <div className="flex justify-end gap-2 pt-4 border-t border-theme-border mt-6 flex-wrap">
+            <Button
               type="button"
+              variant="outline"
+              size="sm"
               onClick={() => setSubdivisionActive(false)}
-              className="px-3 py-1.5 border border-gray-300 dark:border-gray-700 rounded text-gray-700 dark:text-gray-300 hover:bg-gray-50 text-xs font-semibold"
             >
               Cancel
-            </button>
-            <button
-              type="button"
-              onClick={executeSubdivision}
-              className="bg-indigo-650 hover:bg-indigo-700 text-white px-4 py-1.5 rounded text-xs font-semibold shadow-sm"
-            >
+            </Button>
+            <Button type="button" variant="primary" size="sm" onClick={executeSubdivision}>
               Apply Subdivide
-            </button>
+            </Button>
           </div>
         </div>
       ) : (
         <form onSubmit={handleSavePlot} className="space-y-4 flex-1 flex flex-col justify-between">
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-305">
-                Name / Number
-              </label>
+              <label className={labelClass}>Name / Number</label>
               <input
                 required={!["road", "park"].includes(plotForm.status)}
                 type="text"
                 value={plotForm.number}
                 onChange={(e) => setPlotForm({ ...plotForm, number: e.target.value })}
                 placeholder="e.g. Plot 41 or Main Road"
-                className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border"
+                className={fieldClass}
               />
             </div>
 
             <div className="grid grid-cols-3 gap-4">
               <div>
                 <div className="flex items-center justify-between">
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-305">
-                    Size
-                  </label>
+                  <label className={labelClass}>Size</label>
                   {project.scaleRatio && (
                     <button
                       type="button"
                       onClick={handleAutoCalculateSize}
-                      className="text-[10px] text-indigo-600 hover:text-indigo-700 font-semibold"
+                      className="text-[10px] text-theme-accent hover:opacity-80 font-semibold min-h-11 px-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-theme-ring rounded-theme"
                       title="Auto-calculate size based on polygon area"
                     >
                       Auto
@@ -283,13 +336,11 @@ export default function AdminMapSidebar({
                       price: calculatePrice(size, plotForm.rate, plotForm.price),
                     });
                   }}
-                  className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border"
+                  className={fieldClass}
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-305">
-                  Rate (₹)
-                </label>
+                <label className={labelClass}>Rate (₹)</label>
                 <input
                   type="number"
                   value={plotForm.rate}
@@ -301,30 +352,26 @@ export default function AdminMapSidebar({
                       price: calculatePrice(plotForm.size, rate, plotForm.price),
                     });
                   }}
-                  className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border"
+                  className={fieldClass}
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-305">
-                  Price (₹)
-                </label>
+                <label className={labelClass}>Price (₹)</label>
                 <input
                   type="text"
                   value={plotForm.price}
                   onChange={(e) => setPlotForm({ ...plotForm, price: e.target.value })}
-                  className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border"
+                  className={fieldClass}
                 />
               </div>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-305">
-                Area Type / Status
-              </label>
+              <label className={labelClass}>Area Type / Status</label>
               <select
                 value={plotForm.status}
                 onChange={(e) => setPlotForm({ ...plotForm, status: e.target.value })}
-                className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border"
+                className={fieldClass}
               >
                 <optgroup label="Plots">
                   <option value="available">Available</option>
@@ -341,9 +388,7 @@ export default function AdminMapSidebar({
 
             {!editingPlot.isNew && plotForm.status !== "road" && (
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-305">
-                  Label Rotation (degrees)
-                </label>
+                <label className={labelClass}>Label Rotation (degrees)</label>
                 <input
                   type="range"
                   min="-180"
@@ -356,9 +401,9 @@ export default function AdminMapSidebar({
                       labelRotation: parseInt(e.target.value),
                     })
                   }
-                  className="w-full mt-1 accent-indigo-650"
+                  className="w-full mt-1 accent-[var(--theme-accent)] min-h-11"
                 />
-                <div className="flex justify-between text-xs text-gray-400">
+                <div className="flex justify-between text-xs text-theme-muted">
                   <span>-180°</span>
                   <span>{plotForm.labelRotation || 0}°</span>
                   <span>180°</span>
@@ -366,18 +411,15 @@ export default function AdminMapSidebar({
               </div>
             )}
 
-            {/* Manual Vertex Coordinates Inspector */}
             {!editingPlot.isNew && (
-              <div className="space-y-1.5 pt-2 border-t dark:border-gray-700">
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-305">
-                  Vertices Coordinates (X%, Y%)
-                </label>
-                <div className="max-h-36 overflow-y-auto space-y-1 border border-gray-200 dark:border-gray-700 rounded-md p-2 bg-gray-50 dark:bg-gray-900/50">
-                  {editingPlot.points.map((pt: any, idx: number) => (
+              <div className="space-y-1.5 pt-2 border-t border-theme-border">
+                <label className={labelClass}>Vertices Coordinates (X%, Y%)</label>
+                <div className="max-h-36 overflow-y-auto space-y-1 border border-theme-border rounded-theme p-2 bg-theme-surface/50">
+                  {editingPlot.points.map((pt: [number, number], idx: number) => (
                     <div key={idx} className="flex items-center space-x-2 text-xs py-0.5">
-                      <span className="font-semibold text-gray-400 w-8">Pt {idx + 1}:</span>
-                      <div className="flex items-center border rounded border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 px-1.5 h-6">
-                        <span className="text-[10px] text-gray-400 mr-1">X</span>
+                      <span className="font-semibold text-theme-muted w-8">Pt {idx + 1}:</span>
+                      <div className="flex items-center border rounded-theme border-theme-border bg-theme-card px-1.5 min-h-11">
+                        <span className="text-[10px] text-theme-muted mr-1">X</span>
                         <input
                           type="number"
                           step="0.1"
@@ -385,11 +427,12 @@ export default function AdminMapSidebar({
                           onChange={(e) =>
                             handleVertexManualEdit(idx, 0, parseFloat(e.target.value))
                           }
-                          className="w-12 dark:bg-gray-800 dark:text-white outline-none text-center"
+                          aria-label={`Vertex ${idx + 1} X`}
+                          className="w-12 bg-transparent text-theme-text outline-none text-center focus-visible:ring-2 focus-visible:ring-theme-ring rounded"
                         />
                       </div>
-                      <div className="flex items-center border rounded border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 px-1.5 h-6">
-                        <span className="text-[10px] text-gray-400 mr-1">Y</span>
+                      <div className="flex items-center border rounded-theme border-theme-border bg-theme-card px-1.5 min-h-11">
+                        <span className="text-[10px] text-theme-muted mr-1">Y</span>
                         <input
                           type="number"
                           step="0.1"
@@ -397,17 +440,22 @@ export default function AdminMapSidebar({
                           onChange={(e) =>
                             handleVertexManualEdit(idx, 1, parseFloat(e.target.value))
                           }
-                          className="w-12 dark:bg-gray-800 dark:text-white outline-none text-center"
+                          aria-label={`Vertex ${idx + 1} Y`}
+                          className="w-12 bg-transparent text-theme-text outline-none text-center focus-visible:ring-2 focus-visible:ring-theme-ring rounded"
                         />
                       </div>
                       <button
                         type="button"
                         onClick={() => handleVertexManualDelete(idx)}
                         disabled={editingPlot.points.length <= 3}
-                        className="text-red-500 hover:text-red-600 disabled:opacity-30 ml-auto"
+                        className={
+                          "text-theme-danger hover:opacity-80 disabled:opacity-30 ml-auto min-h-11 min-w-11 inline-flex items-center justify-center " +
+                          "rounded-theme focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-theme-ring"
+                        }
+                        aria-label={`Delete vertex ${idx + 1}`}
                         title="Delete vertex"
                       >
-                        <X className="w-3.5 h-3.5" />
+                        <X className="w-3.5 h-3.5" aria-hidden="true" />
                       </button>
                     </div>
                   ))}
@@ -416,61 +464,56 @@ export default function AdminMapSidebar({
             )}
           </div>
 
-          <div className="flex justify-between items-center pt-4 border-t dark:border-gray-700 flex-wrap gap-2 mt-4">
+          <div className="flex justify-between items-center pt-4 border-t border-theme-border flex-wrap gap-2 mt-4">
             {!editingPlot.isNew ? (
-              <div className="flex items-center space-x-2 text-xs">
+              <div className="flex items-center flex-wrap gap-1 text-xs">
                 <button
                   type="button"
                   onClick={handleDeletePlot}
-                  className="text-red-600 hover:text-red-600 flex items-center"
+                  className="text-theme-danger hover:opacity-80 flex items-center min-h-11 px-2 rounded-theme focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-theme-ring"
                 >
-                  <Trash2 className="w-3.5 h-3.5 mr-1" /> Delete
+                  <Trash2 className="w-3.5 h-3.5 mr-1" aria-hidden="true" /> Delete
                 </button>
                 <button
                   type="button"
                   onClick={handleEditShapeClick}
-                  className="text-yellow-600 hover:text-yellow-700 flex items-center"
+                  className="text-theme-warning hover:opacity-80 flex items-center min-h-11 px-2 rounded-theme focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-theme-ring"
                 >
                   Edit Shape
                 </button>
                 <button
                   type="button"
                   onClick={() => handleDuplicatePlot(editingPlot)}
-                  className="text-indigo-650 hover:text-indigo-700 flex items-center"
+                  className="text-theme-accent hover:opacity-80 flex items-center min-h-11 px-2 rounded-theme focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-theme-ring"
                   title="Clone this plot"
                 >
-                  <Copy className="w-3.5 h-3.5 mr-1" /> Duplicate
+                  <Copy className="w-3.5 h-3.5 mr-1" aria-hidden="true" /> Duplicate
                 </button>
                 <button
                   type="button"
-                  onClick={() => {
-                    setSubdivisionActive(true);
-                  }}
-                  className="text-purple-600 hover:text-purple-700 dark:text-purple-400 flex items-center"
+                  onClick={() => setSubdivisionActive(true)}
+                  className="text-theme-accent hover:opacity-80 flex items-center min-h-11 px-2 rounded-theme focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-theme-ring"
                   title="Subdivide this plot"
                 >
-                  <Scissors className="w-3.5 h-3.5 mr-1" /> Subdivide
+                  <Scissors className="w-3.5 h-3.5 mr-1" aria-hidden="true" /> Subdivide
                 </button>
                 {editingPlot.points.length === 4 && (
                   <button
                     type="button"
                     onClick={() => orthogonalizePlot(editingPlot.id)}
-                    className="text-emerald-600 hover:text-emerald-700 flex items-center"
+                    className="text-theme-success hover:opacity-80 flex items-center min-h-11 px-2 rounded-theme focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-theme-ring"
                     title="Snap vertices to horizontal/vertical align"
                   >
-                    <Grid className="w-3.5 h-3.5 mr-1" /> Align
+                    <Grid className="w-3.5 h-3.5 mr-1" aria-hidden="true" /> Align
                   </button>
                 )}
               </div>
             ) : (
               <div />
             )}
-            <button
-              type="submit"
-              className="bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700 font-medium shadow-sm ml-auto"
-            >
+            <Button type="submit" variant="primary" size="sm" className="ml-auto">
               Save Area
-            </button>
+            </Button>
           </div>
         </form>
       )}

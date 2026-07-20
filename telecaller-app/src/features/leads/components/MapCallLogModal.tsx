@@ -42,6 +42,7 @@ export default function MapCallLogModal({
       isOpen={true}
       onClose={onClose}
       title={`Call Log for ${activeMapLead.name}`}
+      variant="sheet"
       size="md"
       footer={
         <FormActions>

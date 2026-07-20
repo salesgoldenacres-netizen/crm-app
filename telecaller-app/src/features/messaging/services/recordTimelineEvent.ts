@@ -1,5 +1,4 @@
-import { addDoc, collection, doc, setDoc } from "firebase/firestore";
-import { db } from "@/shared/services/firebase";
+import { TimelineEventsRepository } from "@/shared/services/firebase/repositories";
 import {
   TIMELINE_EVENT_ICONS,
   TIMELINE_SUMMARY_MAX,
@@ -44,14 +43,14 @@ export async function recordTimelineEvent(
     leadId: input.leadId,
     type: input.type,
     source: input.source || "system",
-    sourceId: input.sourceId || null,
-    conversationId: input.conversationId || null,
-    messageId: input.messageId || null,
+    sourceId: input.sourceId,
+    conversationId: input.conversationId,
+    messageId: input.messageId,
     summary: String(input.summary || input.type).slice(0, TIMELINE_SUMMARY_MAX),
     icon: input.icon || TIMELINE_EVENT_ICONS[input.type] || "note",
-    actorId: input.actorId || null,
-    actorName: input.actorName || null,
-    metadata: input.metadata || null,
+    actorId: input.actorId,
+    actorName: input.actorName,
+    metadata: input.metadata,
     timestamp: input.timestamp || now,
     createdAt: now,
     ...(input.idempotencyKey
@@ -60,14 +59,7 @@ export async function recordTimelineEvent(
   };
 
   try {
-    if (input.idempotencyKey) {
-      const safeKey = String(input.idempotencyKey).replace(/[^\w.-]/g, "_").slice(0, 120);
-      const id = `tl_${safeKey}`;
-      await setDoc(doc(db, "timelineEvents", id), payload, { merge: true });
-      return id;
-    }
-    const ref = await addDoc(collection(db, "timelineEvents"), payload);
-    return ref.id;
+    return await TimelineEventsRepository.add(payload, input.idempotencyKey);
   } catch (err) {
     console.warn("recordTimelineEvent failed", err);
     return null;

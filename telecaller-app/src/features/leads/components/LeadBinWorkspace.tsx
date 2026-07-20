@@ -197,11 +197,11 @@ export default function LeadBinWorkspace({
 
   return (
     <div className="flex flex-col gap-3 text-theme-text min-h-0">
-      <div className="shrink-0 rounded-xl border border-theme-border bg-theme-card px-3 py-2.5">
+      <div className="shrink-0 rounded-theme border border-theme-border bg-theme-card px-3 py-2.5">
         <div className="flex items-center justify-between gap-3">
           <div className="min-w-0">
             <div className="flex items-baseline gap-2">
-              <h2 className="text-sm font-black text-theme-text tracking-tight flex items-center gap-1.5">
+              <h2 className="text-sm font-bold text-theme-text tracking-tight flex items-center gap-1.5">
                 <Trash2 className="w-3.5 h-3.5 text-theme-danger" />
                 Lead Bin
               </h2>
@@ -228,7 +228,7 @@ export default function LeadBinWorkspace({
         </div>
       </div>
 
-      <div className="min-h-0 rounded-xl border border-theme-border bg-theme-card overflow-hidden shadow-sm">
+      <div className="min-h-0 rounded-theme border border-theme-border bg-theme-card overflow-hidden shadow-sm">
         <div className="hidden md:block max-h-[min(78dvh,820px)] overflow-auto scrollbar-thin">
           <table className="w-full min-w-max divide-y divide-theme-border">
             <thead className="bg-theme-surface sticky top-0 z-10 shadow-sm">
@@ -406,7 +406,7 @@ export default function LeadBinWorkspace({
                       />
                     </td>
                     <td className="px-3 py-2 whitespace-nowrap text-[11px] text-theme-muted font-mono tabular-nums">
-                      {lead.leadNumber || "—"}
+                      {lead.leadReference ? lead.leadReference.substring(0, 10) + "..." : lead.leadNumber || "—"}
                     </td>
                     <td className="px-3 py-2 whitespace-nowrap text-[12px] font-semibold text-theme-text">
                       {lead.name}
@@ -464,7 +464,7 @@ export default function LeadBinWorkspace({
                         {lead.name}
                       </h4>
                       <span className="text-[10px] text-theme-muted font-mono">
-                        #{lead.leadNumber || "—"} · {lead.phone || "—"}
+                        #{lead.leadReference ? lead.leadReference.substring(0, 10) + "..." : lead.leadNumber || "—"} · {lead.phone || "—"}
                       </span>
                     </div>
                   </div>
@@ -632,7 +632,7 @@ export default function LeadBinWorkspace({
       </div>
 
       {selectedLeadIds.length > 0 && (
-        <div className="fixed bottom-20 md:bottom-6 left-1/2 -translate-x-1/2 z-50 w-[calc(100%-2rem)] max-w-4xl bg-theme-card border border-theme-danger/30 rounded-xl p-3 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-xl animate-sheetSlideUp">
+        <div className="fixed bottom-20 md:bottom-6 left-1/2 -translate-x-1/2 z-50 w-[calc(100%-2rem)] max-w-4xl bg-theme-card border border-theme-danger/30 rounded-theme p-3 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-xl animate-sheetSlideUp">
           <div className="text-[11px] font-bold text-theme-text flex items-center gap-1.5">
             <AlertTriangle className="w-3.5 h-3.5 text-theme-danger" />
             <span>

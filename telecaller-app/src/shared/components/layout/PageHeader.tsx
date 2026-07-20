@@ -9,6 +9,7 @@ export interface PageHeaderProps {
 
 /**
  * Compact control-panel command bar — shared by all Admin / Control Panel tabs.
+ * Inviting surfaces: calm density, type-* hierarchy, theme tokens only.
  */
 export default function PageHeader({
   title,
@@ -18,19 +19,19 @@ export default function PageHeader({
 }: PageHeaderProps) {
   return (
     <div className="bg-theme-card border-b border-theme-border transition-colors duration-300 header-brand-strip shrink-0">
-      <div className="px-3 md:px-4 min-h-14 h-14 flex items-center gap-3">
+      <div className="px-3 md:px-5 min-h-14 py-2.5 sm:py-0 sm:h-14 flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
         <div className="min-w-0 flex-1 flex flex-col justify-center gap-0.5">
           {breadcrumb && (
-            <div className="text-[10px] text-theme-muted font-medium select-none flex items-center gap-1 leading-none min-w-0">
+            <div className="type-label text-[10px] text-theme-muted font-medium select-none flex items-center gap-1 leading-none min-w-0 overflow-x-auto scrollbar-none">
               {breadcrumb}
             </div>
           )}
-          <div className="flex items-baseline gap-2 min-w-0">
-            <h1 className="text-sm font-black text-theme-text tracking-tight leading-tight truncate">
+          <div className="flex items-baseline gap-2.5 min-w-0">
+            <h1 className="type-page-title text-sm text-theme-text tracking-tight leading-tight truncate">
               {title}
             </h1>
             {description && (
-              <p className="text-[10px] text-theme-muted leading-snug truncate max-w-xl hidden sm:block">
+              <p className="type-secondary text-[11px] text-theme-muted leading-snug truncate max-w-xl hidden sm:block">
                 {description}
               </p>
             )}
@@ -38,7 +39,7 @@ export default function PageHeader({
         </div>
 
         {actions && (
-          <div className="flex items-center gap-1.5 shrink-0 justify-end flex-wrap">
+          <div className="flex items-center gap-1.5 w-full sm:w-auto shrink-0 justify-start sm:justify-end flex-wrap">
             {actions}
           </div>
         )}

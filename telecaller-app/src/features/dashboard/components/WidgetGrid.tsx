@@ -243,11 +243,11 @@ export default function WidgetGrid({
 
   useEffect(() => {
     let active = true;
-    analytics.getDashboardMetrics(activeProjectId).then((res) => {
+    analytics.getDashboardMetrics(activeProjectId ?? undefined).then((res) => {
       if (active) setMetrics(res);
     }).catch((e) => console.error("Failed to load dashboard metrics", e));
 
-    analytics.getTeamMetrics(activeProjectId).then((res) => {
+    analytics.getTeamMetrics(activeProjectId ?? undefined).then((res) => {
       if (active) setTeamMetrics(res);
     }).catch((e) => console.error("Failed to load team metrics", e));
 

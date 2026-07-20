@@ -135,57 +135,57 @@ export default function AdminAttendanceTab({
 
         return (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div className="bg-theme-card p-4 rounded-xl border border-theme-border shadow-sm flex items-center space-x-3">
-              <div className="p-2.5 rounded-lg bg-green-50 dark:bg-green-955/40 text-green-600 dark:text-green-400">
-                <Users className="w-5 h-5" />
+            <div className="bg-theme-card p-4 rounded-theme border border-theme-border shadow-elevation-sm flex items-center space-x-3">
+              <div className="p-2.5 rounded-theme bg-theme-success/10 text-theme-success">
+                <Users className="w-5 h-5" aria-hidden />
               </div>
               <div>
-                <span className="text-[10px] font-bold text-theme-muted uppercase tracking-wider block">
+                <span className="type-label text-[10px] text-theme-muted uppercase tracking-wider block">
                   Active / Online
                 </span>
-                <span className="text-xl font-bold text-theme-text mt-0.5 block">
+                <span className="type-kpi text-xl text-theme-text mt-0.5 block">
                   {activeAgentStatuses.length} / {telecallers.length}
                 </span>
               </div>
             </div>
 
-            <div className="bg-theme-card p-4 rounded-xl border border-theme-border shadow-sm flex items-center space-x-3">
-              <div className="p-2.5 rounded-lg bg-yellow-50 dark:bg-yellow-955/40 text-yellow-600 dark:text-yellow-400">
-                <Clock className="w-5 h-5" />
+            <div className="bg-theme-card p-4 rounded-theme border border-theme-border shadow-elevation-sm flex items-center space-x-3">
+              <div className="p-2.5 rounded-theme bg-theme-warning/10 text-theme-warning">
+                <Clock className="w-5 h-5" aria-hidden />
               </div>
               <div>
-                <span className="text-[10px] font-bold text-theme-muted uppercase tracking-wider block">
+                <span className="type-label text-[10px] text-theme-muted uppercase tracking-wider block">
                   Late Arrivals
                 </span>
-                <span className="text-xl font-bold text-theme-text mt-0.5 block">
+                <span className="type-kpi text-xl text-theme-text mt-0.5 block">
                   {lateCount}
                 </span>
               </div>
             </div>
 
-            <div className="bg-theme-card p-4 rounded-xl border border-theme-border shadow-sm flex items-center space-x-3">
-              <div className="p-2.5 rounded-lg bg-amber-50 dark:bg-amber-900/40 text-theme-warning">
-                <Clock className="w-5 h-5" />
+            <div className="bg-theme-card p-4 rounded-theme border border-theme-border shadow-elevation-sm flex items-center space-x-3">
+              <div className="p-2.5 rounded-theme bg-theme-warning/10 text-theme-warning">
+                <Clock className="w-5 h-5" aria-hidden />
               </div>
               <div>
-                <span className="text-[10px] font-bold text-theme-muted uppercase tracking-wider block">
+                <span className="type-label text-[10px] text-theme-muted uppercase tracking-wider block">
                   On Breaks
                 </span>
-                <span className="text-xl font-bold text-theme-text mt-0.5 block">
+                <span className="type-kpi text-xl text-theme-text mt-0.5 block">
                   {breakAgentStatuses.length}
                 </span>
               </div>
             </div>
 
-            <div className="bg-theme-card p-4 rounded-xl border border-theme-border shadow-sm flex items-center space-x-3">
-              <div className="p-2.5 rounded-lg bg-rose-50 dark:bg-rose-900/40 text-theme-danger">
-                <Users className="w-5 h-5" />
+            <div className="bg-theme-card p-4 rounded-theme border border-theme-border shadow-elevation-sm flex items-center space-x-3">
+              <div className="p-2.5 rounded-theme bg-theme-danger/10 text-theme-danger">
+                <Users className="w-5 h-5" aria-hidden />
               </div>
               <div>
-                <span className="text-[10px] font-bold text-theme-muted uppercase tracking-wider block">
+                <span className="type-label text-[10px] text-theme-muted uppercase tracking-wider block">
                   Offline / Absent
                 </span>
-                <span className="text-xl font-bold text-theme-text mt-0.5 block">
+                <span className="type-kpi text-xl text-theme-text mt-0.5 block">
                   {Math.max(0, telecallers.length - activeAgentStatuses.length)}
                 </span>
               </div>
@@ -218,11 +218,12 @@ export default function AdminAttendanceTab({
               Select a month to view shift metrics and export to payroll CSV.
             </p>
           </div>
-          <div className="flex flex-wrap items-center gap-3">
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3 w-full sm:w-auto">
             <select
               value={selectedMonth}
               onChange={(e) => setSelectedMonth(parseInt(e.target.value))}
-              className="text-xs bg-theme-surface text-theme-text border border-theme-border rounded-theme p-2 focus:ring-theme-ring"
+              aria-label="Select month"
+              className="min-h-11 sm:min-h-0 text-xs bg-theme-surface text-theme-text border border-theme-border rounded-theme px-2 py-2 focus:ring-theme-ring focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-theme-ring"
             >
               {Array.from({ length: 12 }).map((_, idx) => (
                 <option key={idx} value={idx}>
@@ -235,7 +236,8 @@ export default function AdminAttendanceTab({
             <select
               value={selectedYear}
               onChange={(e) => setSelectedYear(parseInt(e.target.value))}
-              className="text-xs bg-theme-surface text-theme-text border border-theme-border rounded-theme p-2 focus:ring-theme-ring"
+              aria-label="Select year"
+              className="min-h-11 sm:min-h-0 text-xs bg-theme-surface text-theme-text border border-theme-border rounded-theme px-2 py-2 focus:ring-theme-ring focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-theme-ring"
             >
               {[2025, 2026, 2027].map((y) => (
                 <option key={y} value={y}>
@@ -244,6 +246,7 @@ export default function AdminAttendanceTab({
               ))}
             </select>
             <button
+              type="button"
               onClick={() => {
                 const telecallers = users.filter((u) => !checkIsManagerial(u.role));
                 const daysCount = new Date(
@@ -304,7 +307,7 @@ export default function AdminAttendanceTab({
                 link.click();
                 document.body.removeChild(link);
               }}
-              className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-xs font-semibold rounded-lg text-white bg-theme-accent hover:opacity-90 focus:outline-none cursor-pointer border-0"
+              className="inline-flex items-center min-h-11 sm:min-h-0 px-4 py-2 shadow-sm text-xs font-semibold rounded-theme text-theme-accent-fg bg-theme-accent hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-theme-ring cursor-pointer border-0"
             >
               <Download className="w-4 h-4 mr-2" />
               Export CSV
@@ -312,12 +315,12 @@ export default function AdminAttendanceTab({
           </div>
         </div>
 
-        {/* Matrix Layout Grid */}
-        <div className="overflow-x-auto">
+        {/* Matrix Layout Grid — horizontal scroll + sticky agent col / header */}
+        <div className="overflow-x-auto overscroll-x-contain max-w-full -mx-1 px-1">
           <table className="min-w-full divide-y divide-theme-border">
-            <thead className="bg-theme-surface">
+            <thead className="bg-theme-surface sticky top-0 z-20">
               <tr>
-                <th className="px-4 py-3 text-left text-xs font-bold text-theme-muted uppercase tracking-wider sticky left-0 bg-theme-surface z-10">
+                <th className="px-4 py-3 text-left text-xs font-bold text-theme-muted uppercase tracking-wider sticky left-0 bg-theme-surface z-30">
                   Agent
                 </th>
                 {Array.from({
@@ -351,7 +354,7 @@ export default function AdminAttendanceTab({
                       key={tc.id}
                       className="hover:bg-theme-surface/60 transition-colors"
                     >
-                      <td className="px-4 py-4 whitespace-nowrap text-sm font-semibold text-theme-text sticky left-0 bg-theme-card border-r border-theme-border">
+                      <td className="px-4 py-4 whitespace-nowrap text-sm font-semibold text-theme-text sticky left-0 z-10 bg-theme-card border-r border-theme-border">
                         {tc.username}{" "}
                         <span className="text-[10px] text-theme-muted font-normal">
                           ({tc.role})

@@ -50,7 +50,8 @@ export function useLeadsFiltering(
 
       if (
         f.leadNumber &&
-        !lead.leadNumber?.toLowerCase().includes(f.leadNumber.toLowerCase())
+        !lead.leadNumber?.toLowerCase().includes(f.leadNumber.toLowerCase()) &&
+        !lead.leadReference?.toLowerCase().includes(f.leadNumber.toLowerCase())
       ) {
         return false;
       }

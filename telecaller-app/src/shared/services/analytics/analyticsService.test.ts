@@ -2,6 +2,9 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { AnalyticsService } from "./AnalyticsService";
 import { AnalyticsProvider } from "./analyticsContracts";
 import { AnalyticsError } from "./analyticsErrors";
+import type { DashboardMetrics } from "./analyticsTypes";
+
+import { User } from "@/shared/types";
 
 describe("AnalyticsService Core Architecture", () => {
   let mockClientProvider: AnalyticsProvider;
@@ -10,12 +13,12 @@ describe("AnalyticsService Core Architecture", () => {
   let service: AnalyticsService;
 
   let activeProjectId: string | undefined;
-  let currentUser: any | null;
+  let currentUser: User | null;
   let hasPermission: boolean;
 
   beforeEach(() => {
     activeProjectId = "project-alpha";
-    currentUser = { id: "agent-1", username: "agent1", role: "telecaller" };
+    currentUser = { id: "agent-1", username: "agent1", role: "telecaller", email: "agent1@test.com" };
     hasPermission = true;
 
     // Reset providers with spies
@@ -94,17 +97,30 @@ describe("AnalyticsService Core Architecture", () => {
   describe("Request Deduplication", () => {
     it("collapses simultaneous concurrent duplicate requests into one promise execution", async () => {
       // Delay response slightly to verify concurrent overlapping calls
-      let resolvePromise: any;
-      const delayedPromise = new Promise((resolve) => {
+      let resolvePromise!: (value: DashboardMetrics) => void;
+      const delayedPromise = new Promise<DashboardMetrics>((resolve) => {
         resolvePromise = resolve;
       });
-      vi.mocked(mockClientProvider.getDashboardMetrics).mockReturnValueOnce(delayedPromise as any);
+      vi.mocked(mockClientProvider.getDashboardMetrics).mockReturnValueOnce(delayedPromise);
 
       const p1 = service.getDashboardMetrics();
       const p2 = service.getDashboardMetrics();
       const p3 = service.getDashboardMetrics();
 
-      resolvePromise({ callsLoggedToday: 42 });
+      resolvePromise({
+        callsLoggedToday: 42,
+        callTarget: 50,
+        bookingsToday: 0,
+        bookingTarget: 5,
+        pipelineStats: {
+          newCount: 0,
+          contactedCount: 0,
+          interestedCount: 0,
+          bookedCount: 0,
+          totalCount: 0,
+        },
+        leaderboard: [],
+      });
 
       const [r1, r2, r3] = await Promise.all([p1, p2, p3]);
       expect(r1.callsLoggedToday).toBe(42);

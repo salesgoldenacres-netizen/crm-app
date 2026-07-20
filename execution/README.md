@@ -38,6 +38,17 @@ python execution/cleanup_database.py --apply --confirm DELETE --backup-ack
 
 See `directives/backup_firestore.md`.
 
+## Phase C — call log backfill
+
+Migrate embedded `lead.callLogs[]` → top-level `callLogs` (dry-run default):
+
+```bash
+python execution/backfill_call_logs.py
+python execution/backfill_call_logs.py --apply --confirm BACKFILL
+```
+
+See `directives/phase-c-call-logs-migration.md`.
+
 ## Security / Phase 0 one-shots
 
 ### Scrub plaintext passwords from Firestore users

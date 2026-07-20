@@ -18,10 +18,22 @@ export interface Branding {
   sidebarColor: string;
   headerColor: string;
   backgroundColor: string;
+  surfaceColor: string;
   cardBackground: string;
   borderColor: string;
+  ringColor: string;
   textPrimary: string;
   textSecondary: string;
+  /** Dark appearance surfaces — fully controllable from Branding Customizer. */
+  darkBackgroundColor: string;
+  darkSurfaceColor: string;
+  darkCardBackground: string;
+  darkBorderColor: string;
+  darkRingColor: string;
+  darkTextPrimary: string;
+  darkTextSecondary: string;
+  darkSidebarColor: string;
+  darkHeaderColor: string;
   successColor: string;
   warningColor: string;
   dangerColor: string;
@@ -38,6 +50,8 @@ export interface Branding {
   animations: boolean;
   customCss: string;
   savedThemes?: SavedTheme[];
+  /** Stamped on publish/migrate so legacy indigo remap runs only once. */
+  brandPaletteVersion?: number;
 }
 
 export interface SavedTheme extends Partial<Omit<Branding, "savedThemes">> {

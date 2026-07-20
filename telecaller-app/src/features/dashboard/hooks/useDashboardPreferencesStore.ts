@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
-import { doc, onSnapshot, setDoc } from "firebase/firestore";
-import { db } from "@/shared/services/firebase";
+import { DashboardPreferencesRepository } from "@/shared/services/firebase/repositories";
 
 export interface WidgetPreference {
   id: string;
@@ -74,63 +73,43 @@ export function useDashboardPreferencesStore(userId?: string) {
 
   useEffect(() => {
     if (!userId) return;
-    const unsubscribe = onSnapshot(
-      doc(db, "dashboardPreferences", userId),
-      (docSnap) => {
-        if (docSnap.exists()) {
-          const data = docSnap.data();
-          if (data.widgets) {
-            setWidgets(data.widgets);
-          }
-          if (data.widgetStyle) {
-            setWidgetStyle(data.widgetStyle);
-          }
-          if (data.widgetDensity) {
-            setWidgetDensity(data.widgetDensity);
-          }
-        }
+    const unsubscribe = DashboardPreferencesRepository.subscribe(userId, (data) => {
+      if (!data) {
         setIsLoaded(true);
+        return;
       }
-    );
+      if (Array.isArray(data.widgets)) {
+        setWidgets(data.widgets as WidgetPreference[]);
+      }
+      if (typeof data.widgetStyle === "string") {
+        setWidgetStyle(data.widgetStyle);
+      }
+      if (typeof data.widgetDensity === "string") {
+        setWidgetDensity(data.widgetDensity);
+      }
+      setIsLoaded(true);
+    });
     return () => unsubscribe();
   }, [userId]);
 
   const updateWidgets = async (newWidgets: WidgetPreference[]) => {
     if (!userId) return;
-    await setDoc(
-      doc(db, "dashboardPreferences", userId),
-      {
-        widgets: newWidgets,
-      },
-      { merge: true }
-    );
+    await DashboardPreferencesRepository.set(userId, { widgets: newWidgets });
   };
 
   const updateWidgetStyle = async (style: string) => {
     if (!userId) return;
-    await setDoc(
-      doc(db, "dashboardPreferences", userId),
-      {
-        widgetStyle: style,
-      },
-      { merge: true }
-    );
+    await DashboardPreferencesRepository.set(userId, { widgetStyle: style });
   };
 
   const updateWidgetDensity = async (density: string) => {
     if (!userId) return;
-    await setDoc(
-      doc(db, "dashboardPreferences", userId),
-      {
-        widgetDensity: density,
-      },
-      { merge: true }
-    );
+    await DashboardPreferencesRepository.set(userId, { widgetDensity: density });
   };
 
   const resetPreferences = async () => {
     if (!userId) return;
-    await setDoc(doc(db, "dashboardPreferences", userId), {
+    await DashboardPreferencesRepository.reset(userId, {
       widgets: DEFAULT_WIDGETS,
       widgetStyle: "standard",
       widgetDensity: "comfortable",

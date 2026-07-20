@@ -1,4 +1,4 @@
-// No react hooks needed directly – all state via custom hooks
+import { useMemo, useRef, useEffect } from "react";
 import { Link } from "react-router-dom";
 import {
   MessageCircle,
@@ -9,6 +9,9 @@ import {
   FileText,
   Edit3,
   Trash2,
+  ChevronLeft,
+  ChevronRight,
+  RefreshCw,
 } from "lucide-react";
 
 import SegmentedStageTracker from "@/shared/components/SegmentedStageTracker";
@@ -17,10 +20,14 @@ import FilterSearchInput from "@/shared/components/FilterSearchInput";
 import Badge from "@/shared/components/ui/Badge";
 import { Lead } from "@/shared/types";
 import { useLeadsStore } from "@/features/leads/hooks/useLeadsStore";
+import { useLeadQuery } from "@/features/leads/hooks/useLeadQuery";
 import { useProjectsStore } from "@/features/plots/hooks/useProjectsStore";
 import { useUsersStore } from "@/features/employees/hooks/useUsersStore";
-import { useAuditLogsStore } from "@/features/admin/hooks/adminStores";
+import { useAuditLogsStore, useCustomRolesStore } from "@/features/admin/hooks/adminStores";
 import { safeFormatDateTime } from "@/shared/utils/dateUtils";
+import { createDefaultLeadQuerySpec } from "@/shared/services/leads";
+import { DEFAULT_PAGE_SIZE } from "@/shared/services/performance/pagination/contracts/paginationConstants";
+import { useProjectScope } from "@/shared/services/ProjectScopeContext";
 
 import { useAdminLeads } from "@/features/leads/hooks/useAdminLeads";
 import LeadAcquisitionAnalytics from "@/features/leads/components/LeadAcquisitionAnalytics";
@@ -45,7 +52,6 @@ interface AdminLeadsTabProps {
 
 export default function AdminLeadsTab({ user, isManagerial }: AdminLeadsTabProps) {
   const {
-    leads,
     addLead,
     updateLead: updateLeadInStore,
     deleteLead,
@@ -53,8 +59,13 @@ export default function AdminLeadsTab({ user, isManagerial }: AdminLeadsTabProps
   } = useLeadsStore();
   const { projects } = useProjectsStore();
   const { users } = useUsersStore();
+  const { roles: customRoles } = useCustomRolesStore();
   const { logAuditEvent } = useAuditLogsStore();
+  const { activeProjectId } = useProjectScope();
+  const todayStr = new Date().toISOString().split("T")[0];
+  const refreshRef = useRef<() => void>(() => {});
 
+  // Filter UI state first; LeadQueryService page is the display SoT.
   const {
     isAdvancedFilterOpen,
     setIsAdvancedFilterOpen,
@@ -77,7 +88,6 @@ export default function AdminLeadsTab({ user, isManagerial }: AdminLeadsTabProps
     setSelectedCampaignLeadIds,
     checkSlaBreach,
     checkStatusEscalation,
-    filteredLeads,
     handleOpenLeadModal,
     handleSaveLead,
     handleDeleteLead,
@@ -91,14 +101,74 @@ export default function AdminLeadsTab({ user, isManagerial }: AdminLeadsTabProps
     escalationDays,
   } = useAdminLeads({
     user,
-    leads,
     projects,
     users,
     addLead,
     updateLead: updateLeadInStore,
     deleteLead,
     logAuditEvent,
+    onMutated: () => refreshRef.current(),
   });
+
+  const querySpec = useMemo(() => {
+    const server: {
+      projectId?: string | null;
+      assignedTo?: string;
+      status?: string;
+      leadSource?: string;
+      leadMedium?: string;
+      priority?: string;
+    } = {
+      projectId: advancedFilters.projectId || activeProjectId || null,
+    };
+    if (advancedFilters.assignedTo) server.assignedTo = advancedFilters.assignedTo;
+    if (advancedFilters.status) server.status = advancedFilters.status;
+    if (advancedFilters.source) server.leadSource = advancedFilters.source;
+    if (advancedFilters.leadMedium) server.leadMedium = advancedFilters.leadMedium;
+    if (advancedFilters.priority) server.priority = advancedFilters.priority;
+
+    return createDefaultLeadQuerySpec(user.id, user.role || "admin", {
+      pageSize: DEFAULT_PAGE_SIZE,
+      server,
+      client: {
+        todayStr,
+        search: leadSearchQuery || undefined,
+        leadNumber: advancedFilters.leadNumber || undefined,
+        name: advancedFilters.name || undefined,
+        phone: advancedFilters.phone || undefined,
+        email: advancedFilters.email || undefined,
+        followUpStart: advancedFilters.followUpStart || undefined,
+        followUpEnd: advancedFilters.followUpEnd || undefined,
+        createdDateStart: advancedFilters.createdDateStart || undefined,
+        createdDateEnd: advancedFilters.createdDateEnd || undefined,
+        source: advancedFilters.source || undefined,
+        leadMedium: advancedFilters.leadMedium || undefined,
+        assignedTo: advancedFilters.assignedTo || undefined,
+        priority: advancedFilters.priority || undefined,
+        projectId: advancedFilters.projectId || undefined,
+        statuses: advancedFilters.status ? [advancedFilters.status] : undefined,
+      },
+      prefetchNext: true,
+    });
+  }, [advancedFilters, activeProjectId, todayStr, leadSearchQuery, user.id, user.role]);
+
+  const {
+    items: pageLeads,
+    isLoading,
+    isRefreshing,
+    error: loadError,
+    hasNextPage,
+    hasPreviousPage,
+    nextPage,
+    previousPage,
+    refresh,
+  } = useLeadQuery(user, customRoles, querySpec);
+
+  useEffect(() => {
+    refreshRef.current = refresh;
+  }, [refresh]);
+
+  const filteredLeads = pageLeads;
 
   const columns: ColumnDef<Lead>[] = [
     {
@@ -226,6 +296,7 @@ export default function AdminLeadsTab({ user, isManagerial }: AdminLeadsTabProps
               return;
             }
             await updateLeadInStore(l.id, plan.leadPatch);
+            refresh();
           }}
         />
       ),
@@ -334,7 +405,7 @@ export default function AdminLeadsTab({ user, isManagerial }: AdminLeadsTabProps
   return (
     <>
       <div className="flex flex-col sm:flex-row sm:justify-end sm:items-center mb-3 gap-2">
-        <div className="flex items-center gap-1.5 flex-wrap justify-end">
+        <div className="flex items-center gap-1.5 flex-wrap justify-start sm:justify-end w-full min-w-0">
           {checkedLeadIds.length > 0 && (
             <button
               type="button"
@@ -342,36 +413,36 @@ export default function AdminLeadsTab({ user, isManagerial }: AdminLeadsTabProps
                 setSelectedCampaignLeadIds(checkedLeadIds);
                 setIsCampaignModalOpen(true);
               }}
-              className="inline-flex items-center px-2.5 h-8 bg-theme-accent hover:opacity-90 text-theme-accent-fg rounded-lg text-[11px] font-bold transition-colors cursor-pointer border-0"
+              className="inline-flex items-center min-h-11 sm:min-h-0 sm:h-8 px-3 py-2 sm:py-0 bg-theme-accent hover:opacity-90 text-theme-accent-fg rounded-theme text-[11px] font-bold transition-colors cursor-pointer border-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-theme-ring"
             >
               <MessageCircle className="w-3.5 h-3.5 mr-1.5" /> Campaign ({checkedLeadIds.length})
             </button>
           )}
           <button
             type="button"
-            onClick={handleExportCSV}
-            className="inline-flex items-center px-2.5 h-8 border border-theme-success/40 text-theme-success bg-theme-card rounded-lg text-[11px] font-bold hover:bg-theme-success/10 transition-colors cursor-pointer"
+            onClick={() => void handleExportCSV(pageLeads)}
+            className="inline-flex items-center min-h-11 sm:min-h-0 sm:h-8 px-3 py-2 sm:py-0 border border-theme-success/40 text-theme-success bg-theme-card rounded-theme text-[11px] font-bold hover:bg-theme-success/10 transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-theme-ring"
           >
             <Download className="w-3.5 h-3.5 mr-1.5" /> Export
           </button>
           <button
             type="button"
             onClick={() => setIsBulkImportOpen(true)}
-            className="inline-flex items-center px-2.5 h-8 border border-theme-border text-theme-text bg-theme-card rounded-lg text-[11px] font-bold hover:bg-theme-surface transition-colors cursor-pointer"
+            className="inline-flex items-center min-h-11 sm:min-h-0 sm:h-8 px-3 py-2 sm:py-0 border border-theme-border text-theme-text bg-theme-card rounded-theme text-[11px] font-bold hover:bg-theme-surface transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-theme-ring"
           >
             <FileSpreadsheet className="w-3.5 h-3.5 mr-1.5 text-theme-muted" /> Import
           </button>
           <button
             type="button"
             onClick={() => handleOpenLeadModal()}
-            className="inline-flex items-center px-2.5 h-8 bg-theme-accent hover:opacity-90 text-theme-accent-fg rounded-lg text-[11px] font-bold transition-colors cursor-pointer border-0"
+            className="inline-flex items-center min-h-11 sm:min-h-0 sm:h-8 px-3 py-2 sm:py-0 bg-theme-accent hover:opacity-90 text-theme-accent-fg rounded-theme text-[11px] font-bold transition-colors cursor-pointer border-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-theme-ring"
           >
             <Plus className="w-3.5 h-3.5 mr-1.5" /> Add Lead
           </button>
           <select
             value={leadsViewMode}
             onChange={(e) => setLeadsViewMode(e.target.value)}
-            className="px-2 h-8 rounded-lg text-[11px] font-semibold border border-theme-border bg-theme-card text-theme-text hover:bg-theme-surface focus:ring-theme-ring focus:border-theme-accent cursor-pointer outline-none transition-colors"
+            className="min-h-11 sm:min-h-0 sm:h-8 px-2 rounded-theme text-[11px] font-semibold border border-theme-border bg-theme-card text-theme-text hover:bg-theme-surface focus:ring-theme-ring focus:border-theme-accent cursor-pointer outline-none transition-colors"
             title="Table View Mode"
           >
             <option value="standard">Standard</option>
@@ -380,7 +451,7 @@ export default function AdminLeadsTab({ user, isManagerial }: AdminLeadsTabProps
           <button
             type="button"
             onClick={() => setIsAdvancedFilterOpen(!isAdvancedFilterOpen)}
-            className={`flex items-center px-3 h-8 rounded-theme font-semibold text-[11px] transition-colors cursor-pointer border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-theme-ring ${
+            className={`inline-flex items-center min-h-11 sm:min-h-0 sm:h-8 px-3 py-2 sm:py-0 rounded-theme font-semibold text-[11px] transition-colors cursor-pointer border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-theme-ring ${
               isAdvancedFilterOpen || Object.values(advancedFilters).some((v) => v !== "" && v !== "all")
                 ? "bg-theme-accent-muted border-theme-border text-theme-accent"
                 : "bg-theme-card border-theme-border text-theme-text hover:bg-theme-surface"
@@ -405,17 +476,21 @@ export default function AdminLeadsTab({ user, isManagerial }: AdminLeadsTabProps
         isManagerial={isManagerial}
       />
 
-      <LeadAcquisitionAnalytics leads={leads} />
+      {/* Tier 1: bounded current page only — never empty-store company math */}
+      <LeadAcquisitionAnalytics leads={pageLeads} />
 
       <PendingDiscountsApprovals
-        leads={leads}
+        leads={pageLeads}
         projects={projects}
-        updateLead={updateLeadInStore}
+        updateLead={async (id, patch) => {
+          await updateLeadInStore(id, patch);
+          refresh();
+        }}
         logAuditEvent={logAuditEvent}
         user={user}
       />
 
-      <div className="mb-4">
+      <div className="mb-4 flex flex-col sm:flex-row gap-2 sm:items-center">
         <FilterSearchInput
           value={leadSearchQuery}
           onChange={setLeadSearchQuery}
@@ -423,7 +498,41 @@ export default function AdminLeadsTab({ user, isManagerial }: AdminLeadsTabProps
           aria-label="Search leads"
           className="w-full"
         />
+        <div className="flex items-center gap-1.5 shrink-0">
+          <button
+            type="button"
+            onClick={() => previousPage()}
+            disabled={!hasPreviousPage || isLoading}
+            className="inline-flex items-center min-h-11 sm:min-h-0 sm:h-8 px-2 border border-theme-border rounded-theme text-theme-text bg-theme-card disabled:opacity-40 cursor-pointer"
+            title="Previous page"
+          >
+            <ChevronLeft className="w-4 h-4" />
+          </button>
+          <button
+            type="button"
+            onClick={() => nextPage()}
+            disabled={!hasNextPage || isLoading}
+            className="inline-flex items-center min-h-11 sm:min-h-0 sm:h-8 px-2 border border-theme-border rounded-theme text-theme-text bg-theme-card disabled:opacity-40 cursor-pointer"
+            title="Next page"
+          >
+            <ChevronRight className="w-4 h-4" />
+          </button>
+          <button
+            type="button"
+            onClick={() => refresh()}
+            disabled={isLoading || isRefreshing}
+            className="inline-flex items-center min-h-11 sm:min-h-0 sm:h-8 px-2 border border-theme-border rounded-theme text-theme-text bg-theme-card disabled:opacity-40 cursor-pointer"
+            title="Refresh"
+          >
+            <RefreshCw className={`w-4 h-4 ${isRefreshing ? "animate-spin" : ""}`} />
+          </button>
+        </div>
       </div>
+      {(isLoading || loadError) && (
+        <p className="mb-2 text-xs text-theme-muted">
+          {isLoading ? "Loading leads…" : loadError}
+        </p>
+      )}
 
       <LeadListFilterChips
         chips={activeFilterChips}
@@ -492,7 +601,7 @@ export default function AdminLeadsTab({ user, isManagerial }: AdminLeadsTabProps
         isOpen={isCampaignModalOpen}
         onClose={() => setIsCampaignModalOpen(false)}
         selectedCampaignLeadIds={selectedCampaignLeadIds}
-        leads={leads}
+        leads={pageLeads}
         logAuditEvent={logAuditEvent}
         user={user}
       />

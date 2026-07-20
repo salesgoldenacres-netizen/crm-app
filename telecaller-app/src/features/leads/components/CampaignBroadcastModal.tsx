@@ -101,6 +101,7 @@ export default function CampaignBroadcastModal({
       isOpen={isOpen}
       onClose={onClose}
       title={`Launch Bulk Campaign (${selectedCampaignLeadIds.length} leads)`}
+      variant="sheet"
       size="xl"
       className="max-w-2xl"
       footer={

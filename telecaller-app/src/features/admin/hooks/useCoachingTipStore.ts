@@ -1,6 +1,4 @@
 import { useState, useEffect } from "react";
-import { doc, onSnapshot } from "firebase/firestore";
-import { db } from "@/shared/services/firebase";
 import { SettingsRepository } from "@/shared/services/firebase/repositories";
 
 export interface UseCoachingTipStoreOptions {
@@ -18,13 +16,10 @@ export function useCoachingTipStore(options: UseCoachingTipStoreOptions = {}) {
   useEffect(() => {
     if (!enabled) return;
 
-    const unsubscribe = onSnapshot(
-      doc(db, "settings", "coachingTip"),
-      (docSnap) => {
-        if (docSnap.exists()) setCoachingTip(docSnap.data().text || "");
-        setIsLoaded(true);
-      }
-    );
+    const unsubscribe = SettingsRepository.subscribeCoachingTip((text) => {
+      setCoachingTip(text);
+      setIsLoaded(true);
+    });
     return () => unsubscribe();
   }, [enabled]);
 

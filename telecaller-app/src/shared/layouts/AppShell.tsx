@@ -2,6 +2,7 @@ import { ReactNode } from "react";
 import { ToastProvider } from "@/shared/components/Toast";
 import ModalHost from "@/shared/layouts/ModalHost";
 import { User } from "@/shared/types";
+import { useAgentOpenLeads } from "@/features/leads/hooks/useAgentOpenLeads";
 import { AppShellContext, useAppShell } from "./AppShellContext";
 
 export { useAppShell, AppShellContext };
@@ -22,12 +23,15 @@ export default function AppShell({
   leadsStore,
   ivrStore,
 }: AppShellProps) {
+  // Agent dialer convenience only — not list SoT (LeadQueryService).
+  const { openLeads } = useAgentOpenLeads();
+
   return (
     <ToastProvider>
       <ModalHost
         user={user}
         projects={projects}
-        leads={leadsStore.leads}
+        leads={openLeads}
         addLead={leadsStore.addLead}
         updateLead={leadsStore.updateLead}
         logCall={leadsStore.logCall}

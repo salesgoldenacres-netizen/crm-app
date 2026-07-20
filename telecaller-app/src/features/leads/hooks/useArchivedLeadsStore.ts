@@ -1,14 +1,13 @@
 import { useState, useEffect } from "react";
-import { onSnapshot } from "firebase/firestore";
 import { logAnalyticsEvent } from "@/shared/utils/analytics";
 import { Lead } from "@/shared/types";
 import { LeadsRepository } from "@/shared/services/firebase/repositories";
-import { buildArchivedLeadsListQuery } from "@/shared/contracts";
+import {
+  subscribeArchivedLeads,
+  type ArchivedLeadDoc,
+} from "@/shared/services/firebase/archivedLeadsListener";
 
-export interface ArchivedLead extends Lead {
-  archivedAt?: string;
-  archivedBy?: string;
-}
+export type ArchivedLead = ArchivedLeadDoc;
 
 export interface UseArchivedLeadsStoreOptions {
   /** Max docs for the list listener (default 200 via contract). */
@@ -23,29 +22,15 @@ export function useArchivedLeadsStore(
   const [isLoaded, setIsLoaded] = useState(false);
 
   useEffect(() => {
-    const listQuery = buildArchivedLeadsListQuery(
-      listLimit != null ? { limit: listLimit } : {},
-    );
-
-    const unsubscribe = onSnapshot(
-      listQuery,
-      (snapshot) => {
-        const list: ArchivedLead[] = [];
-        snapshot.forEach((d) => {
-          list.push({ id: d.id, ...d.data() } as ArchivedLead);
-        });
-        // Query orders by archivedAt desc; keep client fallback sort
-        list.sort(
-          (a, b) =>
-            new Date(b.archivedAt || 0).getTime() -
-            new Date(a.archivedAt || 0).getTime(),
-        );
+    const unsubscribe = subscribeArchivedLeads(
+      (list) => {
         setArchivedLeads(list);
         setIsLoaded(true);
       },
       (error) => {
         console.error("Error listening to archived leads:", error);
       },
+      listLimit,
     );
 
     return () => unsubscribe();
@@ -66,7 +51,6 @@ export function useArchivedLeadsStore(
         updatedAt: new Date().toISOString(),
       };
 
-      // Clean up archive-specific fields
       delete restoredLead.archivedAt;
       delete restoredLead.archivedBy;
 
@@ -83,13 +67,13 @@ export function useArchivedLeadsStore(
   };
 
   const deletePermanently = async (leadIds: string[]): Promise<void> => {
-    if (leadIds.length > 0) {
-      await LeadsRepository.deletePermanently(leadIds);
-      for (const id of leadIds) {
-        logAnalyticsEvent("lead_permanently_deleted", { id });
-      }
-    }
+    await LeadsRepository.deletePermanently(leadIds);
   };
 
-  return { archivedLeads, isLoaded, restoreLeads, deletePermanently };
+  return {
+    archivedLeads,
+    isLoaded,
+    restoreLeads,
+    deletePermanently,
+  };
 }

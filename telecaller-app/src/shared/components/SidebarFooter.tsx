@@ -39,10 +39,11 @@ export default function SidebarFooter({
             <button
               type="button"
               onClick={handleLogout}
-              className="p-1.5 text-theme-muted hover:text-theme-danger rounded-lg hover:bg-theme-surface transition-colors cursor-pointer border-0 bg-transparent shrink-0"
+              className="inline-flex items-center justify-center min-h-11 min-w-11 p-1.5 text-theme-muted hover:text-theme-danger rounded-theme hover:bg-theme-surface transition-colors cursor-pointer border-0 bg-transparent shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-theme-ring"
               title="Sign Out"
+              aria-label="Sign out"
             >
-              <LogOut className="w-4 h-4" />
+              <LogOut className="w-4 h-4" aria-hidden="true" />
             </button>
           </>
         )}

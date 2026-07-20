@@ -1,13 +1,5 @@
 import { useEffect, useState } from "react";
-import {
-  collection,
-  onSnapshot,
-  orderBy,
-  query,
-  where,
-  limit as fsLimit,
-} from "firebase/firestore";
-import { db } from "@/shared/services/firebase";
+import { WhatsAppMessagesRepository } from "@/shared/services/firebase/repositories";
 import type { WhatsAppMessage } from "../types";
 
 function mapDoc(id: string, data: Record<string, unknown>): WhatsAppMessage {
@@ -50,20 +42,14 @@ export function useWhatsAppMessages(leadId: string | null | undefined, max = 200
     let cancelled = false;
     let legacyUnsub: (() => void) | null = null;
 
-    const primaryQ = query(
-      collection(db, "whatsappMessages"),
-      where("leadId", "==", leadId),
-      orderBy("timestamp", "asc"),
-      fsLimit(max),
-    );
-
     // Defer loading flag so the effect body stays free of sync setState
     const loadingTimer = window.setTimeout(() => {
       if (!cancelled) setLoading(true);
     }, 0);
 
-    const primaryUnsub = onSnapshot(
-      primaryQ,
+    const primaryUnsub = WhatsAppMessagesRepository.subscribe(
+      leadId,
+      max,
       (snap) => {
         if (cancelled) return;
         if (!snap.empty) {
@@ -71,7 +57,7 @@ export function useWhatsAppMessages(leadId: string | null | undefined, max = 200
             legacyUnsub();
             legacyUnsub = null;
           }
-          const rows = snap.docs.map((d) => mapDoc(d.id, d.data()));
+          const rows = snap.docs.map((d: any) => mapDoc(d.id, d.data()));
           setMessages(rows);
           setConversationId(rows[rows.length - 1]?.conversationId || null);
           setError(null);
@@ -80,16 +66,12 @@ export function useWhatsAppMessages(leadId: string | null | undefined, max = 200
         }
 
         if (legacyUnsub) return;
-        const legacyQ = query(
-          collection(db, "leads", leadId, "whatsappMessages"),
-          orderBy("timestamp", "asc"),
-          fsLimit(max),
-        );
-        legacyUnsub = onSnapshot(
-          legacyQ,
+        legacyUnsub = WhatsAppMessagesRepository.subscribeLegacy(
+          leadId,
+          max,
           (legacySnap) => {
             if (cancelled) return;
-            const rows = legacySnap.docs.map((d) =>
+            const rows = legacySnap.docs.map((d: any) =>
               mapDoc(d.id, { ...d.data(), leadId, conversationId: "" }),
             );
             setMessages(rows);
@@ -110,7 +92,7 @@ export function useWhatsAppMessages(leadId: string | null | undefined, max = 200
         console.error("whatsappMessages subscribe failed", err);
         setError(err.message || "Failed to load messages");
         setLoading(false);
-      },
+      }
     );
 
     return () => {

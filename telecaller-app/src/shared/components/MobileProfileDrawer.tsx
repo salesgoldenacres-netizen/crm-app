@@ -2,6 +2,7 @@ import { LogOut, Minimize2, Maximize2, Keyboard } from "lucide-react";
 import { User } from "@/shared/types";
 import ThemeToggle from "@/shared/components/ThemeToggle";
 import Drawer from "@/shared/components/ui/Drawer";
+import { NAV_LABELS } from "@/shared/constants/navTaxonomy";
 
 interface MobileProfileDrawerProps {
   user: User | null;
@@ -30,7 +31,7 @@ export default function MobileProfileDrawer({
           onClose();
           await handleLogout();
         }}
-        className="w-full flex items-center justify-center space-x-2 py-3.5 rounded-xl bg-theme-danger/10 hover:bg-theme-danger/20 border border-theme-danger/20 text-theme-danger font-bold text-sm transition-all active:scale-[0.98] cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-theme-ring"
+        className="w-full flex items-center justify-center space-x-2 py-3.5 rounded-theme bg-theme-danger/10 hover:bg-theme-danger/20 border border-theme-danger/20 text-theme-danger font-bold text-sm transition-all active:scale-[0.98] cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-theme-ring"
       >
         <LogOut className="w-4 h-4" aria-hidden="true" />
         <span>Sign Out</span>
@@ -42,14 +43,14 @@ export default function MobileProfileDrawer({
     <Drawer
       isOpen={isOpen}
       onClose={onClose}
-      title="Account"
+      title={NAV_LABELS.account}
       position="bottom"
       size="lg"
       footer={footer}
       className="pb-safe"
     >
-      <div className="p-4 bg-theme-surface rounded-2xl border border-theme-border flex items-center space-x-4 mb-5">
-        <div className="w-12 h-12 rounded-full bg-theme-accent text-theme-accent-fg flex items-center justify-center font-black text-sm flex-shrink-0 shadow-lg">
+      <div className="p-4 bg-theme-surface rounded-theme border border-theme-border flex items-center space-x-4 mb-5">
+        <div className="w-12 h-12 rounded-full bg-theme-accent text-theme-accent-fg flex items-center justify-center font-bold text-sm flex-shrink-0 shadow-lg">
           {user?.username
             ? user.username.substring(0, 2).toUpperCase()
             : "GA"}
@@ -70,7 +71,7 @@ export default function MobileProfileDrawer({
       </div>
 
       <div className="space-y-2">
-        <div className="w-full flex items-center justify-between px-4 py-3 bg-theme-surface rounded-xl border border-theme-border">
+        <div className="w-full flex items-center justify-between px-4 py-3 bg-theme-surface rounded-theme border border-theme-border">
           <span className="text-xs font-bold text-theme-text">Appearance</span>
           <ThemeToggle compact />
         </div>
@@ -80,7 +81,7 @@ export default function MobileProfileDrawer({
             onClose();
             toggleFullscreen();
           }}
-          className="w-full flex items-center justify-between px-4 py-3 bg-theme-surface rounded-xl border border-theme-border text-theme-text hover:opacity-90 transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-theme-ring"
+          className="w-full flex items-center justify-between px-4 py-3 bg-theme-surface rounded-theme border border-theme-border text-theme-text hover:opacity-90 transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-theme-ring"
         >
           <div className="flex items-center space-x-3">
             {isFullscreen ? (
@@ -88,9 +89,9 @@ export default function MobileProfileDrawer({
             ) : (
               <Maximize2 className="w-4 h-4 text-theme-accent" aria-hidden="true" />
             )}
-            <span className="text-xs font-bold">Full Screen Mode</span>
+            <span className="text-xs font-bold">{NAV_LABELS.fullScreen}</span>
           </div>
-          <span className="text-[10px] font-black text-theme-muted uppercase tracking-wider">
+          <span className="text-[10px] font-bold text-theme-muted uppercase tracking-wider">
             {isFullscreen ? "Enabled" : "Disabled"}
           </span>
         </button>
@@ -100,10 +101,10 @@ export default function MobileProfileDrawer({
             onClose();
             openShortcuts();
           }}
-          className="w-full flex items-center px-4 py-3 bg-theme-surface rounded-xl border border-theme-border text-theme-text hover:opacity-90 transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-theme-ring"
+          className="w-full flex items-center px-4 py-3 bg-theme-surface rounded-theme border border-theme-border text-theme-text hover:opacity-90 transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-theme-ring"
         >
           <Keyboard className="w-4 h-4 text-theme-muted mr-3" aria-hidden="true" />
-          <span className="text-xs font-bold">Keyboard Shortcuts</span>
+          <span className="text-xs font-bold">{NAV_LABELS.shortcuts}</span>
         </button>
       </div>
     </Drawer>

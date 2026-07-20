@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import { useToast } from "@/shared/components/Toast";
 import EmptyState from "@/shared/components/ui/EmptyState";
+import Button from "@/shared/components/ui/Button";
 import BulkActionsPanel from "./BulkActionsPanel";
 import LeadsDesktopTable from "./LeadsDesktopTable";
 import LeadsMobileGrid from "./LeadsMobileGrid";
@@ -23,6 +24,7 @@ import {
 import { User, Lead, Project } from "@/shared/types";
 import { rankPowerDialerQueue } from "@/features/leads/intelligence";
 import DailyPrioritiesStrip from "./DailyPrioritiesStrip";
+import { NAV_LABELS } from "@/shared/constants/navTaxonomy";
 
 interface LeadsWorkspaceProps {
   user: User;
@@ -74,6 +76,15 @@ interface LeadsWorkspaceProps {
   todayStr: string;
   logCall: (leadId: string, logData: any) => Promise<void>;
   archiveLeads: (ids: string[], username: string) => Promise<void>;
+  /** LeadQueryService page state */
+  isLoading?: boolean;
+  isRefreshing?: boolean;
+  loadError?: string | null;
+  hasNextPage?: boolean;
+  hasPreviousPage?: boolean;
+  onNextPage?: () => void;
+  onPreviousPage?: () => void;
+  onRefreshPage?: () => void;
 }
 
 export default function LeadsWorkspace({
@@ -118,6 +129,14 @@ export default function LeadsWorkspace({
   todayStr,
   logCall,
   archiveLeads,
+  isLoading = false,
+  isRefreshing = false,
+  loadError = null,
+  hasNextPage = false,
+  hasPreviousPage = false,
+  onNextPage,
+  onPreviousPage,
+  onRefreshPage,
 }: LeadsWorkspaceProps) {
   const { toast } = useToast();
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
@@ -164,29 +183,35 @@ export default function LeadsWorkspace({
         limit={8}
       />
 
-      {/* Command bar */}
-      <div className="shrink-0 rounded-theme border border-theme-border bg-theme-surface px-3 py-2.5 space-y-2.5">
+      {/* Command bar — quiet surface, cohesive filters/chips */}
+      <div className="shrink-0 rounded-theme border border-theme-border bg-theme-card px-3 py-2.5 space-y-2.5 shadow-elevation-sm">
         <div className="flex flex-col lg:flex-row lg:items-center gap-2.5 lg:gap-3">
           <div className="flex items-center justify-between gap-3 min-w-0 lg:shrink-0">
             <div className="min-w-0">
               <div className="flex items-baseline gap-2">
-                <h2 className="text-sm font-semibold text-theme-text tracking-tight">Leads</h2>
-                <span className="text-[11px] font-semibold text-theme-muted tabular-nums">
-                  {myLeads.length.toLocaleString()} shown
+                <h2 className="type-card-title text-sm text-theme-text tracking-tight">
+                  {NAV_LABELS.leads}
+                </h2>
+                <span className="type-secondary text-[11px] font-medium text-theme-muted tabular-nums">
+                  {isLoading
+                    ? "Loading…"
+                    : `${myLeads.length.toLocaleString()} on page`}
+                  {isRefreshing ? " · refreshing" : ""}
                   {activeCount > 0
                     ? ` · ${activeCount} filter${activeCount === 1 ? "" : "s"}`
                     : ""}
                 </span>
               </div>
             </div>
-            <button
+            <Button
               type="button"
+              size="sm"
               onClick={onAddLeadClick}
-              className="lg:hidden inline-flex items-center gap-1 px-2.5 py-1.5 rounded-theme text-[11px] font-semibold text-theme-accent-fg bg-theme-accent cursor-pointer border-0 shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-theme-ring"
+              className="lg:hidden gap-1 shrink-0"
             >
               <PlusCircle className="w-3.5 h-3.5" aria-hidden />
               Add
-            </button>
+            </Button>
           </div>
 
           <div className="min-w-0 overflow-x-auto scrollbar-none lg:flex-1">
@@ -199,7 +224,7 @@ export default function LeadsWorkspace({
               onClick={() =>
                 setLeadsViewMode(leadsViewMode === "compact" ? "normal" : "compact")
               }
-              className="hidden md:inline-flex items-center gap-1 px-2 py-1.5 rounded-theme border border-theme-border bg-theme-card text-[11px] font-semibold text-theme-muted hover:text-theme-text cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-theme-ring"
+              className="hidden md:inline-flex items-center gap-1 min-h-11 px-2.5 py-2 rounded-theme border border-theme-border bg-theme-surface text-[11px] font-semibold text-theme-muted hover:text-theme-text cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-theme-ring md:min-h-0 md:py-1.5"
               title="Toggle row density"
             >
               {leadsViewMode === "compact" ? (
@@ -214,10 +239,10 @@ export default function LeadsWorkspace({
               type="button"
               onClick={togglePowerDialer}
               title="Auto-dialer queue"
-              className={`inline-flex items-center gap-1 px-2 py-1.5 rounded-theme border text-[11px] font-semibold cursor-pointer transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-theme-ring ${
+              className={`inline-flex items-center gap-1 min-h-11 min-w-11 px-2.5 py-2 rounded-theme border text-[11px] font-semibold cursor-pointer transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-theme-ring sm:min-h-0 sm:min-w-0 sm:py-1.5 ${
                 isPowerDialerActive
                   ? "border-theme-success/40 bg-theme-success/15 text-theme-success"
-                  : "border-theme-border bg-theme-card text-theme-muted hover:text-theme-text"
+                  : "border-theme-border bg-theme-surface text-theme-muted hover:text-theme-text"
               }`}
             >
               <PhoneCall className="w-3.5 h-3.5" aria-hidden />
@@ -229,35 +254,39 @@ export default function LeadsWorkspace({
             <button
               type="button"
               onClick={() => setMobileFiltersOpen(true)}
-              className="md:hidden inline-flex items-center gap-1 px-2.5 py-1.5 rounded-theme border border-theme-border bg-theme-card text-[11px] font-semibold text-theme-text cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-theme-ring"
+              className="md:hidden inline-flex items-center gap-1 min-h-11 px-3 py-2 rounded-theme border border-theme-border bg-theme-surface text-[11px] font-semibold text-theme-text cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-theme-ring"
             >
               <Filter className="w-3.5 h-3.5 text-theme-accent" aria-hidden />
               Filters{activeCount > 0 ? ` (${activeCount})` : ""}
             </button>
 
-            <button
+            <Button
               type="button"
+              size="sm"
               onClick={onAddLeadClick}
-              className="hidden lg:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-theme text-[11px] font-semibold text-theme-accent-fg bg-theme-accent cursor-pointer border-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-theme-ring"
+              className="hidden lg:inline-flex gap-1.5"
             >
               <PlusCircle className="w-3.5 h-3.5" aria-hidden />
               Add Lead
-            </button>
+            </Button>
           </div>
         </div>
 
         {chips.length > 0 && (
-          <LeadListFilterChips
-            chips={chips}
-            onClearChip={clearChip}
-            onClearAll={clearAllChips}
-            resultCount={myLeads.length}
-          />
+          <div className="pt-0.5 border-t border-theme-border/70">
+            <LeadListFilterChips
+              chips={chips}
+              onClearChip={clearChip}
+              onClearAll={clearAllChips}
+              resultCount={myLeads.length}
+              className="pt-2"
+            />
+          </div>
         )}
       </div>
 
       {/* Table is the primary surface */}
-      <div className="min-h-0 rounded-theme border border-theme-border bg-theme-card overflow-hidden">
+      <div className="min-h-0 rounded-theme border border-theme-border bg-theme-card overflow-hidden shadow-elevation-sm">
         <LeadsDesktopTable
           myLeads={myLeads}
           selectedLeadIds={selectedLeadIds}
@@ -294,31 +323,65 @@ export default function LeadsWorkspace({
           handleTouchEnd={handleTouchEnd}
         />
 
-        {myLeads.length === 0 && (
-          <div className="border-t border-theme-border p-4">
+        {loadError && (
+          <div className="border-t border-theme-border px-4 py-3 text-[11px] text-theme-danger">
+            {loadError}
+            {onRefreshPage && (
+              <button
+                type="button"
+                onClick={onRefreshPage}
+                className="ml-2 underline cursor-pointer bg-transparent border-0 text-theme-danger"
+              >
+                Retry
+              </button>
+            )}
+          </div>
+        )}
+
+        {!isLoading && myLeads.length === 0 && !loadError && (
+          <div className="border-t border-theme-border p-6">
             <EmptyState
               variant="compact"
-              preset="search"
-              title="No matching leads"
-              description="Adjust the filter row and Search, pick a work queue, or reset to see everything."
+              preset="leads"
+              title="Your queue is clear"
+              description="No leads match this view. Try another work queue, adjust filters, or reset to see everything assigned to you."
               className="border-0 bg-transparent shadow-none"
               action={
-                <button
-                  type="button"
-                  onClick={resetFilters}
-                  className="text-xs font-semibold text-theme-accent cursor-pointer border-0 bg-transparent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-theme-ring rounded-theme px-1"
-                >
+                <Button type="button" variant="outline" size="sm" onClick={resetFilters}>
                   Reset to All Leads
-                </button>
+                </Button>
               }
             />
           </div>
         )}
+
+        <div className="flex items-center justify-between gap-2 border-t border-theme-border px-3 py-2 bg-theme-surface/40">
+          <button
+            type="button"
+            disabled={!hasPreviousPage || isLoading}
+            onClick={onPreviousPage}
+            className="min-h-11 px-3 py-1.5 rounded-theme border border-theme-border bg-theme-card text-[11px] font-semibold text-theme-text disabled:opacity-40 cursor-pointer"
+          >
+            Previous
+          </button>
+          <span className="text-[10px] text-theme-muted tabular-nums">
+            Cursor page · {myLeads.length} rows
+          </span>
+          <button
+            type="button"
+            disabled={!hasNextPage || isLoading}
+            onClick={onNextPage}
+            className="min-h-11 px-3 py-1.5 rounded-theme border border-theme-border bg-theme-card text-[11px] font-semibold text-theme-text disabled:opacity-40 cursor-pointer"
+          >
+            Next
+          </button>
+        </div>
       </div>
 
       <BulkActionsPanel
         selectedLeadIds={selectedLeadIds}
         setSelectedLeadIds={setSelectedLeadIds}
+        pageLeads={myLeads}
         bulkAssignee={bulkAssignee}
         setBulkAssignee={setBulkAssignee}
         bulkStatus={bulkStatus}

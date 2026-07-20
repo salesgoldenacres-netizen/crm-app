@@ -56,6 +56,7 @@ export default function CallAuditRatingModal({
         isOpen={isOpen}
         onClose={onClose}
         title="Evaluate Call Quality"
+        variant="sheet"
         size="md"
         closeOnBackdrop={false}
         footer={

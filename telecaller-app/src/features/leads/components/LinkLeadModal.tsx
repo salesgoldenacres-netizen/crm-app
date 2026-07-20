@@ -75,6 +75,7 @@ export default function LinkLeadModal({
       isOpen={true}
       onClose={onClose}
       title={`Link Lead to Plot ${selectedPlot.number}`}
+      variant="sheet"
       size="md"
       footer={
         <FormActions>

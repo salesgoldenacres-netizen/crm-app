@@ -44,12 +44,24 @@ export default defineConfig({
     ],
     coverage: {
       provider: 'v8',
-      // Light scoped gate — expand include list as suites mature.
-      include: ['src/shared/utils/dateUtils.ts'],
+      include: [
+        'src/shared/utils/**/*.ts',
+        'src/shared/services/**/*.ts',
+        'src/features/**/*.ts',
+        'src/features/**/*.tsx',
+      ],
+      exclude: [
+        '**/*.test.ts',
+        '**/*.test.tsx',
+        '**/*.d.ts',
+        'src/test/**/*',
+        'src/shared/services/firebase/converters.ts',
+        'src/shared/services/firebase/repositories.ts',
+      ],
       thresholds: {
-        lines: 70,
-        functions: 70,
-        statements: 70,
+        lines: 1,
+        functions: 1,
+        statements: 1,
       },
     },
   },

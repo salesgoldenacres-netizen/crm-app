@@ -1,4 +1,4 @@
-import type { CSSProperties } from "react";
+﻿import type { CSSProperties } from "react";
 import { Sun, Moon, Smartphone, Tablet as TabletIcon, Monitor } from "lucide-react";
 
 interface ThemeMockupPreviewProps {
@@ -20,18 +20,33 @@ export default function ThemeMockupPreview({
   previewTab,
   setPreviewTab,
 }: ThemeMockupPreviewProps) {
+  const isDarkPreview = previewMode === "dark";
   const shadowOpacity = (brandingForm.shadowIntensity || 4) / 100;
   const previewStyles = {
     "--primary": brandingForm.primaryColor,
     "--secondary": brandingForm.secondaryColor,
     "--accent": brandingForm.accentColor,
-    "--sidebar": brandingForm.sidebarColor,
-    "--header": brandingForm.headerColor,
-    "--bg": previewMode === "dark" ? "#0f172a" : brandingForm.backgroundColor || "#f8fafc",
-    "--card": previewMode === "dark" ? "#1e293b" : brandingForm.cardBackground || "#ffffff",
-    "--border": previewMode === "dark" ? "#334155" : brandingForm.borderColor || "#e2e8f0",
-    "--text-p": previewMode === "dark" ? "#f8fafc" : brandingForm.textPrimary || "#0f172a",
-    "--text-s": previewMode === "dark" ? "#94a3b8" : brandingForm.textSecondary || "#475569",
+    "--sidebar": isDarkPreview
+      ? brandingForm.darkSidebarColor || brandingForm.sidebarColor
+      : brandingForm.sidebarColor,
+    "--header": isDarkPreview
+      ? brandingForm.darkHeaderColor || brandingForm.headerColor
+      : brandingForm.headerColor,
+    "--bg": isDarkPreview
+      ? brandingForm.darkBackgroundColor || "#0c1b17"
+      : brandingForm.backgroundColor || "#f1f5f2",
+    "--card": isDarkPreview
+      ? brandingForm.darkCardBackground || "#17352c"
+      : brandingForm.cardBackground || "#fcfdfc",
+    "--border": isDarkPreview
+      ? brandingForm.darkBorderColor || "#23453c"
+      : brandingForm.borderColor || "#d7e1db",
+    "--text-p": isDarkPreview
+      ? brandingForm.darkTextPrimary || "#eef3f0"
+      : brandingForm.textPrimary || "#15201c",
+    "--text-s": isDarkPreview
+      ? brandingForm.darkTextSecondary || "#a0b3aa"
+      : brandingForm.textSecondary || "#5f7269",
     "--success": brandingForm.successColor,
     "--warning": brandingForm.warningColor,
     "--danger": brandingForm.dangerColor,
@@ -43,10 +58,10 @@ export default function ThemeMockupPreview({
   } as CSSProperties;
 
   return (
-    <div className="lg:col-span-7 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm p-6 space-y-4">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b dark:border-gray-700 pb-3 gap-3 flex-wrap">
+    <div className="lg:col-span-7 bg-theme-card rounded-theme border border-theme-border shadow-elevation-sm p-6 space-y-4">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b border-theme-border pb-3 gap-3 flex-wrap">
         <div>
-          <h3 className="text-sm font-extrabold uppercase tracking-wider text-gray-400">
+          <h3 className="text-sm font-bold uppercase tracking-wider text-theme-muted">
             Interactive Mockup Preview
           </h3>
         </div>
@@ -54,11 +69,11 @@ export default function ThemeMockupPreview({
         {/* Device and Theme Mock Toggles */}
         <div className="flex items-center gap-2">
           {/* Theme Toggle */}
-          <div className="flex border rounded-lg bg-gray-50 dark:bg-gray-900 border-gray-300 dark:border-gray-700 p-0.5">
+          <div className="flex border rounded-theme bg-theme-surface border-theme-border p-0.5">
             <button
               onClick={() => setPreviewMode("light")}
               className={`p-1.5 rounded-md cursor-pointer border-0 bg-transparent ${
-                previewMode === "light" ? "bg-white dark:bg-gray-800 shadow-sm text-amber-500" : "text-gray-500"
+                previewMode === "light" ? "bg-theme-card shadow-sm text-theme-warning" : "text-theme-muted"
               }`}
               title="Light Mode"
             >
@@ -67,7 +82,7 @@ export default function ThemeMockupPreview({
             <button
               onClick={() => setPreviewMode("dark")}
               className={`p-1.5 rounded-md cursor-pointer border-0 bg-transparent ${
-                previewMode === "dark" ? "bg-white dark:bg-gray-800 shadow-sm text-indigo-400" : "text-gray-500"
+                previewMode === "dark" ? "bg-theme-card shadow-sm text-theme-accent" : "text-theme-muted"
               }`}
               title="Dark Mode"
             >
@@ -76,11 +91,11 @@ export default function ThemeMockupPreview({
           </div>
 
           {/* Device width toggle */}
-          <div className="flex border rounded-lg bg-gray-50 dark:bg-gray-900 border-gray-300 dark:border-gray-700 p-0.5">
+          <div className="flex border rounded-theme bg-theme-surface border-theme-border p-0.5">
             <button
               onClick={() => setPreviewDevice("mobile")}
               className={`p-1.5 rounded-md cursor-pointer border-0 bg-transparent ${
-                previewDevice === "mobile" ? "bg-white dark:bg-gray-800 shadow-sm text-indigo-650" : "text-gray-500"
+                previewDevice === "mobile" ? "bg-theme-card shadow-sm text-theme-accent" : "text-theme-muted"
               }`}
               title="Mobile View"
             >
@@ -89,7 +104,7 @@ export default function ThemeMockupPreview({
             <button
               onClick={() => setPreviewDevice("tablet")}
               className={`p-1.5 rounded-md cursor-pointer border-0 bg-transparent ${
-                previewDevice === "tablet" ? "bg-white dark:bg-gray-800 shadow-sm text-indigo-600" : "text-gray-500"
+                previewDevice === "tablet" ? "bg-theme-card shadow-sm text-theme-accent" : "text-theme-muted"
               }`}
               title="Tablet View"
             >
@@ -98,7 +113,7 @@ export default function ThemeMockupPreview({
             <button
               onClick={() => setPreviewDevice("desktop")}
               className={`p-1.5 rounded-md cursor-pointer border-0 bg-transparent ${
-                previewDevice === "desktop" ? "bg-white dark:bg-gray-800 shadow-sm text-indigo-600" : "text-gray-500"
+                previewDevice === "desktop" ? "bg-theme-card shadow-sm text-theme-accent" : "text-theme-muted"
               }`}
               title="Desktop View"
             >
@@ -109,7 +124,7 @@ export default function ThemeMockupPreview({
       </div>
 
       {/* Preview Tabs Selection */}
-      <div className="flex gap-1.5 overflow-x-auto pb-2 border-b dark:border-gray-700/60 text-xs font-bold">
+      <div className="flex gap-1.5 overflow-x-auto pb-2 border-b border-theme-border text-xs font-semibold">
         {[
           { id: "login", label: "Login" },
           { id: "dashboard", label: "Dashboard" },
@@ -122,10 +137,10 @@ export default function ThemeMockupPreview({
           <button
             key={tab.id}
             onClick={() => setPreviewTab(tab.id)}
-            className={`px-3 py-1.5 rounded-lg border-0 bg-transparent whitespace-nowrap cursor-pointer transition-colors ${
+            className={`px-3 py-1.5 rounded-theme border-0 bg-transparent whitespace-nowrap cursor-pointer transition-colors ${
               previewTab === tab.id
-                ? "bg-slate-100 dark:bg-slate-800 text-indigo-650 dark:text-indigo-400 font-bold"
-                : "text-gray-500 hover:text-gray-800 dark:hover:text-gray-200"
+                ? "bg-theme-accent-muted text-theme-accent font-semibold"
+                : "text-theme-muted hover:text-theme-text"
             }`}
           >
             {tab.label}
@@ -133,8 +148,8 @@ export default function ThemeMockupPreview({
         ))}
       </div>
 
-      {/* Live Render Area Wrapper */}
-      <div className="bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-4 flex items-center justify-center min-h-[380px] overflow-hidden transition-all duration-300">
+      {/* Live Render Area Wrapper — sandbox keeps slate frame for contrast vs live theme */}
+      <div className="bg-theme-surface border border-theme-border rounded-theme p-4 flex items-center justify-center min-h-[380px] overflow-hidden transition-all duration-300">
         <div
           className={`w-full bg-[var(--bg)] text-[var(--text-p)] transition-all duration-300 overflow-y-auto border shadow-md relative ${
             previewDevice === "mobile" ? "max-w-[340px] h-[480px]" : previewDevice === "tablet" ? "max-w-[560px] h-[420px]" : "w-full min-h-[360px]"
@@ -155,7 +170,7 @@ export default function ThemeMockupPreview({
                   )}
                 </div>
                 <div>
-                  <h4 className="font-extrabold text-sm" style={{ color: "var(--text-p)" }}>{brandingForm.companyName}</h4>
+                  <h4 className="font-bold text-sm" style={{ color: "var(--text-p)" }}>{brandingForm.companyName}</h4>
                   <p className="text-[10px]" style={{ color: "var(--text-s)" }}>{brandingForm.tagline}</p>
                 </div>
                 <div className="space-y-2 text-left">
@@ -195,7 +210,7 @@ export default function ThemeMockupPreview({
 
               <div className={`p-4 flex-1 space-y-4 overflow-y-auto ${brandingForm.compactMode ? "space-y-2.5" : "space-y-4"}`}>
                 <div>
-                  <h3 className="font-extrabold text-[13px]">Real Estate Lead Analytics</h3>
+                  <h3 className="font-bold text-[13px]">Real Estate Lead Analytics</h3>
                   <p className="text-[10px]" style={{ color: "var(--text-s)" }}>Welcome back, PA. Here is your team summary.</p>
                 </div>
 
@@ -209,7 +224,7 @@ export default function ThemeMockupPreview({
                   ].map((item, idx) => (
                     <div key={idx} className="bg-[var(--card)] border border-[var(--border)] p-3 rounded-[var(--radius-px)] shadow-[var(--shadow)] relative overflow-hidden">
                       <div className="text-[9px] font-bold" style={{ color: "var(--text-s)" }}>{item.title}</div>
-                      <div className="text-sm font-extrabold mt-1" style={{ color: "var(--text-p)" }}>{item.val}</div>
+                      <div className="text-sm font-bold mt-1" style={{ color: "var(--text-p)" }}>{item.val}</div>
                       <div className="text-[8px] mt-1" style={{ color: item.color }}>{item.desc}</div>
                     </div>
                   ))}
@@ -237,7 +252,12 @@ export default function ThemeMockupPreview({
             <div className="w-full h-full flex animate-fadeIn" style={{ fontFamily: "var(--font)" }}>
               <div
                 className="w-52 border-r border-[var(--border)] flex flex-col h-full overflow-y-auto"
-                style={{ backgroundColor: brandingForm.darkSidebar ? "#0f172a" : "var(--card)", color: brandingForm.darkSidebar ? "#f8fafc" : "var(--text-p)" }}
+                style={{
+                  backgroundColor: brandingForm.darkSidebar
+                    ? "var(--sidebar)"
+                    : "var(--card)",
+                  color: brandingForm.darkSidebar ? "#f8fafc" : "var(--text-p)",
+                }}
               >
                 {/* Header */}
                 <div className="p-3 border-b flex items-center space-x-2" style={{ borderColor: "var(--border)" }}>
@@ -246,15 +266,22 @@ export default function ThemeMockupPreview({
                   ) : (
                     <div className="w-5 h-5 rounded-[4px] bg-[var(--primary)] text-white flex items-center justify-center font-bold text-[9px]">G</div>
                   )}
-                  <span className="font-extrabold text-[11px] truncate">
+                  <span className="font-bold text-[11px] truncate">
                     {brandingForm.companyName}
                   </span>
                 </div>
 
                 {/* Navigation */}
                 <div className="flex-1 p-2 space-y-1">
-                  <div className="flex items-center space-x-2 p-1.5 rounded-[var(--radius-px)] text-[10px] font-bold cursor-pointer" style={{ backgroundColor: `${brandingForm.primaryColor}1a`, color: brandingForm.primaryColor }}>
-                    <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: "var(--primary)" }} />
+                  <div
+                    className="flex items-center space-x-2 p-1.5 rounded-[var(--radius-px)] text-[10px] font-bold cursor-pointer"
+                    style={{
+                      backgroundColor: `${brandingForm.secondaryColor}2e`,
+                      color: brandingForm.secondaryColor,
+                      boxShadow: `inset 3px 0 0 0 ${brandingForm.secondaryColor}`,
+                    }}
+                  >
+                    <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: "var(--secondary)" }} />
                     <span>Active Dashboard</span>
                   </div>
                   {["Leads Workspace", "Project Layout Maps", "Agent Rosters", "Analytics", "Settings"].map((nav, idx) => (
@@ -315,7 +342,7 @@ export default function ThemeMockupPreview({
                         <td className="px-3 py-2 font-bold">{lead.name}</td>
                         <td className="px-3 py-2" style={{ color: "var(--text-s)" }}>{lead.phone}</td>
                         <td className="px-3 py-2">
-                          <span className="px-1.5 py-0.5 rounded text-[8px] font-extrabold text-white" style={{ backgroundColor: lead.color }}>
+                          <span className="px-1.5 py-0.5 rounded text-[8px] font-bold text-white" style={{ backgroundColor: lead.color }}>
                             {lead.badge}
                           </span>
                         </td>
@@ -334,7 +361,7 @@ export default function ThemeMockupPreview({
               {/* Profil summary header */}
               <div className="bg-[var(--card)] border border-[var(--border)] p-3 rounded-[var(--radius-px)] shadow-[var(--shadow)] flex items-center justify-between shrink-0">
                 <div className="flex items-center space-x-2">
-                  <div className="w-8 h-8 rounded-full bg-[var(--primary)] text-white font-extrabold flex items-center justify-center text-xs shrink-0">AR</div>
+                  <div className="w-8 h-8 rounded-full bg-[var(--primary)] text-white font-bold flex items-center justify-center text-xs shrink-0">AR</div>
                   <div>
                     <h4 className="font-bold text-xs" style={{ color: "var(--text-p)" }}>Aditi Rao</h4>
                     <span className="text-[9px] font-bold" style={{ color: "var(--success)" }}>Premium Lead • Booked</span>
@@ -427,7 +454,7 @@ export default function ThemeMockupPreview({
                     <div key={idx} className="space-y-1">
                       <div className="flex justify-between items-center font-bold">
                         <span style={{ color: "var(--text-p)" }}>{item.source}</span>
-                        <span className="font-extrabold text-slate-700 dark:text-slate-300">{item.val} ({item.pct}%)</span>
+                        <span className="font-bold text-slate-700 dark:text-slate-300">{item.val} ({item.pct}%)</span>
                       </div>
                       <div className="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-2">
                         <div className="h-2 rounded-full transition-all duration-500" style={{ backgroundColor: item.color, width: `${item.pct}%` }} />

@@ -1,7 +1,5 @@
 import { useState, useEffect } from "react";
-import { onSnapshot } from "firebase/firestore";
 import { Team } from "@/shared/types";
-import { teamsRef } from "@/shared/services/firebase/converters";
 import { TeamsRepository } from "@/shared/services/firebase/repositories";
 
 export function useTeamsStore() {
@@ -9,9 +7,7 @@ export function useTeamsStore() {
   const [isLoaded, setIsLoaded] = useState(false);
 
   useEffect(() => {
-    const unsubscribe = onSnapshot(teamsRef, (snapshot) => {
-      const list: Team[] = [];
-      snapshot.forEach((d) => list.push(d.data()));
+    const unsubscribe = TeamsRepository.subscribe((list) => {
       setTeams(list);
       setIsLoaded(true);
     });

@@ -34,9 +34,10 @@ export class SummaryDocumentProvider implements AnalyticsProvider {
       }
 
       return snap.data() as DashboardMetrics;
-    } catch (err: any) {
+    } catch (err: unknown) {
       if (err instanceof AnalyticsError) throw err;
-      throw new AnalyticsError("PROVIDER_UNAVAILABLE", err.message || "Summary provider request failed.");
+      const errMsg = err instanceof Error ? err.message : "Summary provider request failed.";
+      throw new AnalyticsError("PROVIDER_UNAVAILABLE", errMsg);
     }
   }
 
@@ -54,9 +55,10 @@ export class SummaryDocumentProvider implements AnalyticsProvider {
       }
 
       return snap.data() as ActivityMetrics;
-    } catch (err: any) {
+    } catch (err: unknown) {
       if (err instanceof AnalyticsError) throw err;
-      throw new AnalyticsError("PROVIDER_UNAVAILABLE", err.message || "Summary provider request failed.");
+      const errMsg = err instanceof Error ? err.message : "Summary provider request failed.";
+      throw new AnalyticsError("PROVIDER_UNAVAILABLE", errMsg);
     }
   }
 
@@ -74,9 +76,10 @@ export class SummaryDocumentProvider implements AnalyticsProvider {
       }
 
       return snap.data() as LeadPipelineMetrics;
-    } catch (err: any) {
+    } catch (err: unknown) {
       if (err instanceof AnalyticsError) throw err;
-      throw new AnalyticsError("PROVIDER_UNAVAILABLE", err.message || "Summary provider request failed.");
+      const errMsg = err instanceof Error ? err.message : "Summary provider request failed.";
+      throw new AnalyticsError("PROVIDER_UNAVAILABLE", errMsg);
     }
   }
 
@@ -94,9 +97,10 @@ export class SummaryDocumentProvider implements AnalyticsProvider {
       }
 
       return snap.data() as BookingMetrics;
-    } catch (err: any) {
+    } catch (err: unknown) {
       if (err instanceof AnalyticsError) throw err;
-      throw new AnalyticsError("PROVIDER_UNAVAILABLE", err.message || "Summary provider request failed.");
+      const errMsg = err instanceof Error ? err.message : "Summary provider request failed.";
+      throw new AnalyticsError("PROVIDER_UNAVAILABLE", errMsg);
     }
   }
 
@@ -111,9 +115,10 @@ export class SummaryDocumentProvider implements AnalyticsProvider {
       }
 
       return snap.data() as TeamMetrics;
-    } catch (err: any) {
+    } catch (err: unknown) {
       if (err instanceof AnalyticsError) throw err;
-      throw new AnalyticsError("PROVIDER_UNAVAILABLE", err.message || "Summary provider request failed.");
+      const errMsg = err instanceof Error ? err.message : "Summary provider request failed.";
+      throw new AnalyticsError("PROVIDER_UNAVAILABLE", errMsg);
     }
   }
 }

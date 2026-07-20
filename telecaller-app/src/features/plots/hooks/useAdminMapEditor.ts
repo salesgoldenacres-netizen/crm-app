@@ -4,6 +4,8 @@ import { Project, Plot, EditingPlot } from "@/shared/types";
 import { logAnalyticsEvent } from "@/shared/utils/analytics";
 import { logger } from "@/shared/utils/logger";
 import { uploadFile } from "@/shared/utils/uploadFile";
+import { useToast } from "@/shared/components/Toast";
+import type { InteractionDialogState } from "@/shared/components/ui/InteractionDialog";
 
 interface UseAdminMapEditorProps {
   projectId: string;
@@ -16,6 +18,12 @@ export function useAdminMapEditor({
   project,
   updateProject,
 }: UseAdminMapEditorProps) {
+  const { toast } = useToast();
+  const [interaction, setInteraction] = useState<InteractionDialogState | null>(
+    null
+  );
+  const clearInteraction = useCallback(() => setInteraction(null), []);
+
   const svgRef = useRef<SVGSVGElement | null>(null);
   const viewportRef = useRef<HTMLDivElement | null>(null);
   const mapElementRef = useRef<HTMLDivElement | null>(null);
@@ -318,11 +326,11 @@ export function useAdminMapEditor({
       const downloadUrl = await uploadFile("layouts", file);
 
       await updateProject(projectId, { ...project, image: downloadUrl });
-      alert("Layout image updated successfully!");
+      toast("Layout image updated successfully!", "success");
     } catch (err: unknown) {
       logger.error("AdminMapEditor", "Image upload failed:", err);
       const msg = err instanceof Error ? err.message : String(err);
-      alert("Failed to upload image: " + msg);
+      toast("Failed to upload image: " + msg, "error");
     } finally {
       setUploadingImage(false);
     }
@@ -351,7 +359,10 @@ export function useAdminMapEditor({
   }, []);
 
   const handleFinishDrawing = useCallback(() => {
-    if (drawingPoints.length < 3) return alert("A polygon must have at least 3 points.");
+    if (drawingPoints.length < 3) {
+      toast("A polygon must have at least 3 points.", "warning");
+      return;
+    }
     setEditingPlot({
       isNew: true,
       points: drawingPoints,
@@ -370,7 +381,7 @@ export function useAdminMapEditor({
       status: "available",
       labelRotation: 0,
     });
-  }, [drawingPoints]);
+  }, [drawingPoints, toast]);
 
   const executeSlice = useCallback((p1: [number, number], p2: [number, number]) => {
     if (!project) return;
@@ -455,12 +466,12 @@ export function useAdminMapEditor({
       }
     } catch (err) {
       logger.error("AdminMapEditor", "Slice failed:", err);
-      alert("Could not slice polygon cleanly. Try adjusting your line.");
+      toast("Could not slice polygon cleanly. Try adjusting your line.", "error");
     }
 
     setSlicePoints([]);
     setActivePlotId(null);
-  }, [project, activePlotId, projectId, updateProject, pushToHistory]);
+  }, [project, activePlotId, projectId, updateProject, pushToHistory, toast]);
 
   const executeCalibration = useCallback((p1: [number, number], p2: [number, number]) => {
     if (!project) return;
@@ -469,26 +480,38 @@ export function useAdminMapEditor({
     const pixelDistance = Math.sqrt(dx * dx + dy * dy);
 
     if (pixelDistance < 0.5) {
-      alert("Reference line is too short. Please select wider points.");
+      toast("Reference line is too short. Please select wider points.", "warning");
       setCalibrationPoints([]);
       return;
     }
 
-    const realFeet = prompt("Enter the real-world distance of this reference line in FEET:", "100");
-    const parsedFeet = parseFloat(realFeet || "");
-
-    if (isNaN(parsedFeet) || parsedFeet <= 0) {
-      alert("Invalid length entered.");
-      setCalibrationPoints([]);
-      return;
-    }
-
-    const scaleRatio = parsedFeet / pixelDistance;
-    updateProject(projectId, { ...project, scaleRatio });
-    setCalibrationPoints([]);
-    setMode("view");
-    alert(`Calibration complete! Scale Ratio: ${scaleRatio.toFixed(3)} ft/unit.`);
-  }, [project, projectId, updateProject]);
+    setInteraction({
+      mode: "prompt",
+      title: "Calibrate scale",
+      description:
+        "Enter the real-world distance of this reference line in feet.",
+      defaultValue: "100",
+      inputLabel: "Distance (feet)",
+      confirmLabel: "Calibrate",
+      onCancel: () => setCalibrationPoints([]),
+      onConfirm: (realFeet) => {
+        const parsedFeet = parseFloat(realFeet || "");
+        if (isNaN(parsedFeet) || parsedFeet <= 0) {
+          toast("Invalid length entered.", "error");
+          setCalibrationPoints([]);
+          return;
+        }
+        const scaleRatio = parsedFeet / pixelDistance;
+        void updateProject(projectId, { ...project, scaleRatio });
+        setCalibrationPoints([]);
+        setMode("view");
+        toast(
+          `Calibration complete! Scale Ratio: ${scaleRatio.toFixed(3)} ft/unit.`,
+          "success"
+        );
+      },
+    });
+  }, [project, projectId, updateProject, toast]);
 
   const handleSvgClick = useCallback((e: React.MouseEvent) => {
     const rawCoords = getSvgCoordinates(e);
@@ -727,13 +750,16 @@ export function useAdminMapEditor({
         updateProject(projectId, { ...project, plots: updatedPlots });
         setSelectedPlotIds([]);
         setMode("view");
-        alert("Plots merged successfully!");
+        toast("Plots merged successfully!", "success");
       }
     } catch (err) {
       logger.error("AdminMapEditor", "Merge failed:", err);
-      alert("Could not merge selected areas. Ensure they touch or overlap.");
+      toast(
+        "Could not merge selected areas. Ensure they touch or overlap.",
+        "error"
+      );
     }
-  }, [project, selectedPlotIds, pushToHistory, updateProject, projectId]);
+  }, [project, selectedPlotIds, pushToHistory, updateProject, projectId, toast]);
 
   const handlePlotClick = useCallback((plot: Plot, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -820,22 +846,29 @@ export function useAdminMapEditor({
       setEditingPlot(null);
       return;
     }
-    if (confirm("Are you sure you want to delete this feature?")) {
-      pushToHistory();
-      const updatedPlots = project.plots.filter((p) => p.id !== editingPlot.id);
-      updateProject(projectId, { ...project, plots: updatedPlots });
-      setEditingPlot(null);
-      if (activePlotId === editingPlot.id) {
-        setActivePlotId(null);
-        setMode("view");
-      }
-    }
+    setInteraction({
+      mode: "confirm",
+      title: "Delete feature",
+      description: "Are you sure you want to delete this feature?",
+      confirmLabel: "Delete",
+      confirmVariant: "danger",
+      onConfirm: () => {
+        pushToHistory();
+        const updatedPlots = project.plots.filter((p) => p.id !== editingPlot.id);
+        void updateProject(projectId, { ...project, plots: updatedPlots });
+        setEditingPlot(null);
+        if (activePlotId === editingPlot.id) {
+          setActivePlotId(null);
+          setMode("view");
+        }
+      },
+    });
   }, [editingPlot, project, activePlotId, pushToHistory, updateProject, projectId]);
 
   const handleAutoCalculateSize = useCallback(() => {
     if (!project || !editingPlot || !editingPlot.points) return;
     if (!project.scaleRatio) {
-      alert("Please calibrate scale ruler first in settings menu.");
+      toast("Please calibrate scale ruler first in settings menu.", "warning");
       return;
     }
     const area = calculatePolygonArea(editingPlot.points, project.scaleRatio);
@@ -850,13 +883,13 @@ export function useAdminMapEditor({
       size: area.toString(),
       price: calculatedPrice(area.toString(), prev.rate),
     }));
-  }, [project, editingPlot, calculatePolygonArea, plotForm.price]);
+  }, [project, editingPlot, calculatePolygonArea, plotForm.price, toast]);
 
   const orthogonalizePlot = useCallback((plotId: string) => {
     if (!project) return;
     const plot = project.plots.find((p) => p.id === plotId);
     if (!plot || !plot.points || plot.points.length !== 4) {
-      alert("Orthogonalization is supported for 4-point areas.");
+      toast("Orthogonalization is supported for 4-point areas.", "warning");
       return;
     }
 
@@ -897,7 +930,7 @@ export function useAdminMapEditor({
       p.id === plotId ? { ...p, points: newPoints } : p
     );
     updateProject(projectId, { ...project, plots: updatedPlots });
-  }, [project, projectId, updateProject, pushToHistory]);
+  }, [project, projectId, updateProject, pushToHistory, toast]);
 
   const handleDuplicatePlot = useCallback((plot: Plot) => {
     if (!project || !plot.points) return;
@@ -934,24 +967,28 @@ export function useAdminMapEditor({
       const totalArea = calculatePolygonArea(plot.points as [number, number][], project.scaleRatio);
       const tSize = parseFloat(targetSize as unknown as string);
       if (isNaN(tSize) || tSize <= 0) {
-        alert("Please enter a valid target size.");
+        toast("Please enter a valid target size.", "warning");
         return;
       }
       if (!project.scaleRatio) {
-        alert("Scale calibration is required to subdivide by square footage.");
+        toast(
+          "Scale calibration is required to subdivide by square footage.",
+          "warning"
+        );
         return;
       }
       N = Math.round(totalArea / tSize);
       if (N < 2) {
-        alert(
-          `Plot area (${totalArea} sq ft) is too small to subdivide into ${tSize} sq ft plots.`
+        toast(
+          `Plot area (${totalArea} sq ft) is too small to subdivide into ${tSize} sq ft plots.`,
+          "warning"
         );
         return;
       }
     }
 
     if (isNaN(N) || N < 2) {
-      alert("Plot must be subdivided into at least 2 parts.");
+      toast("Plot must be subdivided into at least 2 parts.", "warning");
       return;
     }
 
@@ -1192,15 +1229,21 @@ export function useAdminMapEditor({
         setActivePlotId(null);
         setSubdivisionActive(false);
         setMode("view");
-        alert(`Plot subdivided successfully into ${currentPolys.length} parts!`);
+        toast(
+          `Plot subdivided successfully into ${currentPolys.length} parts!`,
+          "success"
+        );
       } else {
-        alert("Failed to divide plot geometry cleanly.");
+        toast("Failed to divide plot geometry cleanly.", "error");
       }
     } catch (err) {
       logger.error("AdminMapEditor", "Subdivision failed:", err);
-      alert("An error occurred during subdivision clipping. Please try different parameters.");
+      toast(
+        "An error occurred during subdivision clipping. Please try different parameters.",
+        "error"
+      );
     }
-  }, [project, activePlotId, subdivisionForm, calculatePolygonArea, getBoundingBox, pushToHistory, updateProject, projectId]);
+  }, [project, activePlotId, subdivisionForm, calculatePolygonArea, getBoundingBox, pushToHistory, updateProject, projectId, toast]);
 
   const handleSelectAll = useCallback(() => {
     if (!project) return;
@@ -1222,13 +1265,23 @@ export function useAdminMapEditor({
 
   const handleBulkDelete = useCallback(() => {
     if (!project || selectedPlotIds.length === 0) return;
-    if (confirm(`Are you sure you want to delete ${selectedPlotIds.length} selected areas?`)) {
-      pushToHistory();
-      const updatedPlots = project.plots.filter((p) => !selectedPlotIds.includes(p.id));
-      updateProject(projectId, { ...project, plots: updatedPlots });
-      setSelectedPlotIds([]);
-      setMode("view");
-    }
+    const count = selectedPlotIds.length;
+    setInteraction({
+      mode: "confirm",
+      title: "Delete selected areas",
+      description: `Are you sure you want to delete ${count} selected areas?`,
+      confirmLabel: "Delete",
+      confirmVariant: "danger",
+      onConfirm: () => {
+        pushToHistory();
+        const updatedPlots = project.plots.filter(
+          (p) => !selectedPlotIds.includes(p.id)
+        );
+        void updateProject(projectId, { ...project, plots: updatedPlots });
+        setSelectedPlotIds([]);
+        setMode("view");
+      },
+    });
   }, [project, selectedPlotIds, pushToHistory, updateProject, projectId]);
 
   const startTransform = useCallback((action: string, e: React.MouseEvent) => {
@@ -1423,5 +1476,7 @@ export function useAdminMapEditor({
     handleVertexManualEdit,
     handleVertexManualDelete,
     handleSearchFocus,
+    interaction,
+    clearInteraction,
   };
 }

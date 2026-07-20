@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+﻿import { useMemo, useState } from "react";
 import {
   MessageCircle,
   RefreshCw,
@@ -27,16 +27,16 @@ interface MessagingIntegrationsPanelProps {
 function statusBadge(status: MessagingConnectionStatus | string) {
   const map: Record<string, string> = {
     connected:
-      "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30",
+      "bg-theme-success/15 text-theme-success border-theme-success/30",
     connecting:
-      "bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30",
+      "bg-theme-warning/15 text-theme-warning border-theme-warning/30",
     waiting_qr:
-      "bg-sky-500/15 text-sky-700 dark:text-sky-300 border-sky-500/30",
-    qr: "bg-sky-500/15 text-sky-700 dark:text-sky-300 border-sky-500/30",
+      "bg-sky-50 text-sky-700 border-sky-100 dark:bg-sky-950/40 dark:text-sky-300 dark:border-sky-800",
+    qr: "bg-sky-50 text-sky-700 border-sky-100 dark:bg-sky-950/40 dark:text-sky-300 dark:border-sky-800",
     disconnected: "bg-theme-surface text-theme-muted border-theme-border",
     disabled: "bg-theme-surface text-theme-muted border-theme-border",
     not_configured: "bg-theme-surface text-theme-muted border-theme-border",
-    error: "bg-rose-500/15 text-rose-600 dark:text-rose-400 border-rose-500/30",
+    error: "bg-theme-danger/15 text-theme-danger border-theme-danger/30",
   };
   return map[status] || map.not_configured;
 }
@@ -44,9 +44,9 @@ function statusBadge(status: MessagingConnectionStatus | string) {
 function webhookHealthBadge(health: string) {
   const map: Record<string, string> = {
     healthy:
-      "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30",
-    stale: "bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30",
-    error: "bg-rose-500/15 text-rose-600 dark:text-rose-400 border-rose-500/30",
+      "bg-theme-success/15 text-theme-success border-theme-success/30",
+    stale: "bg-theme-warning/15 text-theme-warning border-theme-warning/30",
+    error: "bg-theme-danger/15 text-theme-danger border-theme-danger/30",
     unknown: "bg-theme-surface text-theme-muted border-theme-border",
   };
   return map[health] || map.unknown;
@@ -159,7 +159,7 @@ export default function EvolutionIntegrationsPanel({
   };
 
   return (
-    <div className="bg-theme-card rounded-xl shadow-sm border border-theme-border p-5 transition-colors animate-fadeIn">
+    <div className="bg-theme-card rounded-theme shadow-sm border border-theme-border p-5 transition-colors animate-fadeIn">
       <div className="flex items-start justify-between gap-3 border-b border-theme-border pb-3 mb-4">
         <div>
           <h3 className="text-sm font-semibold text-theme-text flex items-center gap-2">
@@ -335,7 +335,7 @@ export default function EvolutionIntegrationsPanel({
         </div>
 
         {status?.qrBase64 && (
-          <div className="rounded-xl border border-theme-border bg-theme-surface p-3 flex flex-col items-center gap-2">
+          <div className="rounded-theme border border-theme-border bg-theme-surface p-3 flex flex-col items-center gap-2">
             <img
               src={
                 status.qrBase64.startsWith("data:")

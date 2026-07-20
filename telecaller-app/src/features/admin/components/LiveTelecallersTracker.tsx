@@ -1,4 +1,4 @@
-import { Users } from "lucide-react";
+﻿import { Users } from "lucide-react";
 import { User, AttendanceRecord } from "@/shared/types";
 
 interface LiveTelecallersTrackerProps {
@@ -46,7 +46,7 @@ export default function LiveTelecallersTracker({
   ).length;
 
   return (
-    <div className="rounded-xl border border-theme-border bg-theme-card p-3 xl:col-span-2 flex flex-col gap-2.5">
+    <div className="rounded-theme border border-theme-border bg-theme-card p-3 xl:col-span-2 flex flex-col gap-2.5">
       <div className="flex justify-between items-center border-b border-theme-border pb-2">
         <h2 className="text-xs font-bold text-theme-text flex items-center gap-1.5">
           <Users className="w-3.5 h-3.5 text-theme-accent" />

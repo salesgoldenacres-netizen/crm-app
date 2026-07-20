@@ -15,6 +15,10 @@ export const COLLECTIONS = {
   CALL_TARGETS: "callTargets",
   AUDIT_LOGS: "auditLogs",
   AGENT_PRODUCTIVITY: "agentProductivity",
+  /** Create-once markers keyed by callLogId (Phase C productivity idempotency). */
+  PRODUCTIVITY_EVENTS: "productivityEvents",
+  /** Top-level call log event collection (Phase C). */
+  CALL_LOGS: "callLogs",
   AGENT_STATUS: "agentStatus",
   ATTENDANCE: "attendance",
   LEAVE_REQUESTS: "leaveRequests",

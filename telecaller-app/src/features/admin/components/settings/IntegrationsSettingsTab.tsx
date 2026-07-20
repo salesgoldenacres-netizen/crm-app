@@ -1,4 +1,4 @@
-import { Globe, SlidersHorizontal, Activity, Users } from "lucide-react";
+﻿import { Globe, SlidersHorizontal, Activity, Users } from "lucide-react";
 
 import { useIntegrationsSettings } from "@/features/admin/hooks/useIntegrationsSettings";
 import WebhookSimulatorConsole from "@/features/admin/components/WebhookSimulatorConsole";
@@ -81,7 +81,7 @@ export default function IntegrationsSettingsTab({
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-1 space-y-6">
-          <div className="bg-theme-card rounded-xl shadow-sm border border-theme-border p-5 transition-colors animate-fadeIn">
+          <div className="bg-theme-card rounded-theme shadow-sm border border-theme-border p-5 transition-colors animate-fadeIn">
             <h3 className={CARD_TITLE}>
               <Globe className="w-5 h-5 mr-2 text-theme-accent" aria-hidden="true" />
               Webhook &amp; API Configuration
@@ -414,7 +414,7 @@ export default function IntegrationsSettingsTab({
             </form>
           </div>
 
-          <div className="bg-theme-surface/40 rounded-xl p-5 border border-theme-border text-xs leading-relaxed space-y-2 mt-4 animate-fadeIn text-theme-muted">
+          <div className="bg-theme-surface/40 rounded-theme p-5 border border-theme-border text-xs leading-relaxed space-y-2 mt-4 animate-fadeIn text-theme-muted">
             <h4 className="font-semibold text-theme-text flex items-center">
               <Globe
                 className="w-4 h-4 mr-1 text-theme-accent"
@@ -431,7 +431,7 @@ export default function IntegrationsSettingsTab({
             </p>
           </div>
 
-          <div className="bg-theme-card rounded-xl shadow-sm border border-theme-border p-5 transition-colors mt-4 animate-fadeIn">
+          <div className="bg-theme-card rounded-theme shadow-sm border border-theme-border p-5 transition-colors mt-4 animate-fadeIn">
             <h3 className={CARD_TITLE}>
               <SlidersHorizontal
                 className="w-5 h-5 mr-2 text-theme-accent"

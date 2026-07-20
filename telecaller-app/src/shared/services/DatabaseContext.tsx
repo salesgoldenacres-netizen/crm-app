@@ -1,6 +1,13 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode, useMemo } from "react";
 import {
+  doc,
+  getDoc,
+  getDocs,
   onSnapshot,
+  query,
+  where,
+  type DocumentSnapshot,
+  type QuerySnapshot,
 } from "firebase/firestore";
 import { User, Lead, Project, CustomRole } from "@/shared/types";
 import { logger } from "@/shared/utils/logger";
@@ -10,11 +17,18 @@ import { ProjectScopeProvider, useProjectScope } from "./ProjectScopeContext";
 import { AuthorizationProvider } from "./AuthorizationContext";
 import { AnalyticsProvider } from "./analytics/AnalyticsContext";
 import { PerformanceProvider } from "./performance/PerformanceContext";
+import { isManagerial } from "@/shared/utils/roleUtils";
+import { AGENT_OPEN_LEADS_REALTIME_BOUND } from "@/shared/services/leads/leadQueryConstants";
+
 const PerformanceOverlay = import.meta.env.DEV
   ? React.lazy(() => import("./performance/PerformanceOverlay"))
   : null;
 
 interface DatabaseContextType {
+  /**
+   * Bounded reference leads for non-list surfaces (agent open queue / legacy rollback).
+   * NOT the source of truth for lead list UIs — use LeadQueryService.
+   */
   leads: Lead[];
   isLeadsLoaded: boolean;
   projects: Record<string, Project>;
@@ -53,99 +67,144 @@ export function DatabaseProvider({
   userRole,
   customRoles = [],
   children,
-}: DatabaseProviderProps) {
-  const [leads, setLeads] = useState<Lead[]>([]);
+}: DatabaseProviderProps) {  const [leads, setLeads] = useState<Lead[]>([]);
   const [isLeadsLoaded, setIsLeadsLoaded] = useState(false);
   const [projects, setProjects] = useState<Record<string, Project>>({});
   const [isProjectsLoaded, setIsProjectsLoaded] = useState(false);
   const [users, setUsers] = useState<User[]>([]);
   const [isUsersLoaded, setIsUsersLoaded] = useState(false);
+  const [currentUserDoc, setCurrentUserDoc] = useState<User | null>(null);
 
-  // Projects Listener — empty collection stays empty (no demo seed writes)
+  // 1. Current User Profile Listener (real-time presence / profile checks)
   useEffect(() => {
     if (!userId) {
+      Promise.resolve().then(() => {
+        setCurrentUserDoc(null);
+      });
       return;
     }
+    const qUid = query(usersRef, where("uid", "==", userId));
     const unsubscribe = onSnapshot(
-      projectsRef,
-      (snapshot) => {
+      qUid,
+      (snapshot: QuerySnapshot) => {
         if (snapshot.empty) {
-          setProjects({});
-          setIsProjectsLoaded(true);
+          // fallback direct doc ID lookup
+          getDoc(doc(usersRef, userId)).then((d: DocumentSnapshot) => {
+            if (d.exists()) {
+              const safe = { ...d.data() };
+              delete safe.password;
+              setCurrentUserDoc(safe as User);
+            } else {
+              setCurrentUserDoc({
+                id: userId,
+                role: userRole || "telecaller",
+                username: "",
+                email: "",
+              } as User);
+            }
+          }).catch((err: unknown) => {
+            logger.error("DatabaseContext", "Error fetching user doc", err);
+          });
           return;
         }
-        const newProjects: Record<string, Project> = {};
-        snapshot.forEach((d) => {
-          const data = d.data();
-          if (data.plots) {
-            data.plots = data.plots.map((p) => {
-              if (
-                p.points &&
-                p.points.length > 0 &&
-                !Array.isArray(p.points[0])
-              ) {
-                const pts = p.points as unknown as Array<{ x: number; y: number }>;
-                return { ...p, points: pts.map((pt) => [pt.x, pt.y]) };
-              }
-              return p;
-            });
-          }
-          newProjects[d.id] = data;
-        });
-        setProjects(newProjects);
+        const docSnap = snapshot.docs[0];
+        const safe = { ...docSnap.data() };
+        delete safe.password;
+        setCurrentUserDoc(safe as User);
+      },
+      (err: Error) => logger.error("DatabaseContext", "Error listening to current user", err)
+    );
+    return () => {
+      unsubscribe();
+      setCurrentUserDoc(null);
+    };
+  }, [userId, userRole]);
+
+  // 2. Projects cached/one-time fetch on startup
+  useEffect(() => {
+    if (!userId) {
+      Promise.resolve().then(() => {
+        setProjects({});
+        setIsProjectsLoaded(false);
+      });
+      return;
+    }
+    let active = true;
+    getDocs(projectsRef).then((snapshot: QuerySnapshot) => {
+      if (!active) return;
+      if (snapshot.empty) {
+        setProjects({});
         setIsProjectsLoaded(true);
-      },
-      (err) => logger.error("DatabaseContext", "Error listening to projects", err)
-    );
+        return;
+      }
+      const newProjects: Record<string, Project> = {};
+      snapshot.forEach((d) => {
+        const data = d.data() as Project;
+        if (data.plots) {
+          data.plots = data.plots.map((p) => {
+            if (
+              p.points &&
+              p.points.length > 0 &&
+              !Array.isArray(p.points[0])
+            ) {
+              const pts = p.points as unknown as Array<{ x: number; y: number }>;
+              return { ...p, points: pts.map((pt) => [pt.x, pt.y]) };
+            }
+            return p;
+          });
+        }
+        newProjects[d.id] = data;
+      });
+      setProjects(newProjects);
+      setIsProjectsLoaded(true);
+    }).catch((err: unknown) => {
+      logger.error("DatabaseContext", "Error fetching projects", err);
+      if (active) setIsProjectsLoaded(true);
+    });
     return () => {
-      unsubscribe();
-      setProjects({});
-      setIsProjectsLoaded(false);
+      active = false;
     };
   }, [userId]);
 
-  // Users Listener — empty collection stays empty (no demo seed writes)
+  // 3. Users cached/one-time fetch on startup (restricted to managerial roles for rosters)
   useEffect(() => {
-    if (!userId) {
+    if (!userId || !currentUserDoc) {
+      Promise.resolve().then(() => {
+        setUsers([]);
+        setIsUsersLoaded(false);
+      });
       return;
     }
-    const unsubscribe = onSnapshot(
-      usersRef,
-      (snapshot) => {
-        if (snapshot.empty) {
-          setUsers([]);
-          setIsUsersLoaded(true);
-          return;
-        }
-        const newUsers: User[] = [];
-        snapshot.forEach((d) => {
-          const data = d.data() as User & { password?: unknown };
-          const { password: _pw, ...safe } = data;
-          newUsers.push(safe as User);
-        });
-        setUsers(newUsers);
+    
+    const managerial = isManagerial(currentUserDoc.role, customRoles);
+    if (!managerial) {
+      Promise.resolve().then(() => {
+        setUsers([currentUserDoc]);
         setIsUsersLoaded(true);
-      },
-      (err) => logger.error("DatabaseContext", "Error listening to users", err)
-    );
-    return () => {
-      unsubscribe();
-      setUsers([]);
-      setIsUsersLoaded(false);
-    };
-  }, [userId]);
+      });
+      return;
+    }
 
-  const currentUserDoc = useMemo(() => {
-    if (!userId) return null;
-    const found = users.find((u) => u.id === userId || u.uid === userId);
-    if (found) return found;
-    return {
-      id: userId,
-      role: userRole || "telecaller",
-      username: "",
-      email: "",
-    } as User;
-  }, [users, userId, userRole]);
+    let active = true;
+    getDocs(usersRef).then((snapshot: QuerySnapshot) => {
+      if (!active) return;
+      const newUsers: User[] = [];
+      snapshot.forEach((d) => {
+        const safe = { ...d.data() };
+        delete safe.password;
+        newUsers.push(safe as User);
+      });
+      setUsers(newUsers);
+      setIsUsersLoaded(true);
+    }).catch((err: unknown) => {
+      logger.error("DatabaseContext", "Error fetching all users", err);
+      if (active) setIsUsersLoaded(true);
+    });
+
+    return () => {
+      active = false;
+    };
+  }, [userId, currentUserDoc, customRoles]);
 
   const value = useMemo(
     () => ({
@@ -194,6 +253,14 @@ interface LeadsListenerProps {
   setIsLeadsLoaded: (loaded: boolean) => void;
 }
 
+/**
+ * Phase B/F realtime policy:
+ * - Default: NO company-wide leads listener (list SoT is LeadQueryService).
+ * - Agents: optional narrow realtime of assigned leads, hard-bounded
+ *   (AGENT_OPEN_LEADS_REALTIME_BOUND) for dashboard / dialer convenience.
+ * - Managers: empty openLeads array (use LeadQueryService for lists).
+ * - Legacy VITE_LEGACY_LEADS_SNAPSHOT rollback removed in Phase F.
+ */
 function LeadsListener({
   userId,
   userRole,
@@ -202,17 +269,35 @@ function LeadsListener({
   setIsLeadsLoaded,
 }: LeadsListenerProps) {
   const { activeProjectId } = useProjectScope();
+  const managerial =
+    !!userRole && isManagerial(userRole, customRoles);
 
   useEffect(() => {
     if (!userId || !userRole) {
       return;
     }
 
+    // Managers: no company-wide realtime.
+    if (managerial) {
+      let cancelled = false;
+      queueMicrotask(() => {
+        if (cancelled) return;
+        setLeads([]);
+        setIsLeadsLoaded(true);
+      });
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    const bound = AGENT_OPEN_LEADS_REALTIME_BOUND;
+
     const scopedQuery = buildRoleScopedLeadsQuery(userId, userRole, customRoles, {
       orderField: "updatedAt",
       orderDirection: "desc",
       projectId: activeProjectId,
-      limit: 500,
+      limit: bound,
+      omitLimit: false,
     });
 
     const unsubscribe = onSnapshot(
@@ -230,7 +315,15 @@ function LeadsListener({
       setLeads([]);
       setIsLeadsLoaded(false);
     };
-  }, [userId, userRole, customRoles, activeProjectId, setLeads, setIsLeadsLoaded]);
+  }, [
+    userId,
+    userRole,
+    customRoles,
+    activeProjectId,
+    setLeads,
+    setIsLeadsLoaded,
+    managerial,
+  ]);
 
   return null;
 }

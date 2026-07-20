@@ -1,28 +1,6 @@
 import { lazy, Suspense } from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import {
-  Map as MapIcon,
-  Users,
-  Briefcase,
-  Calendar,
-  TrendingUp,
-  Trophy,
-  Award,
-  Star,
-  BookOpen,
-  Lightbulb,
-  Gift,
-  ShieldCheck,
-  SlidersHorizontal,
-  AlertTriangle,
-  Paintbrush,
-  Webhook,
-  Activity,
-  BarChart3,
-  Clock,
-  Search,
-  Home,
-} from "lucide-react";
+import { ShieldCheck, Home } from "lucide-react";
 import { isManagerial as isManagerialUtil } from "@/shared/utils/roleUtils";
 import { safeFormatDateTime } from "@/shared/utils/dateUtils";
 import { useLeadsStore } from "@/features/leads/hooks/useLeadsStore";
@@ -30,7 +8,8 @@ import { useProjectsStore } from "@/features/plots/hooks/useProjectsStore";
 import { useUsersStore } from "@/features/employees/hooks/useUsersStore";
 import { useCustomRolesStore } from "@/features/admin/hooks/adminStores";
 import PageHeader from "@/shared/components/layout/PageHeader";
-import { navIconColor, type NavIconTone } from "@/shared/components/sidebar/sidebarNavStyles";
+import { navIconColor } from "@/shared/components/sidebar/sidebarNavStyles";
+import { ADMIN_NAV_GROUPS, NAV_LABELS } from "@/shared/constants/navTaxonomy";
 import { User } from "@/shared/types";
 
 // Lazy-load tab components
@@ -61,61 +40,17 @@ export default function Admin({ user }: AdminProps) {
   const { projects, isLoaded: projectsLoaded } = useProjectsStore();
   const { users, isLoaded: usersLoaded } = useUsersStore();
   const {
-    leads,
-    isLoaded: leadsLoaded,
     addLead,
     updateLead: updateLeadInStore,
     deleteLead,
     rateCallLog,
+    mergeLeads,
   } = useLeadsStore();
 
   const [searchParams, setSearchParams] = useSearchParams();
   const activeTab = searchParams.get("tab") || "projects";
 
-  const navigationGroups: {
-    title: string;
-    items: { id: string; label: string; icon: typeof MapIcon; tone: NavIconTone }[];
-  }[] = [
-    {
-      title: "Operations & CRM",
-      items: [
-        { id: "projects", label: "Manage Projects", icon: MapIcon, tone: "projects" },
-        { id: "leads", label: "Manage Leads", icon: Briefcase, tone: "leads" },
-        { id: "users", label: "Telecallers & Teams", icon: Users, tone: "users" },
-        { id: "roster", label: "Shift Planner", icon: Clock, tone: "roster" },
-        { id: "analytics", label: "Analytics & ROI", icon: BarChart3, tone: "analytics" },
-      ],
-    },
-    {
-      title: "Performance & HR",
-      items: [
-        { id: "attendance", label: "Attendance & Leaves", icon: Calendar, tone: "attendance" },
-        { id: "targets", label: "Targets & Goals", icon: TrendingUp, tone: "targets" },
-        { id: "leaderboard", label: "Leaderboard", icon: Trophy, tone: "leaderboard" },
-        { id: "performance", label: "Agent Performance", icon: Award, tone: "performance" },
-        { id: "quality", label: "Call Quality Score", icon: Star, tone: "quality" },
-      ],
-    },
-    {
-      title: "Training & Coaching",
-      items: [
-        { id: "training", label: "Training Content", icon: BookOpen, tone: "training" },
-        { id: "coaching", label: "Coaching Tip Editor", icon: Lightbulb, tone: "coaching" },
-        { id: "events", label: "Client Events Manager", icon: Gift, tone: "events" },
-      ],
-    },
-    {
-      title: "System Settings",
-      items: [
-        { id: "roles", label: "Roles & Permissions", icon: ShieldCheck, tone: "roles" },
-        { id: "customfields", label: "Custom Fields", icon: SlidersHorizontal, tone: "customfields" },
-        { id: "merge", label: "Duplicate Merge", icon: AlertTriangle, tone: "merge" },
-        { id: "branding", label: "Theme & Branding", icon: Paintbrush, tone: "branding" },
-        { id: "integrations", label: "Ad Integrations", icon: Webhook, tone: "integrations" },
-        { id: "audit", label: "System Audit Logs", icon: Activity, tone: "audit" },
-      ],
-    },
-  ];
+  const navigationGroups = ADMIN_NAV_GROUPS;
 
   const getActiveTabDetails = () => {
     for (const group of navigationGroups) {
@@ -124,7 +59,7 @@ export default function Admin({ user }: AdminProps) {
         return { groupTitle: group.title, label: found.label };
       }
     }
-    return { groupTitle: "Admin", label: "Dashboard" };
+    return { groupTitle: NAV_LABELS.admin, label: NAV_LABELS.dashboard };
   };
 
   const getTabDescription = (tabId: string) => {
@@ -152,50 +87,55 @@ export default function Admin({ user }: AdminProps) {
   };
 
   const activeDetails = getActiveTabDetails();
+  const skipLinkClassName =
+    "sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-[100] focus:px-4 focus:py-2 focus:bg-theme-accent focus:text-theme-accent-fg focus:rounded-theme focus:outline-none focus:ring-2 focus:ring-theme-ring focus:ring-offset-2 focus:ring-offset-theme-bg";
 
   if (!isManagerial(user?.role)) {
     return (
       <div className="p-10 text-center text-red-600 font-bold">
-        Access Denied. Admin only.
+        <a href="#main-content" className={skipLinkClassName}>
+          Skip to main content
+        </a>
+        <main id="main-content">Access Denied. Admin only.</main>
       </div>
     );
   }
 
-  if (!projectsLoaded || !usersLoaded || !leadsLoaded) {
+  if (!projectsLoaded || !usersLoaded) {
     return (
       <div className="h-full min-h-0 bg-theme-bg flex items-center justify-center transition-colors duration-300 app-canvas">
-        <div className="text-theme-accent font-bold animate-pulse text-sm">
+        <a href="#main-content" className={skipLinkClassName}>
+          Skip to main content
+        </a>
+        <main id="main-content" className="text-theme-accent font-bold animate-pulse text-sm">
           Loading admin console...
-        </div>
+        </main>
       </div>
     );
   }
 
   return (
     <div className="h-full min-h-0 flex flex-col overflow-hidden app-canvas text-theme-text transition-colors duration-300">
+      <a href="#main-content" className={skipLinkClassName}>
+        Skip to main content
+      </a>
       {/* Pinned chrome — never scrolls */}
       <div className="shrink-0 z-30 bg-theme-card">
         {/* Mobile Header with Horizontal Scrollable Navigation */}
         <div className="md:hidden flex flex-col bg-theme-card/95 border-b border-theme-border backdrop-blur-md transition-colors">
-          <div className="flex items-center justify-between px-4 py-3">
+          <div className="flex items-center px-4 py-3">
             <div className="flex items-center space-x-2">
-              <div className="w-7 h-7 rounded-lg bg-theme-accent text-theme-accent-fg flex items-center justify-center shadow-lg">
+              <div className="w-7 h-7 rounded-theme bg-theme-accent text-theme-accent-fg flex items-center justify-center shadow-lg">
                 <ShieldCheck className="w-3.5 h-3.5" />
               </div>
-              <span className="font-extrabold text-xs tracking-wider bg-gradient-to-r from-slate-800 via-indigo-600 to-indigo-700 dark:from-white dark:via-indigo-200 dark:to-indigo-400 bg-clip-text text-transparent uppercase">
-                Operations Desk
+              <span className="font-bold text-xs tracking-wider text-theme-text uppercase">
+                {NAV_LABELS.admin}
               </span>
             </div>
-            <Link
-              to="/"
-              className="text-[10px] font-extrabold bg-indigo-600/10 hover:bg-indigo-600/20 text-theme-accent border border-indigo-505/20 px-2.5 py-1.5 rounded-xl transition-all cursor-pointer"
-            >
-              Back to CRM
-            </Link>
           </div>
 
-          {/* Horizontal Scrollable Tabs */}
-          <div className="flex overflow-x-auto px-4 pb-3 space-x-2 scrollbar-none select-none">
+          {/* Horizontal Scrollable Tabs — min-h-11 touch targets */}
+          <div className="flex overflow-x-auto px-4 pb-3 gap-2 scrollbar-none select-none min-w-0">
             {navigationGroups
               .flatMap((g) => g.items)
               .map((item) => {
@@ -204,17 +144,19 @@ export default function Admin({ user }: AdminProps) {
                 return (
                   <button
                     key={item.id}
+                    type="button"
                     onClick={() => setSearchParams({ tab: item.id })}
-                    className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-full text-[10px] font-bold whitespace-nowrap transition-all duration-200 shrink-0 cursor-pointer group btn-hover-bounce ${
+                    className={`inline-flex items-center gap-1.5 min-h-11 px-3 py-2 rounded-theme text-[11px] font-semibold whitespace-nowrap transition-colors shrink-0 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-theme-ring ${
                       isActive
                         ? "bg-theme-accent text-theme-accent-fg shadow-sm"
                         : "bg-theme-surface text-theme-muted hover:text-theme-text hover:bg-theme-card border border-theme-border"
                     }`}
                   >
                     <Icon
-                      className={`w-3 h-3 transition-transform duration-200 ${
+                      className={`w-3.5 h-3.5 shrink-0 ${
                         isActive ? "" : navIconColor[item.tone]
                       }`}
+                      aria-hidden
                     />
                     <span>{item.label}</span>
                   </button>
@@ -230,32 +172,12 @@ export default function Admin({ user }: AdminProps) {
             breadcrumb={
               <>
                 <Link to="/" className="hover:text-theme-accent transition-colors flex items-center gap-1.5">
-                  <Home className="w-3.5 h-3.5" /> CRM
+                  <Home className="w-3.5 h-3.5" /> {NAV_LABELS.crm}
                 </Link>
                 <span>/</span>
-                <span>Admin</span>
+                <span>{NAV_LABELS.admin}</span>
                 <span>/</span>
                 <span className="text-theme-muted font-semibold">{activeDetails.groupTitle}</span>
-              </>
-            }
-            actions={
-              <>
-                <div className="relative hidden md:block">
-                  <Search className="w-3.5 h-3.5 text-theme-muted absolute left-2.5 top-1/2 -translate-y-1/2" />
-                  <input
-                    type="text"
-                    placeholder="Search console…"
-                    className="w-56 bg-theme-surface border border-theme-border rounded-lg pl-8 pr-2.5 h-8 text-[11px] text-theme-text outline-none focus:border-theme-accent focus:ring-1 focus:ring-theme-ring/20 transition-all font-semibold"
-                    readOnly
-                  />
-                </div>
-
-                <Link
-                  to="/"
-                  className="inline-flex items-center justify-center px-2.5 h-8 bg-theme-accent-muted hover:bg-theme-accent/20 border border-theme-accent/30 text-theme-accent rounded-lg text-[11px] font-bold transition-colors cursor-pointer"
-                >
-                  Back to CRM
-                </Link>
               </>
             }
           />
@@ -263,7 +185,10 @@ export default function Admin({ user }: AdminProps) {
       </div>
 
       {/* Only this region scrolls */}
-      <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden p-3 md:p-4 space-y-3 pb-24 md:pb-6">
+      <main
+        id="main-content"
+        className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden p-3 md:p-5 space-y-4 pb-24 md:pb-8"
+      >
         <Suspense fallback={
           <div className="flex h-64 items-center justify-center">
             <div className="h-8 w-8 animate-spin rounded-full border-4 border-theme-accent border-t-transparent"></div>
@@ -296,7 +221,6 @@ export default function Admin({ user }: AdminProps) {
               <AdminAnalyticsTab
                 user={user}
                 users={users}
-                leads={leads}
                 projects={projects}
                 isManagerial={isManagerial}
               />
@@ -323,7 +247,6 @@ export default function Admin({ user }: AdminProps) {
                 tab={activeTab as "leaderboard" | "performance" | "quality"}
                 user={user}
                 users={users}
-                leads={leads}
                 isManagerial={isManagerial}
                 rateCallLog={rateCallLog}
               />
@@ -352,10 +275,10 @@ export default function Admin({ user }: AdminProps) {
                 addCustomRole={addCustomRole}
                 updateCustomRole={updateCustomRole}
                 deleteCustomRole={deleteCustomRole}
-                leads={leads}
                 addLead={addLead}
                 updateLeadInStore={updateLeadInStore}
                 deleteLead={deleteLead}
+                mergeLeads={mergeLeads}
                 projects={projects}
                 isManagerial={isManagerial}
                 safeFormatDateTime={safeFormatDateTime}
@@ -363,7 +286,7 @@ export default function Admin({ user }: AdminProps) {
             )}
           </div>
         </Suspense>
-      </div>
+      </main>
     </div>
   );
 }

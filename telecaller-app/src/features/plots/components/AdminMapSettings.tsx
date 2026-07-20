@@ -1,5 +1,6 @@
 import { Settings, X, Layers, Eye, EyeOff, Lock, Unlock, Ruler, Upload } from "lucide-react";
 import { Project } from "@/shared/types";
+import { useToast } from "@/shared/components/Toast";
 
 interface AdminMapSettingsProps {
   showSettings: boolean;
@@ -22,6 +23,13 @@ interface AdminMapSettingsProps {
   uploadingImage: boolean;
 }
 
+const settingsBtn =
+  "flex items-center justify-center min-h-11 py-2 px-2 rounded-theme text-xs font-semibold cursor-pointer " +
+  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-theme-ring";
+
+const checkboxClass =
+  "rounded border-theme-border text-theme-accent focus:ring-theme-ring h-4 w-4";
+
 export default function AdminMapSettings({
   showSettings,
   setShowSettings,
@@ -42,28 +50,37 @@ export default function AdminMapSettings({
   handleMapEditorImageUpload,
   uploadingImage,
 }: AdminMapSettingsProps) {
+  const { toast } = useToast();
   if (!showSettings) return null;
 
   return (
-    <div className="absolute top-16 right-4 md:right-8 bg-white dark:bg-gray-800 shadow-xl border border-gray-200 dark:border-gray-700 rounded-lg p-4 z-20 w-72 space-y-4 animate-fadeIn text-sm max-h-[80vh] overflow-y-auto">
-      <div className="flex justify-between items-center border-b dark:border-gray-700 pb-2">
-        <h3 className="font-semibold text-gray-900 dark:text-white flex items-center">
-          <Settings className="w-4 h-4 mr-1.5 text-indigo-500" /> Editor Settings
+    <div className="absolute top-16 right-4 md:right-8 bg-theme-card shadow-xl border border-theme-border rounded-theme p-4 z-20 w-72 space-y-4 animate-fadeIn text-sm max-h-[80vh] overflow-y-auto">
+      <div className="flex justify-between items-center border-b border-theme-border pb-2">
+        <h3 className="font-semibold text-theme-text flex items-center">
+          <Settings className="w-4 h-4 mr-1.5 text-theme-accent" aria-hidden="true" />{" "}
+          Editor Settings
         </h3>
         <button
+          type="button"
           onClick={() => setShowSettings(false)}
-          className="text-gray-400 hover:text-gray-500 dark:hover:text-gray-300"
+          aria-label="Close settings"
+          className={
+            "min-h-11 min-w-11 inline-flex items-center justify-center rounded-theme text-theme-muted " +
+            "hover:text-theme-text hover:bg-theme-surface transition-colors " +
+            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-theme-ring"
+          }
         >
-          <X className="w-4 h-4" />
+          <X className="w-4 h-4" aria-hidden="true" />
         </button>
       </div>
 
       <div className="space-y-2">
-        <h4 className="font-semibold text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+        <h4 className="font-semibold text-xs text-theme-muted uppercase tracking-wider">
           JSON Database Operations
         </h4>
         <div className="grid grid-cols-2 gap-2">
           <button
+            type="button"
             onClick={() => {
               const dataStr = JSON.stringify(project.plots, null, 2);
               const dataBlob = new Blob([dataStr], { type: "application/json" });
@@ -76,7 +93,7 @@ export default function AdminMapSettings({
               document.body.removeChild(link);
               URL.revokeObjectURL(url);
             }}
-            className="flex items-center justify-center py-1.5 bg-indigo-600 text-white rounded hover:bg-indigo-700 text-xs font-semibold cursor-pointer"
+            className={`${settingsBtn} bg-theme-accent text-theme-accent-fg hover:opacity-90`}
           >
             Export JSON
           </button>
@@ -103,9 +120,12 @@ export default function AdminMapSettings({
                   });
                   pushToHistory();
                   updateProject(projectId, { ...project, plots: parsedPlots });
-                  alert(`Successfully imported ${parsedPlots.length} plots!`);
+                  toast(
+                    `Successfully imported ${parsedPlots.length} plots!`,
+                    "success"
+                  );
                 } catch (err: any) {
-                  alert("Failed to import JSON: " + err.message);
+                  toast("Failed to import JSON: " + err.message, "error");
                 }
               };
               reader.readAsText(file);
@@ -114,51 +134,51 @@ export default function AdminMapSettings({
           />
           <label
             htmlFor="import-json-file"
-            className="flex items-center justify-center py-1.5 border border-indigo-500 text-indigo-600 dark:text-indigo-400 rounded hover:bg-indigo-55 dark:hover:bg-indigo-900/30 text-xs font-semibold cursor-pointer text-center"
+            className={`${settingsBtn} border border-theme-accent text-theme-accent hover:bg-theme-accent-muted text-center`}
           >
             Import JSON
           </label>
         </div>
       </div>
 
-      <div className="space-y-2 border-t dark:border-gray-700 pt-3">
-        <h4 className="font-semibold text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+      <div className="space-y-2 border-t border-theme-border pt-3">
+        <h4 className="font-semibold text-xs text-theme-muted uppercase tracking-wider">
           Snapping & Alignment
         </h4>
         <div className="space-y-2.5">
-          <label className="flex items-center space-x-2 text-gray-700 dark:text-gray-300 cursor-pointer">
+          <label className="flex items-center space-x-2 text-theme-text cursor-pointer min-h-11">
             <input
               type="checkbox"
               checked={snapToGrid}
               onChange={(e) => setSnapToGrid(e.target.checked)}
-              className="rounded border-gray-300 dark:border-gray-700 text-indigo-605 focus:ring-indigo-505 h-4 w-4"
+              className={checkboxClass}
             />
             <span>
               Grid Snapping{" "}
-              <span className="text-[10px] text-gray-400 dark:text-gray-550 block">
+              <span className="text-[10px] text-theme-muted block">
                 Lock to 0.5% grid increments
               </span>
             </span>
           </label>
-          <label className="flex items-center space-x-2 text-gray-700 dark:text-gray-300 cursor-pointer">
+          <label className="flex items-center space-x-2 text-theme-text cursor-pointer min-h-11">
             <input
               type="checkbox"
               checked={snapToGeometry}
               onChange={(e) => setSnapToGeometry(e.target.checked)}
-              className="rounded border-gray-300 dark:border-gray-700 text-indigo-605 focus:ring-indigo-505 h-4 w-4"
+              className={checkboxClass}
             />
             <span>
               Plot Snapping{" "}
-              <span className="text-[10px] text-gray-400 dark:text-gray-550 block">
+              <span className="text-[10px] text-theme-muted block">
                 Snap to adjacent corners and edges
               </span>
             </span>
           </label>
           {snapToGeometry && (
             <div className="pl-6 space-y-1">
-              <div className="flex justify-between text-xs text-gray-650 dark:text-gray-400">
+              <div className="flex justify-between text-xs text-theme-muted">
                 <span>Snap Tolerance:</span>
-                <span className="font-bold text-indigo-600 dark:text-indigo-400">{snapTolerancePx} px</span>
+                <span className="font-bold text-theme-accent">{snapTolerancePx} px</span>
               </div>
               <input
                 type="range"
@@ -167,26 +187,28 @@ export default function AdminMapSettings({
                 step="1"
                 value={snapTolerancePx}
                 onChange={(e) => setSnapTolerancePx(parseInt(e.target.value))}
-                className="w-full accent-indigo-650 h-1"
+                aria-label="Snap tolerance in pixels"
+                className="w-full accent-[var(--theme-accent)] min-h-11"
               />
             </div>
           )}
         </div>
       </div>
 
-      <div className="space-y-2 border-t dark:border-gray-700 pt-3">
-        <h4 className="font-semibold text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider flex items-center">
-          <Layers className="w-3.5 h-3.5 mr-1" /> Map Layers
+      <div className="space-y-2 border-t border-theme-border pt-3">
+        <h4 className="font-semibold text-xs text-theme-muted uppercase tracking-wider flex items-center">
+          <Layers className="w-3.5 h-3.5 mr-1" aria-hidden="true" /> Map Layers
         </h4>
         <div className="space-y-2">
           {Object.entries(layers).map(([layerKey, layerVal]) => (
             <div
               key={layerKey}
-              className="flex items-center justify-between text-gray-700 dark:text-gray-300 capitalize text-xs"
+              className="flex items-center justify-between text-theme-text capitalize text-xs"
             >
               <span className="font-medium">{layerKey}</span>
-              <div className="flex space-x-2">
+              <div className="flex space-x-1">
                 <button
+                  type="button"
                   onClick={() =>
                     setLayers({
                       ...layers,
@@ -196,14 +218,20 @@ export default function AdminMapSettings({
                       },
                     })
                   }
-                  className={`p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer ${
-                    layerVal.visible ? "text-indigo-600" : "text-gray-400"
+                  aria-label={`${layerVal.visible ? "Hide" : "Show"} ${layerKey} layer`}
+                  className={`min-h-11 min-w-11 inline-flex items-center justify-center rounded-theme hover:bg-theme-surface cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-theme-ring ${
+                    layerVal.visible ? "text-theme-accent" : "text-theme-muted"
                   }`}
                 >
-                  {layerVal.visible ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
+                  {layerVal.visible ? (
+                    <Eye className="w-3.5 h-3.5" aria-hidden="true" />
+                  ) : (
+                    <EyeOff className="w-3.5 h-3.5" aria-hidden="true" />
+                  )}
                 </button>
                 {layerKey !== "labels" ? (
                   <button
+                    type="button"
                     onClick={() =>
                       setLayers({
                         ...layers,
@@ -213,14 +241,19 @@ export default function AdminMapSettings({
                         },
                       })
                     }
-                    className={`p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer ${
-                      layerVal.locked ? "text-red-500" : "text-gray-400"
+                    aria-label={`${layerVal.locked ? "Unlock" : "Lock"} ${layerKey} layer`}
+                    className={`min-h-11 min-w-11 inline-flex items-center justify-center rounded-theme hover:bg-theme-surface cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-theme-ring ${
+                      layerVal.locked ? "text-theme-danger" : "text-theme-muted"
                     }`}
                   >
-                    {layerVal.locked ? <Lock className="w-3.5 h-3.5" /> : <Unlock className="w-3.5 h-3.5" />}
+                    {layerVal.locked ? (
+                      <Lock className="w-3.5 h-3.5" aria-hidden="true" />
+                    ) : (
+                      <Unlock className="w-3.5 h-3.5" aria-hidden="true" />
+                    )}
                   </button>
                 ) : (
-                  <div className="w-[22px]" />
+                  <div className="w-11" />
                 )}
               </div>
             </div>
@@ -228,25 +261,26 @@ export default function AdminMapSettings({
         </div>
       </div>
 
-      <div className="space-y-2 border-t dark:border-gray-700 pt-3">
-        <h4 className="font-semibold text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider flex items-center">
-          <Ruler className="w-3.5 h-3.5 mr-1" /> Scale Ruler
+      <div className="space-y-2 border-t border-theme-border pt-3">
+        <h4 className="font-semibold text-xs text-theme-muted uppercase tracking-wider flex items-center">
+          <Ruler className="w-3.5 h-3.5 mr-1" aria-hidden="true" /> Scale Ruler
         </h4>
         <button
+          type="button"
           onClick={() => {
             setMode("calibrate");
             setCalibrationPoints([]);
             setShowSettings(false);
           }}
-          className="w-full flex items-center justify-center py-1.5 border border-indigo-550 text-indigo-600 dark:text-indigo-400 rounded hover:bg-indigo-50 dark:hover:bg-indigo-900/30 text-xs font-semibold cursor-pointer"
+          className={`${settingsBtn} w-full border border-theme-accent text-theme-accent hover:bg-theme-accent-muted`}
         >
           Calibrate Map Ruler
         </button>
       </div>
 
-      <div className="space-y-3 border-t dark:border-gray-700 pt-3">
-        <h4 className="font-semibold text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider flex items-center">
-          <Upload className="w-3.5 h-3.5 mr-1" /> Layout Image
+      <div className="space-y-3 border-t border-theme-border pt-3">
+        <h4 className="font-semibold text-xs text-theme-muted uppercase tracking-wider flex items-center">
+          <Upload className="w-3.5 h-3.5 mr-1" aria-hidden="true" /> Layout Image
         </h4>
         <input
           type="file"
@@ -258,7 +292,9 @@ export default function AdminMapSettings({
         />
         <label
           htmlFor="layout-image-upload"
-          className="w-full flex items-center justify-center py-1.5 border border-indigo-550 text-indigo-600 dark:text-indigo-400 rounded hover:bg-indigo-50 dark:hover:bg-indigo-900/30 text-xs font-semibold cursor-pointer text-center"
+          className={`${settingsBtn} w-full border border-theme-accent text-theme-accent hover:bg-theme-accent-muted text-center ${
+            uploadingImage ? "opacity-50 pointer-events-none" : ""
+          }`}
         >
           {uploadingImage ? "Uploading..." : "Upload New Image"}
         </label>

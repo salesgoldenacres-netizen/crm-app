@@ -133,13 +133,16 @@ export interface ModalProps {
   className?: string;
   /**
    * Presentation variant on the same primitive (no Sheet.tsx fork).
-   * `center` = desktop-style dialog; `sheet` = bottom sheet on small screens, centered on `sm+`.
+   * `center` = desktop-style dialog (all breakpoints);
+   * `sheet` = bottom sheet on small screens, centered on `sm+`.
    */
   variant?: "center" | "sheet";
   /** Optional id for `aria-describedby` (e.g. Dialog description). */
   descriptionId?: string;
   /** Backdrop click dismisses. Default true. Set false for destructive confirms. */
   closeOnBackdrop?: boolean;
+  /** Accessible name for the header dismiss control. Default "Close". */
+  closeLabel?: string;
 }
 
 export default function Modal({
@@ -150,12 +153,14 @@ export default function Modal({
   footer,
   size = "md",
   className,
-  variant: _variant = "center",
+  variant = "center",
   descriptionId,
   closeOnBackdrop = true,
+  closeLabel = "Close",
 }: ModalProps) {
   const titleId = useId();
   const panelRef = useRef<HTMLDivElement>(null);
+  const isSheet = variant === "sheet";
 
   useOverlayFocus({ isOpen, onClose, containerRef: panelRef });
 
@@ -171,7 +176,12 @@ export default function Modal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end justify-center p-0 sm:items-center sm:p-4"
+      className={clsx(
+        "fixed inset-0 z-50 flex justify-center",
+        isSheet
+          ? "items-end p-0 sm:items-center sm:p-4"
+          : "items-center p-4"
+      )}
     >
       {/* Backdrop */}
       <div
@@ -190,26 +200,40 @@ export default function Modal({
         tabIndex={-1}
         className={twMerge(
           clsx(
-            "relative w-full bg-theme-card border-t border-theme-border shadow-2xl overflow-hidden flex flex-col outline-none",
-            // Mobile (under sm): bottom sheet layout, safe area aware
-            "h-[100dvh] max-h-none rounded-t-3xl border-x-0 border-b-0 animate-sheetSlideUp",
-            // Tablet/Desktop (sm and up): centered dialog layout
-            "sm:h-auto sm:max-h-[90vh] sm:rounded-theme sm:border sm:animate-none sm:scale-100 sm:border-b",
+            "relative w-full bg-theme-card shadow-2xl overflow-hidden flex flex-col outline-none",
             sizes[size],
+            isSheet
+              ? [
+                  // Mobile (under sm): bottom sheet layout, safe area aware
+                  "h-[100dvh] max-h-none rounded-t-theme border-t border-x-0 border-b-0 border-theme-border animate-sheetSlideUp",
+                  // Tablet/Desktop (sm and up): centered dialog layout
+                  "sm:h-auto sm:max-h-[90vh] sm:rounded-theme sm:border sm:animate-none sm:scale-100 sm:border-b",
+                ]
+              : [
+                  // Center: dialog at all breakpoints
+                  "max-h-[90vh] rounded-theme border border-theme-border",
+                ],
             className
           )
         )}
       >
-        {/* Notch swipe handle on mobile */}
-        <div
-          className="sm:hidden flex justify-center pt-2 pb-0"
-          aria-hidden="true"
-        >
-          <div className="h-1 w-10 rounded-full bg-theme-border" />
-        </div>
+        {/* Notch swipe handle — sheet variant, mobile only */}
+        {isSheet && (
+          <div
+            className="sm:hidden flex justify-center pt-2 pb-0"
+            aria-hidden="true"
+          >
+            <div className="h-1 w-10 rounded-full bg-theme-border" />
+          </div>
+        )}
 
         {/* Header */}
-        <div className="px-6 py-4 pt-[calc(1rem+env(safe-area-inset-top))] sm:pt-4 border-b border-theme-border flex items-center justify-between gap-3">
+        <div
+          className={clsx(
+            "px-6 py-4 border-b border-theme-border flex items-center justify-between gap-3",
+            isSheet && "pt-[calc(1rem+env(safe-area-inset-top))] sm:pt-4"
+          )}
+        >
           <h3
             id={titleId}
             className="text-base font-semibold text-theme-text truncate"
@@ -219,7 +243,7 @@ export default function Modal({
           <button
             type="button"
             onClick={onClose}
-            aria-label="Close"
+            aria-label={closeLabel}
             className={
               "p-2 min-h-11 min-w-11 inline-flex items-center justify-center rounded-theme text-theme-muted hover:text-theme-text transition-colors cursor-pointer " +
               "border-0 bg-transparent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-theme-ring"
@@ -232,14 +256,23 @@ export default function Modal({
         {/* Body */}
         <div className={clsx(
           "flex-1 overflow-y-auto px-6 py-5 text-theme-text text-xs sm:text-sm leading-relaxed",
-          !footer && "pb-[calc(1.25rem+env(safe-area-inset-bottom))] sm:pb-5"
+          !footer && (isSheet
+            ? "pb-[calc(1.25rem+env(safe-area-inset-bottom))] sm:pb-5"
+            : "pb-5")
         )}>
           {children}
         </div>
 
         {/* Footer — right-aligned action hierarchy (Secondary → Primary / Destructive) */}
         {footer && (
-          <div className="px-6 py-4 pb-[calc(1rem+env(safe-area-inset-bottom))] sm:pb-4 border-t border-theme-border bg-theme-surface/50 flex justify-end items-center gap-3 flex-wrap">
+          <div
+            className={clsx(
+              "px-6 py-4 border-t border-theme-border bg-theme-surface/50 flex justify-end items-center gap-3 flex-wrap",
+              isSheet
+                ? "pb-[calc(1rem+env(safe-area-inset-bottom))] sm:pb-4"
+                : "pb-4"
+            )}
+          >
             {footer}
           </div>
         )}

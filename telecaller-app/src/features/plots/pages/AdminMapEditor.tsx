@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { useParams } from "react-router-dom";
 import { Ruler } from "lucide-react";
 
@@ -6,12 +7,14 @@ import { useCustomRolesStore } from "@/features/admin/hooks/adminStores";
 import { isManagerial as isManagerialUtil } from "@/shared/utils/roleUtils";
 
 import { useAdminMapEditor } from "@/features/plots/hooks/useAdminMapEditor";
+import { useMapEditCapability } from "@/features/plots/hooks/useMapEditCapability";
 import AdminMapCanvas from "@/features/plots/components/AdminMapCanvas";
 import AdminMapSidebar from "@/features/plots/components/AdminMapSidebar";
 import AdminMapHeader from "@/features/plots/components/AdminMapHeader";
 import AdminMapSettings from "@/features/plots/components/AdminMapSettings";
 
 import { User } from "@/shared/types";
+import InteractionDialog from "@/shared/components/ui/InteractionDialog";
 
 interface AdminMapEditorProps {
   user: User;
@@ -21,6 +24,7 @@ export default function AdminMapEditor({ user }: AdminMapEditorProps) {
   const { id } = useParams<{ id: string }>();
   const { roles: customRoles } = useCustomRolesStore();
   const isManagerial = (roleCode: string) => isManagerialUtil(roleCode, customRoles);
+  const { canEditMaps } = useMapEditCapability();
 
   const { projects, isLoaded, updateProject } = useProjectsStore();
   const project = projects[id || ""];
@@ -108,31 +112,66 @@ export default function AdminMapEditor({ user }: AdminMapEditorProps) {
     handleVertexManualEdit,
     handleVertexManualDelete,
     handleSearchFocus,
+    interaction,
+    clearInteraction,
   } = useAdminMapEditor({
     projectId: id || "",
     project,
     updateProject: updateProject as any,
   });
 
+  // Force view-only when touch/coarse — never leave silent broken edit modes.
+  useEffect(() => {
+    if (canEditMaps) return;
+    setMode("view");
+    setEditingPlot(null);
+    setShowSettings(false);
+    setSelectedPlotIds([]);
+    setDrawingPoints([]);
+    setSlicePoints([]);
+    setFreeSelectActive(false);
+  }, [
+    canEditMaps,
+    setMode,
+    setEditingPlot,
+    setShowSettings,
+    setSelectedPlotIds,
+    setDrawingPoints,
+    setSlicePoints,
+    setFreeSelectActive,
+  ]);
+
   const isAuthorized = isManagerial(user?.role);
   if (!isAuthorized) {
-    return <div className="p-10 text-center text-red-600 font-bold">Access Denied.</div>;
+    return (
+      <div className="p-10 text-center text-theme-danger font-bold">Access Denied.</div>
+    );
   }
 
   if (!isLoaded) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
-        <div className="w-16 h-16 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
+      <div className="min-h-screen bg-theme-bg flex items-center justify-center">
+        <div
+          className="w-16 h-16 border-4 border-theme-accent border-t-transparent rounded-full animate-spin"
+          role="status"
+          aria-label="Loading map editor"
+        />
       </div>
     );
   }
 
   if (!project) {
-    return <div className="p-10 text-center dark:text-white">Project not found</div>;
+    return <div className="p-10 text-center text-theme-text">Project not found</div>;
   }
 
+  const gatedPlotDoubleClick = canEditMaps
+    ? handlePlotDoubleClick
+    : () => undefined;
+
+  const gatedSvgClick = canEditMaps ? handleSvgClick : () => undefined;
+
   return (
-    <div className="h-full min-h-0 flex flex-col bg-gray-50 dark:bg-gray-900 transition-colors">
+    <div className="h-full min-h-0 flex flex-col bg-theme-bg transition-colors">
       <AdminMapHeader
         project={project}
         projectId={id || ""}
@@ -167,23 +206,24 @@ export default function AdminMapEditor({ user }: AdminMapEditorProps) {
         setCalibrationPoints={() => {}}
         pushToHistory={pushToHistory}
         updateProject={updateProject as any}
+        canEditMaps={canEditMaps}
       />
 
       <div className="flex-1 flex flex-col md:flex-row overflow-hidden relative">
         <div
           ref={viewportRef}
-          className="flex-1 relative overflow-auto bg-gray-200 dark:bg-gray-950 flex justify-center items-center p-4"
+          className="flex-1 relative overflow-auto bg-theme-surface flex justify-center items-center p-4"
         >
           <AdminMapCanvas
             project={project}
             layers={layers}
-            mode={mode}
+            mode={canEditMaps ? mode : "view"}
             editSubMode={editSubMode}
             activePlotId={activePlotId}
             flashPlotId={flashPlotId}
-            selectedPlotIds={selectedPlotIds}
-            drawingPoints={drawingPoints}
-            slicePoints={slicePoints}
+            selectedPlotIds={canEditMaps ? selectedPlotIds : []}
+            drawingPoints={canEditMaps ? drawingPoints : []}
+            slicePoints={canEditMaps ? slicePoints : []}
             calibrationPoints={[]}
             mousePos={mousePos}
             snappedPoint={snappedPoint}
@@ -193,13 +233,13 @@ export default function AdminMapEditor({ user }: AdminMapEditorProps) {
             isMouseDown={isMouseDown}
             setIsMouseDown={setIsMouseDown}
             mapTransform={mapTransform}
-            freeSelectActive={freeSelectActive}
+            freeSelectActive={canEditMaps && freeSelectActive}
             setSelectedPlotIds={setSelectedPlotIds}
             svgRef={svgRef}
             mapElementRef={mapElementRef}
             handlePlotClick={handlePlotClick}
-            handlePlotDoubleClick={handlePlotDoubleClick}
-            handleSvgClick={handleSvgClick}
+            handlePlotDoubleClick={gatedPlotDoubleClick}
+            handleSvgClick={gatedSvgClick}
             handleMouseMove={handleMouseMove}
             handleMouseUp={handleMouseUp}
             handleMouseLeave={handleMouseLeave}
@@ -212,14 +252,14 @@ export default function AdminMapEditor({ user }: AdminMapEditorProps) {
           />
 
           {project.scaleRatio && (
-            <div className="absolute bottom-3 left-3 bg-white/95 dark:bg-gray-800/95 shadow-md px-2.5 py-1 rounded text-[10px] text-gray-800 dark:text-gray-200 border border-gray-300 dark:border-gray-700 select-none flex items-center space-x-1.5 font-bold pointer-events-none z-10">
-              <Ruler className="w-3.5 h-3.5 text-indigo-505" />
+            <div className="absolute bottom-3 left-3 bg-theme-card/95 shadow-md px-2.5 py-1 rounded-theme text-[10px] text-theme-text border border-theme-border select-none flex items-center space-x-1.5 font-bold pointer-events-none z-10">
+              <Ruler className="w-3.5 h-3.5 text-theme-accent" aria-hidden="true" />
               <span>Scale calibrated: 1 unit = {project.scaleRatio.toFixed(2)} ft</span>
             </div>
           )}
 
-          {mode !== "view" && (
-            <div className="absolute bottom-4 md:bottom-6 left-1/2 transform -translate-x-1/2 bg-black/80 text-white px-4 md:px-6 py-2 md:py-3 rounded-full shadow-lg flex items-center space-x-2 md:space-x-3 pointer-events-none w-[90%] md:w-auto justify-center text-xs md:text-sm z-10">
+          {canEditMaps && mode !== "view" && (
+            <div className="absolute bottom-4 md:bottom-6 left-1/2 transform -translate-x-1/2 bg-theme-text/90 text-theme-bg px-4 md:px-6 py-2 md:py-3 rounded-theme shadow-lg flex items-center space-x-2 md:space-x-3 pointer-events-none w-[90%] md:w-auto justify-center text-xs md:text-sm z-10">
               <span>
                 {mode === "draw" &&
                   "Click corners to plot polygon. Press Ctrl+Z to undo points. Click 'Save' to input details."}
@@ -231,8 +271,7 @@ export default function AdminMapEditor({ user }: AdminMapEditorProps) {
                   (!activePlotId
                     ? "Click an area to choose it for cutting."
                     : "Click two cut points across the area to split it.")}
-                {mode === "calibrate" &&
-                  "Calibrating map scale..."}
+                {mode === "calibrate" && "Calibrating map scale..."}
                 {mode === "editLabels" &&
                   "Drag green circles/plot labels to change label offset placements."}
               </span>
@@ -240,7 +279,7 @@ export default function AdminMapEditor({ user }: AdminMapEditorProps) {
           )}
         </div>
 
-        {editingPlot && (
+        {canEditMaps && editingPlot && (
           <AdminMapSidebar
             editingPlot={editingPlot}
             setEditingPlot={setEditingPlot}
@@ -264,26 +303,30 @@ export default function AdminMapEditor({ user }: AdminMapEditorProps) {
         )}
       </div>
 
-      <AdminMapSettings
-        showSettings={showSettings}
-        setShowSettings={setShowSettings}
-        project={project}
-        updateProject={updateProject as any}
-        projectId={id || ""}
-        pushToHistory={pushToHistory}
-        snapToGrid={snapToGrid}
-        setSnapToGrid={setSnapToGrid}
-        snapToGeometry={snapToGeometry}
-        setSnapToGeometry={setSnapToGeometry}
-        snapTolerancePx={snapTolerancePx}
-        setSnapTolerancePx={setSnapTolerancePx}
-        layers={layers}
-        setLayers={setLayers}
-        setMode={setMode}
-        setCalibrationPoints={() => {}}
-        handleMapEditorImageUpload={handleMapEditorImageUpload}
-        uploadingImage={uploadingImage}
-      />
+      {canEditMaps && (
+        <AdminMapSettings
+          showSettings={showSettings}
+          setShowSettings={setShowSettings}
+          project={project}
+          updateProject={updateProject as any}
+          projectId={id || ""}
+          pushToHistory={pushToHistory}
+          snapToGrid={snapToGrid}
+          setSnapToGrid={setSnapToGrid}
+          snapToGeometry={snapToGeometry}
+          setSnapToGeometry={setSnapToGeometry}
+          snapTolerancePx={snapTolerancePx}
+          setSnapTolerancePx={setSnapTolerancePx}
+          layers={layers}
+          setLayers={setLayers}
+          setMode={setMode}
+          setCalibrationPoints={() => {}}
+          handleMapEditorImageUpload={handleMapEditorImageUpload}
+          uploadingImage={uploadingImage}
+        />
+      )}
+
+      <InteractionDialog state={interaction} onClose={clearInteraction} />
     </div>
   );
 }

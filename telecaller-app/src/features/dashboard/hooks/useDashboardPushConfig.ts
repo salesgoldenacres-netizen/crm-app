@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { getToken, onMessage } from "firebase/messaging";
-import { doc, updateDoc } from "firebase/firestore";
-import { messaging, db } from "@/shared/services/firebase";
+import { messaging } from "@/shared/services/firebase";
+import { UsersRepository } from "@/shared/services/firebase/repositories";
 import { User } from "@/shared/types";
 import { logger } from "@/shared/utils/logger";
 
@@ -50,7 +50,7 @@ export function useDashboardPushConfig(
 
           if (token) {
             logger.debug("DashboardPushConfig", "Acquired FCM Token");
-            await updateDoc(doc(db, "users", user.id), {
+            await UsersRepository.update(user.id, {
               fcmToken: token,
               fcmTokenUpdatedAt: new Date().toISOString(),
             });

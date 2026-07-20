@@ -1,4 +1,3 @@
-import React from "react";
 import { ColumnDef } from "@/shared/components/DataTable";
 import Card from "./Card";
 import Checkbox from "./Checkbox";

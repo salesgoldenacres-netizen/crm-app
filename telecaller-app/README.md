@@ -86,8 +86,9 @@ VITE_FIREBASE_STORAGE_BUCKET="your-project-id.appspot.com"
 VITE_FIREBASE_MESSAGING_SENDER_ID="your-sender-id"
 VITE_FIREBASE_APP_ID="your-app-id"
 VITE_FIREBASE_APP_CHECK_DEBUG_TOKEN="your-debug-token"
-# Optional: enable structured Sentry-ready capture in logger.ts
+# Optional: Sentry (missing DSN = warning only, not a deploy blocker)
 # VITE_SENTRY_DSN="https://...@sentry.io/..."
+# Cloud Functions: set SENTRY_DSN in the functions runtime env the same way.
 ```
 
 ### Setup Instructions
@@ -106,12 +107,15 @@ VITE_FIREBASE_APP_CHECK_DEBUG_TOKEN="your-debug-token"
 4. Run checks (same surface as CI):
    ```bash
    npm run lint
+   npm run typecheck
    npm test
    npm run test:coverage
    cd functions && npm test
    ```
 
 ### Docs
+* [CONTRIBUTING.md](./CONTRIBUTING.md) — branch model, checks, hardening notes
+* [Incident runbook](../directives/incident-runbook.md) — webhooks, Sentry, bulk, productivity
 * [ARCHITECTURE.md](../ARCHITECTURE.md) — workspace + system map
 * [WEBHOOK_API.md](./WEBHOOK_API.md) — HTTP webhook routes and auth header names
 * [architecture_guide.md](./architecture_guide.md) — feature folder guide

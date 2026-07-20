@@ -1,4 +1,4 @@
-import { useState } from "react";
+﻿import { useState } from "react";
 import { User, CustomField } from "@/shared/types";
 import Dialog from "@/shared/components/ui/Dialog";
 
@@ -103,7 +103,7 @@ export default function CustomFieldsSettingsTab({
     <div className="space-y-6 animate-fadeIn text-sm">
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {/* Field Form */}
-        <div className="md:col-span-1 bg-theme-card rounded-xl p-5 border dark:border-gray-700 shadow-sm space-y-4">
+        <div className="md:col-span-1 bg-theme-card rounded-theme p-5 border dark:border-gray-700 shadow-sm space-y-4">
           <h3 className="text-sm font-bold uppercase tracking-wider text-gray-400 border-b dark:border-gray-700 pb-2">
             Add New Custom Field
           </h3>
@@ -190,7 +190,7 @@ export default function CustomFieldsSettingsTab({
         </div>
 
         {/* Active Fields List */}
-        <div className="md:col-span-2 bg-theme-card rounded-xl shadow-sm border border-theme-border p-5">
+        <div className="md:col-span-2 bg-theme-card rounded-theme shadow-sm border border-theme-border p-5">
           <h3 className="text-sm font-bold uppercase tracking-wider text-gray-400 mb-4">
             Active Custom Fields
           </h3>

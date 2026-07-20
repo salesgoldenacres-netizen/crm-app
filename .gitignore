@@ -17,6 +17,8 @@ serviceAccountKey.json
 
 # === Intermediate / temp ===
 .tmp/
+coverage/
+**/coverage/
 **/graphify-out/
 .firebase/
 *.local

@@ -47,19 +47,39 @@ function isTerminalForReminders(status) {
 }
 
 /**
- * @param {{ callLogs?: Array<{ agent?: string }> }} lead
+ * Dual-read during Phase C migration:
+ * 1) sticky `hasAgentCall` summary
+ * 2) non-system `lastCallAgent`
+ * 3) embedded `callLogs[]` fallback (until backfill + flag off)
+ *
+ * @param {{
+ *   hasAgentCall?: boolean,
+ *   lastCallAgent?: string,
+ *   callLogs?: Array<{ agent?: string }>
+ * }} lead
  * @returns {boolean}
  */
 function hasAgentCallLog(lead) {
-  const logs = (lead && lead.callLogs) || [];
+  if (!lead) return false;
+  if (lead.hasAgentCall === true) return true;
   const system = new Set(SYSTEM_CALL_AGENTS);
+  if (lead.lastCallAgent && !system.has(String(lead.lastCallAgent))) {
+    return true;
+  }
+  const logs = lead.callLogs || [];
   return logs.some((log) => log && log.agent && !system.has(String(log.agent)));
 }
 
 /**
- * First-touch SLA breach: older than threshold AND no non-system callLogs.
+ * First-touch SLA breach: older than threshold AND no non-system agent call.
  * Mirrors admin `checkSlaBreach` (useAdminLeads).
- * @param {{ createdAt?: string, createdTime?: string, callLogs?: Array<{ agent?: string }> }} lead
+ * @param {{
+ *   createdAt?: string,
+ *   createdTime?: string,
+ *   hasAgentCall?: boolean,
+ *   lastCallAgent?: string,
+ *   callLogs?: Array<{ agent?: string }>
+ * }} lead
  * @param {{ now?: Date, hours?: number }} [options]
  * @returns {boolean}
  */

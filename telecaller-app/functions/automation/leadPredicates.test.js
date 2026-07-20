@@ -29,6 +29,9 @@ test("hasAgentCallLog ignores system agents", () => {
     true,
   );
   assert.equal(hasAgentCallLog({ callLogs: [{ agent: "system_webhook" }] }), false);
+  assert.equal(hasAgentCallLog({ hasAgentCall: true }), true);
+  assert.equal(hasAgentCallLog({ lastCallAgent: "Alice" }), true);
+  assert.equal(hasAgentCallLog({ lastCallAgent: "system" }), false);
 });
 
 test("isSlaBreached requires age past threshold and no agent call", () => {
@@ -41,6 +44,13 @@ test("isSlaBreached requires age past threshold and no agent call", () => {
   assert.equal(
     isSlaBreached(
       { ...oldLead, callLogs: [{ agent: "Alice" }] },
+      { now, hours: 24 },
+    ),
+    false,
+  );
+  assert.equal(
+    isSlaBreached(
+      { createdAt: "2026-07-15T12:00:00.000Z", hasAgentCall: true },
       { now, hours: 24 },
     ),
     false,

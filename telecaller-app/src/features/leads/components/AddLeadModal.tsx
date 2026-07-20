@@ -82,6 +82,7 @@ export default function AddLeadModal({
       isOpen={isOpen}
       onClose={onClose}
       title="Add New Customer Lead"
+      variant="sheet"
       size="lg"
       footer={
         <FormActions>

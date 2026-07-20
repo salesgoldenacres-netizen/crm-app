@@ -62,7 +62,7 @@ Wave 7 Phase 2C+ (live provider / confirm writes / optional Predictive·MI·Know
 - Primitive-first; outside-in (shared chrome → consumers)
 - DLS bump only after validation + user authorize — **stay on v1.4** unless authorized
 - Filters: Apply model **Draft → Search → Applied** (do not change)
-- Overlays: `Modal` / `Dialog` / `Drawer` only — no parallel Sheet system; remaining ~45 alert/confirm are residuals
+- Overlays: `Modal` / `Dialog` / `Drawer` only — no parallel Sheet system; native alert/confirm/prompt migrated (Wave 10 Agent 4)
 - `--radius` default **12**; brand as accent
 - Emoji / motion policies (calm persistent UI; celebration transient only)
 - Table Hierarchy; Command Surface; Form Contract **§3e canonical (v1.3)**; Modal/Drawer Contract **§3f canonical (v1.4)**
@@ -93,5 +93,5 @@ App root for UI code: `telecaller-app/`.
 - Gate each phase: audit → primitives → validation → consumer adoption → DLS bump (UI waves); Wave 6 pattern was audit → Agent 0 contracts → feature slices → validation → formal close.
 - Prefer evolving existing primitives / contracts over new frameworks.
 - Multi-agent polish: freeze shared ownership islands; parallelize independent agents; sequence dependents; Agent 0 only for shared defects; closeout agent last.
-- Soft residuals (screenshots, sidebar polish, remaining alert/confirm, MANUAL QA overlays, Wave 6 carry-forward) stay deferred unless the user reopens them — do not block later waves.
+- Soft residuals (screenshots, sidebar polish, MANUAL QA overlays, Wave 6 carry-forward) stay deferred unless the user reopens them — do not block later waves.
 - After meaningful wave progress, remind the user to `/remember save` so `memory.md` stays current.

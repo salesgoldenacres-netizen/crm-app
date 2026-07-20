@@ -3,8 +3,10 @@ import { Clock, ChevronRight, Bell, Menu, LayoutDashboard } from "lucide-react";
 import { useToast } from "@/shared/components/Toast";
 import ThemeToggle from "@/shared/components/ThemeToggle";
 import Dialog from "@/shared/components/ui/Dialog";
+import EmptyState from "@/shared/components/ui/EmptyState";
 import { safeFormatTime, formatDuration } from "@/shared/utils/dateUtils";
 import { User, AttendanceRecord } from "@/shared/types";
+import { NAV_LABELS } from "@/shared/constants/navTaxonomy";
 
 const STATUS_OPTIONS: { value: string; label: string; dot: string }[] = [
   { value: "available", label: "Available", dot: "bg-theme-success" },
@@ -78,30 +80,60 @@ export default function DashboardHeader({
 }: DashboardHeaderProps) {
   const { toast } = useToast();
   const profileDropdownRef = useRef<HTMLDivElement | null>(null);
+  const notificationDropdownRef = useRef<HTMLDivElement | null>(null);
   const [clockOutConfirmOpen, setClockOutConfirmOpen] = useState(false);
 
   useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
+    function handlePointerOutside(event: MouseEvent) {
+      const target = event.target as Node;
       if (
         profileDropdownRef.current &&
-        !profileDropdownRef.current.contains(event.target as Node)
+        !profileDropdownRef.current.contains(target)
       ) {
         setIsProfileDropdownOpen(false);
       }
+      if (
+        notificationDropdownRef.current &&
+        !notificationDropdownRef.current.contains(target)
+      ) {
+        setIsNotificationDropdownOpen(false);
+      }
     }
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [setIsProfileDropdownOpen]);
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key !== "Escape") return;
+      if (isProfileDropdownOpen) {
+        event.preventDefault();
+        setIsProfileDropdownOpen(false);
+      }
+      if (isNotificationDropdownOpen) {
+        event.preventDefault();
+        setIsNotificationDropdownOpen(false);
+      }
+    }
+
+    document.addEventListener("mousedown", handlePointerOutside);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", handlePointerOutside);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [
+    isProfileDropdownOpen,
+    isNotificationDropdownOpen,
+    setIsProfileDropdownOpen,
+    setIsNotificationDropdownOpen,
+  ]);
 
   return (
     <header className="border-b border-theme-border bg-theme-card transition-colors duration-300 header-brand-strip shrink-0">
-      <div className="w-full max-w-full mx-auto px-3 sm:px-6 lg:px-12 h-14 flex items-center justify-between">
+      <div className="w-full max-w-full mx-auto px-3 sm:px-6 lg:px-12 min-h-14 h-14 flex items-center justify-between gap-2 min-w-0">
         {/* Left: Hamburger menu + Title */}
         <div className="flex items-center space-x-2 min-w-0">
           <button
             type="button"
             onClick={() => setIsMobileDrawerOpen(true)}
-            className="md:hidden p-2 -ml-2 rounded-lg text-theme-muted hover:text-theme-text hover:bg-theme-surface transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-theme-ring"
+            className="md:hidden inline-flex items-center justify-center min-h-11 min-w-11 -ml-2 rounded-theme text-theme-muted hover:text-theme-text hover:bg-theme-surface transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-theme-ring"
             title="Open Menu"
             aria-label="Open menu"
           >
@@ -109,7 +141,7 @@ export default function DashboardHeader({
           </button>
           <LayoutDashboard className="w-4 h-4 sm:w-5 sm:h-5 text-theme-accent flex-shrink-0" aria-hidden />
           <h1 className="type-page-title text-sm sm:text-lg tracking-tight text-theme-text truncate">
-            CRM Workspace
+            {NAV_LABELS.dashboard}
           </h1>
         </div>
 
@@ -143,9 +175,9 @@ export default function DashboardHeader({
                     toast("Failed to Clock In. Try again.", "error");
                   }
                 }}
-                className="bg-theme-accent hover:opacity-90 text-theme-accent-fg font-bold px-4 py-1.5 rounded-theme text-xs transition-all flex items-center space-x-1.5 shadow-elevation-sm cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-theme-ring"
+                className="bg-theme-accent hover:opacity-90 text-theme-accent-fg font-bold min-h-11 px-3 sm:px-4 py-2 rounded-theme text-xs transition-all inline-flex items-center space-x-1.5 shadow-elevation-sm cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-theme-ring"
               >
-                <Clock className="w-3.5 h-3.5" />
+                <Clock className="w-3.5 h-3.5" aria-hidden />
                 <span>Clock In</span>
               </button>
             ) : (
@@ -154,7 +186,7 @@ export default function DashboardHeader({
                 <button
                   type="button"
                   onClick={() => setIsProfileDropdownOpen(!isProfileDropdownOpen)}
-                  className="flex items-center space-x-1.5 bg-theme-surface hover:opacity-90 text-theme-text px-3 py-1.5 rounded-theme text-xs font-bold transition-all border border-theme-border cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-theme-ring"
+                  className="inline-flex items-center space-x-1.5 bg-theme-surface hover:opacity-90 text-theme-text min-h-11 px-2.5 sm:px-3 py-2 rounded-theme text-xs font-bold transition-all border border-theme-border cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-theme-ring"
                   aria-expanded={isProfileDropdownOpen}
                   aria-haspopup="listbox"
                 >
@@ -167,7 +199,11 @@ export default function DashboardHeader({
                 </button>
 
                 {isProfileDropdownOpen && (
-                  <div className="absolute right-0 mt-2 w-64 bg-theme-card rounded-theme shadow-elevation-md border border-theme-border z-50 p-4 transition-all duration-200 text-xs font-semibold text-theme-text">
+                  <div
+                    className="absolute right-0 mt-2 w-[min(16rem,calc(100vw-1.5rem))] bg-theme-card rounded-theme shadow-elevation-md border border-theme-border z-50 p-4 transition-all duration-200 text-xs font-semibold text-theme-text"
+                    role="listbox"
+                    aria-label="Working status"
+                  >
                     <h5 className="type-label text-[10px] uppercase text-theme-muted mb-2 tracking-wide">
                       Change Working Status
                     </h5>
@@ -176,6 +212,8 @@ export default function DashboardHeader({
                         <button
                           key={item.value}
                           type="button"
+                          role="option"
+                          aria-selected={myAgentStatus === item.value}
                           disabled={
                             (!todayAttendance || !!todayAttendance.checkOut) &&
                             item.value !== "offline"
@@ -203,7 +241,7 @@ export default function DashboardHeader({
                               );
                             }
                           }}
-                          className={`px-2 py-1.5 rounded-theme border text-left text-[10px] sm:text-[11px] font-bold transition-all cursor-pointer truncate flex items-center gap-1.5 ${
+                          className={`min-h-11 px-2 py-2 rounded-theme border text-left text-[10px] sm:text-[11px] font-bold transition-all cursor-pointer truncate inline-flex items-center gap-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-theme-ring ${
                             myAgentStatus === item.value
                               ? "bg-theme-accent border-theme-accent text-theme-accent-fg shadow-sm"
                               : "bg-theme-surface hover:opacity-90 border-theme-border text-theme-text"
@@ -237,11 +275,11 @@ export default function DashboardHeader({
           <ThemeToggle compact className="hidden sm:inline-flex" />
 
           {/* Notification Bell Dropdown */}
-          <div className="relative">
+          <div className="relative" ref={notificationDropdownRef}>
             <button
               type="button"
               onClick={() => setIsNotificationDropdownOpen(!isNotificationDropdownOpen)}
-              className="p-2 rounded-theme text-theme-muted hover:bg-theme-surface transition-colors cursor-pointer relative border border-transparent hover:border-theme-border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-theme-ring"
+              className="inline-flex items-center justify-center min-h-11 min-w-11 rounded-theme text-theme-muted hover:bg-theme-surface transition-colors cursor-pointer relative border border-transparent hover:border-theme-border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-theme-ring"
               title="Notifications"
               aria-label={
                 unreadNotificationsCount > 0
@@ -249,47 +287,72 @@ export default function DashboardHeader({
                   : "Notifications"
               }
               aria-expanded={isNotificationDropdownOpen}
+              aria-haspopup="true"
+              aria-controls="dashboard-notifications-panel"
             >
-              <Bell className="w-5 h-5" />
+              <Bell className="w-5 h-5" aria-hidden="true" />
               {unreadNotificationsCount > 0 && (
-                <span className="absolute top-1 right-1 inline-flex items-center justify-center px-1.5 py-0.5 text-[9px] font-bold leading-none text-white transform translate-x-1/2 -translate-y-1/2 bg-theme-danger rounded-theme">
+                <span
+                  className="absolute top-1 right-1 inline-flex items-center justify-center px-1.5 py-0.5 text-[9px] font-bold leading-none text-white transform translate-x-1/2 -translate-y-1/2 bg-theme-danger rounded-theme"
+                  aria-hidden="true"
+                >
                   {unreadNotificationsCount}
                 </span>
               )}
             </button>
 
             {isNotificationDropdownOpen && (
-              <div className="absolute right-0 mt-2 w-80 bg-theme-card rounded-theme shadow-elevation-md py-2 z-50 border border-theme-border text-xs text-theme-text">
-                <div className="px-4 py-2 border-b border-theme-border flex justify-between items-center bg-theme-surface">
+              <div
+                id="dashboard-notifications-panel"
+                role="region"
+                aria-label="Notifications"
+                className="absolute right-0 mt-2 w-[min(20rem,calc(100vw-1.5rem))] bg-theme-card rounded-theme shadow-elevation-md py-2 z-50 border border-theme-border text-xs text-theme-text"
+              >
+                <div className="px-4 py-2 border-b border-theme-border flex justify-between items-center bg-theme-surface gap-2">
                   <span className="type-card-title text-sm">Notifications</span>
                   {unreadNotificationsCount > 0 && (
                     <button
+                      type="button"
                       onClick={markAllAsRead}
-                      className="text-[10px] text-theme-accent hover:underline font-semibold"
+                      className="text-[10px] text-theme-accent hover:underline font-semibold min-h-11 px-2 rounded-theme focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-theme-ring"
                     >
                       Mark all as read
                     </button>
                   )}
                 </div>
-                <div className="max-h-64 overflow-y-auto divide-y divide-theme-border">
+                <div className="max-h-64 overflow-y-auto divide-y divide-theme-border" role="list">
                   {notifications.length === 0 ? (
-                    <div className="p-4 text-center text-theme-muted type-secondary">
-                      No notifications
+                    <div className="p-3" role="status">
+                      <EmptyState
+                        variant="compact"
+                        preset="activity"
+                        title="You're all caught up"
+                        description="New alerts will show up here."
+                        hideIcon
+                        className="border-0 bg-transparent shadow-none"
+                      />
                     </div>
                   ) : (
                     notifications.map((n) => (
                       <div
                         key={n.id}
+                        role="listitem"
                         className={`p-3 transition-colors flex flex-col space-y-1 ${
                           !n.read ? "bg-theme-accent-muted/30" : ""
                         }`}
                       >
-                        <div className="flex justify-between items-start">
-                          <p className="font-medium pr-2">{n.message}</p>
+                        <div className="flex justify-between items-start gap-2">
+                          <p className="font-medium pr-2">
+                            {!n.read ? (
+                              <span className="sr-only">Unread. </span>
+                            ) : null}
+                            {n.message}
+                          </p>
                           {!n.read && (
                             <button
+                              type="button"
                               onClick={() => markAsRead(n.id)}
-                              className="text-[10px] text-theme-accent hover:underline shrink-0"
+                              className="text-[10px] text-theme-accent hover:underline shrink-0 min-h-11 px-2 rounded-theme focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-theme-ring"
                             >
                               Mark read
                             </button>

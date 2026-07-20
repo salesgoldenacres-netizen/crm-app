@@ -1,14 +1,9 @@
-import {
-  PhoneCall,
-  PhoneOff,
-  MicOff,
-  Mic,
-  Volume2,
-  Phone,
-  User,
-} from "lucide-react";
+import { PhoneCall, PhoneOff, MicOff, Mic, Volume2, Phone, User } from "lucide-react";
+import { clsx } from "clsx";
 import { formatDuration } from "@/shared/utils/dateUtils";
 import { Lead } from "@/shared/types";
+import Button from "@/shared/components/ui/Button";
+import { DialerStatusChip } from "@/features/calls/components/DialerChrome";
 
 interface SimulatedDialerProps {
   activeDialerLead: Lead | null;
@@ -23,6 +18,10 @@ interface SimulatedDialerProps {
   activeLead: Lead;
 }
 
+const controlBase =
+  "inline-flex min-h-11 min-w-11 flex-col items-center justify-center gap-0.5 rounded-full border px-2.5 py-2 text-[10px] font-semibold transition-colors " +
+  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-theme-ring cursor-pointer";
+
 export default function SimulatedDialer({
   activeDialerLead,
   dialerStatus,
@@ -35,133 +34,126 @@ export default function SimulatedDialer({
   handleEndCall,
   activeLead,
 }: SimulatedDialerProps) {
+  const isActiveCall = dialerStatus === "Active Call";
+
   return (
-    <div className="card-premium p-4 space-y-4">
-      <div className="bg-slate-950 border border-slate-800/80 rounded-xl p-4 relative overflow-hidden space-y-4">
-        <div className="absolute inset-0 bg-radial-gradient from-[color-mix(in_srgb,var(--primary-color)_12%,transparent)] via-transparent to-transparent pointer-events-none" />
-        <div className="flex justify-between items-center border-b border-slate-900 pb-3">
-          <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center">
-            <PhoneCall className="w-4 h-4 mr-1.5 text-amber-500 animate-pulse" />
+    <div className="card-premium space-y-4 p-4">
+      <div className="relative space-y-4 overflow-hidden rounded-theme border border-theme-border bg-theme-card p-4">
+        <div className="flex items-center justify-between border-b border-theme-border pb-3">
+          <h3 className="flex items-center text-xs font-semibold uppercase tracking-wider text-theme-muted">
+            <PhoneCall
+              className="mr-1.5 h-4 w-4 text-theme-accent"
+              aria-hidden="true"
+            />
             Simulated Dialer Portal
           </h3>
-          {activeDialerLead && (
-            <span className="animate-pulse bg-green-500/10 text-green-400 border border-green-500/20 px-2.5 py-0.5 rounded-full text-[9px] font-extrabold uppercase">
-              Connected
-            </span>
-          )}
+          {activeDialerLead ? (
+            <DialerStatusChip status="Connected" isActive />
+          ) : null}
         </div>
 
         {activeDialerLead ? (
-          <div className="space-y-4 py-2 animate-scaleUp">
+          <div className="space-y-4 py-2">
             <div className="text-center">
               <div
-                className={`w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-3 transition-all duration-300 ${
-                  dialerStatus === "Active Call"
-                    ? "bg-green-500/20 border border-green-500/30 call-ring-pulse text-green-400"
-                    : "bg-theme-accent/15 border border-theme-accent/30 animate-pulse text-theme-accent"
-                }`}
+                className={clsx(
+                  "mx-auto mb-3 flex h-16 w-16 items-center justify-center rounded-full border transition-colors",
+                  isActiveCall
+                    ? "border-theme-success/30 bg-theme-success/15 text-theme-success"
+                    : "border-theme-accent/30 bg-theme-accent-muted text-theme-accent"
+                )}
+                aria-hidden="true"
               >
-                <User className="w-8 h-8" />
+                <User className="h-8 w-8" />
               </div>
-              <h4 className="text-lg font-black tracking-tight text-white">
+              <h4 className="text-lg font-bold tracking-tight text-theme-text">
                 {activeDialerLead.name}
               </h4>
-              <p className="text-slate-400 text-xs font-mono font-semibold mt-1">
+              <p className="mt-1 font-mono text-xs font-semibold text-theme-muted">
                 {activeDialerLead.phone}
               </p>
             </div>
 
-            <div className="flex flex-col items-center justify-center bg-slate-900/50 p-4 rounded-xl border border-slate-800/80 space-y-2">
-              <span className="text-amber-400 text-xs font-extrabold uppercase tracking-widest animate-pulse">
-                {dialerStatus}
-              </span>
-              {dialerStatus === "Active Call" && (
-                <>
-                  <span className="text-3xl font-black text-white tracking-widest font-mono tabular-nums">
-                    {formatDuration(dialerSeconds)}
-                  </span>
-                  {/* Waveform Visualization */}
-                  <div className="flex items-center justify-center space-x-1.5 h-6 mt-1.5">
-                    {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((bar) => {
-                      const heights = [
-                        "h-2",
-                        "h-4",
-                        "h-5",
-                        "h-3",
-                        "h-4",
-                        "h-6",
-                        "h-3",
-                        "h-4",
-                        "h-1",
-                      ];
-                      return (
-                        <div
-                          key={bar}
-                          className={`w-1 bg-gradient-to-t from-green-500 to-emerald-400 rounded-full animate-bounce ${heights[bar % 9]}`}
-                          style={{
-                            animationDelay: `${bar * 0.08}s`,
-                            animationDuration: "0.8s",
-                          }}
-                        />
-                      );
-                    })}
-                  </div>
-                </>
-              )}
+            <div className="flex flex-col items-center justify-center space-y-2 rounded-theme border border-theme-border bg-theme-surface p-4">
+              <DialerStatusChip status={dialerStatus} isActive={isActiveCall} />
+              {isActiveCall ? (
+                <p
+                  className="font-mono text-3xl font-bold tracking-widest text-theme-text tabular-nums"
+                  aria-live="polite"
+                >
+                  <span className="sr-only">Call duration </span>
+                  {formatDuration(dialerSeconds)}
+                </p>
+              ) : null}
             </div>
 
-            {/* Dialer Call Controls */}
-            <div className="flex justify-center items-center space-x-6 pt-2">
+            <div className="flex items-center justify-center gap-6 pt-2">
               <button
                 type="button"
                 onClick={() => setDialerMuted(!dialerMuted)}
-                className={`p-3.5 rounded-full border transition-all cursor-pointer hover:scale-105 active:scale-95 ${
+                aria-pressed={dialerMuted}
+                aria-label={dialerMuted ? "Unmute microphone" : "Mute microphone"}
+                className={clsx(
+                  controlBase,
                   dialerMuted
-                    ? "bg-amber-500/10 text-amber-500 border-amber-500/20"
-                    : "bg-slate-900 text-slate-300 border-slate-800 hover:bg-slate-800"
-                }`}
+                    ? "border-theme-danger/40 bg-theme-danger/10 text-theme-danger"
+                    : "border-theme-border bg-theme-surface text-theme-text hover:bg-theme-card"
+                )}
               >
                 {dialerMuted ? (
-                  <MicOff className="w-5 h-5" />
+                  <MicOff className="h-5 w-5" aria-hidden="true" />
                 ) : (
-                  <Mic className="w-5 h-5" />
+                  <Mic className="h-5 w-5" aria-hidden="true" />
                 )}
+                <span aria-hidden="true">{dialerMuted ? "Unmute" : "Mute"}</span>
               </button>
 
               <button
                 type="button"
                 onClick={handleEndCall}
-                className="p-4.5 rounded-full bg-theme-danger hover:opacity-90 text-white cursor-pointer transition-all hover:scale-110 active:scale-90 shadow-lg shadow-rose-950/20 flex items-center justify-center border-0"
+                aria-label="End call"
+                className={
+                  "inline-flex h-14 w-14 items-center justify-center rounded-full border-0 " +
+                  "bg-theme-danger text-white shadow-md transition-opacity hover:opacity-90 " +
+                  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-theme-ring cursor-pointer"
+                }
               >
-                <PhoneOff className="w-6 h-6" />
+                <PhoneOff className="h-6 w-6" aria-hidden="true" />
               </button>
 
               <button
                 type="button"
                 onClick={() => setDialerSpeaker(!dialerSpeaker)}
-                className={`p-3.5 rounded-full border transition-all cursor-pointer hover:scale-105 active:scale-95 ${
+                aria-pressed={dialerSpeaker}
+                aria-label={
+                  dialerSpeaker ? "Turn speaker off" : "Turn speaker on"
+                }
+                className={clsx(
+                  controlBase,
                   dialerSpeaker
-                    ? "bg-theme-accent/15 text-theme-accent border-theme-accent/25"
-                    : "bg-slate-900 text-slate-300 border-slate-800 hover:bg-slate-800"
-                }`}
+                    ? "border-theme-accent/40 bg-theme-accent-muted text-theme-accent"
+                    : "border-theme-border bg-theme-surface text-theme-text hover:bg-theme-card"
+                )}
               >
-                <Volume2 className="w-5 h-5" />
+                <Volume2 className="h-5 w-5" aria-hidden="true" />
+                <span aria-hidden="true">Speaker</span>
               </button>
             </div>
           </div>
         ) : (
-          <div className="text-center py-6 space-y-3">
-            <p className="text-slate-400 text-xs font-semibold">
+          <div className="space-y-3 py-6 text-center">
+            <p className="text-xs font-medium text-theme-muted">
               Simulated caller is ready to dial.
             </p>
-            <button
+            <Button
               type="button"
+              variant="primary"
+              className="mx-auto"
               onClick={() => handleStartCall(activeLead)}
-              className="btn-premium-primary bg-brand-gradient border-0 shadow-md flex items-center justify-center mx-auto text-xs px-6 py-2.5"
             >
-              <Phone className="w-4 h-4 mr-2" />
+              <Phone className="mr-2 h-4 w-4" aria-hidden="true" />
               Start Simulated Call
-            </button>
+            </Button>
           </div>
         )}
       </div>

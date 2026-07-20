@@ -2,19 +2,19 @@
 
 export const navIconColor = {
   dashboard: "text-sky-500 dark:text-sky-400",
-  leads: "text-indigo-500 dark:text-indigo-400",
+  leads: "text-theme-accent",
   calls: "text-emerald-500 dark:text-emerald-400",
   maps: "text-amber-500 dark:text-amber-400",
   attendance: "text-cyan-500 dark:text-cyan-400",
   training: "text-rose-500 dark:text-rose-400",
-  profile: "text-blue-500 dark:text-blue-400",
+  profile: "text-sky-500 dark:text-sky-400",
   templates: "text-violet-500 dark:text-violet-400",
   shortcuts: "text-fuchsia-500 dark:text-fuchsia-400",
-  fullscreen: "text-slate-500 dark:text-slate-400",
-  admin: "text-purple-500 dark:text-purple-400",
+  fullscreen: "text-theme-muted",
+  admin: "text-violet-500 dark:text-violet-400",
   // Leads CRM children
   leadsOverview: "text-sky-500 dark:text-sky-400",
-  leadsList: "text-indigo-500 dark:text-indigo-400",
+  leadsList: "text-theme-accent",
   leadsForm: "text-teal-500 dark:text-teal-400",
   leadsKanban: "text-orange-500 dark:text-orange-400",
   leadsBin: "text-red-500 dark:text-red-400",
@@ -25,8 +25,8 @@ export const navIconColor = {
   mapsOverview: "text-amber-500 dark:text-amber-400",
   mapsProject: "text-orange-500 dark:text-orange-400",
   // Admin subgroups
-  projects: "text-blue-500 dark:text-blue-400",
-  users: "text-indigo-500 dark:text-indigo-400",
+  projects: "text-sky-500 dark:text-sky-400",
+  users: "text-theme-accent",
   roster: "text-cyan-500 dark:text-cyan-400",
   analytics: "text-sky-500 dark:text-sky-400",
   targets: "text-amber-500 dark:text-amber-400",
@@ -36,7 +36,7 @@ export const navIconColor = {
   coaching: "text-amber-500 dark:text-amber-400",
   events: "text-pink-500 dark:text-pink-400",
   roles: "text-red-500 dark:text-red-400",
-  customfields: "text-slate-500 dark:text-slate-400",
+  customfields: "text-theme-muted",
   merge: "text-orange-600 dark:text-orange-400",
   branding: "text-fuchsia-500 dark:text-fuchsia-400",
   integrations: "text-cyan-600 dark:text-cyan-400",
@@ -47,12 +47,17 @@ export type NavIconTone = keyof typeof navIconColor;
 
 /** Shared desktop sidebar nav class helpers — keep item chrome consistent. */
 
+/** Active rail accent — secondary brand color (gold by default, fully customizable). */
+const ACTIVE_RAIL =
+  "bg-theme-accent-muted text-theme-accent font-semibold shadow-[inset_3px_0_0_0_var(--secondary-color)]";
+
 export function sidebarNavItem(active: boolean, collapsed = false): string {
   return [
-    "group relative flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-[13px] leading-none transition-colors duration-150",
+    "group relative flex items-center gap-2.5 rounded-theme px-2.5 py-2 text-[13px] leading-none transition-colors duration-150",
+    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-theme-ring",
     collapsed ? "justify-center" : "",
     active
-      ? "bg-theme-accent-muted text-theme-accent font-semibold shadow-[inset_3px_0_0_0_#e8c84a]"
+      ? ACTIVE_RAIL
       : "text-theme-muted font-medium hover:text-theme-text hover:bg-theme-surface/70",
   ]
     .filter(Boolean)
@@ -62,10 +67,10 @@ export function sidebarNavItem(active: boolean, collapsed = false): string {
 /** Parent row for collapsible groups (Leads / Calls / Maps / Control Panel). */
 export function sidebarGroupRow(active: boolean, collapsed = false): string {
   return [
-    "flex items-center rounded-lg text-[13px] leading-none transition-colors duration-150",
+    "flex items-center rounded-theme text-[13px] leading-none transition-colors duration-150",
     collapsed ? "justify-center" : "",
     active
-      ? "bg-theme-accent-muted text-theme-accent font-semibold shadow-[inset_3px_0_0_0_#e8c84a]"
+      ? ACTIVE_RAIL
       : "text-theme-muted font-medium hover:text-theme-text hover:bg-theme-surface/70",
   ]
     .filter(Boolean)
@@ -74,7 +79,8 @@ export function sidebarGroupRow(active: boolean, collapsed = false): string {
 
 export function sidebarGroupLink(collapsed = false): string {
   return [
-    "flex items-center gap-2.5 px-2.5 py-2 flex-1 min-w-0",
+    "flex items-center gap-2.5 px-2.5 py-2 flex-1 min-w-0 rounded-theme",
+    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-theme-ring",
     collapsed ? "justify-center" : "",
   ]
     .filter(Boolean)
@@ -82,13 +88,17 @@ export function sidebarGroupLink(collapsed = false): string {
 }
 
 export function sidebarGroupToggle(): string {
-  return "inline-flex items-center justify-center px-2.5 py-2 shrink-0 cursor-pointer border-0 bg-transparent text-theme-muted hover:text-theme-text";
+  return [
+    "inline-flex items-center justify-center min-h-11 min-w-11 px-2.5 py-2 shrink-0 cursor-pointer border-0 bg-transparent text-theme-muted hover:text-theme-text rounded-theme",
+    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-theme-ring",
+  ].join(" ");
 }
 
 /** Child link — always pair with a 14px icon so text columns align. */
 export function sidebarSubItem(active: boolean): string {
   return [
-    "flex items-center gap-2 rounded-md px-2 py-1.5 text-[12px] leading-none transition-colors duration-150 min-h-8",
+    "flex items-center gap-2 rounded-theme px-2 py-1.5 text-[12px] leading-none transition-colors duration-150 min-h-8",
+    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-theme-ring",
     active
       ? "bg-theme-accent-muted text-theme-accent font-semibold"
       : "text-theme-muted font-medium hover:text-theme-text hover:bg-theme-surface/70",

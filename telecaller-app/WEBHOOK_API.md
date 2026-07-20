@@ -48,6 +48,14 @@ Legacy short paths and `/api/webhooks/*` aliases both work.
 
 **Meta path:** uses configured Meta access token server-side when leadgen payload is detected.
 
+**Meta multi-entry correctness (Phase A):** each `leadgen` change in `entry[].changes[]` is processed independently — one create / intentional phone-duplicate skip|merge / or explicit failure per `leadgen_id`. `ingestEvents/meta_leadgen_<id>` is claimed **only after** successful create or intentional duplicate handling (not before Graph fetch / create). Structured log line: `event=meta_ingest` with `entriesReceived`, `leadsCreated`, `duplicates`, `failed`, `durationMs`, `requestId`.
+
+**Verify Meta multi-entry locally:**
+1. `cd telecaller-app/functions && npm test` — covers `webhooks/metaLeadgen.test.js` (collect / parse / log helpers).
+2. POST a page webhook body with **two** distinct `leadgen_id` values (simulator or curl against emulator). Expect `leadsCreated: 2` (or mix of created + duplicates) — never a single lead for two paid entries.
+3. Replay the same payload: expect `duplicates` incremented via `idempotent_skip`, no extra leads.
+4. Confirm Cloud logs contain one JSON `meta_ingest` summary per request.
+
 ### WhatsApp / Evolution
 
 | Method | Paths | Purpose |

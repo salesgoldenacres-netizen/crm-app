@@ -1,12 +1,5 @@
 import { useEffect, useState } from "react";
-import {
-  collection,
-  onSnapshot,
-  orderBy,
-  query,
-  limit as fsLimit,
-} from "firebase/firestore";
-import { db } from "@/shared/services/firebase";
+import { WhatsAppConversationsRepository } from "@/shared/services/firebase/repositories";
 import type { WhatsAppConversation } from "../types";
 
 export function useWhatsAppConversations(max = 100) {
@@ -20,18 +13,12 @@ export function useWhatsAppConversations(max = 100) {
       if (!cancelled) setLoading(true);
     }, 0);
 
-    const q = query(
-      collection(db, "whatsappConversations"),
-      orderBy("lastMessageAt", "desc"),
-      fsLimit(max),
-    );
-
-    const unsub = onSnapshot(
-      q,
+    const unsub = WhatsAppConversationsRepository.subscribe(
+      max,
       (snap) => {
         if (cancelled) return;
         setConversations(
-          snap.docs.map((d) => {
+          snap.docs.map((d: any) => {
             const data = d.data();
             return {
               id: d.id,

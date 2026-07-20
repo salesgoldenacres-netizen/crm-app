@@ -6,7 +6,12 @@
  *
  * Single owner for lead assignment: onLeadCreated. Webhook/bulk create leads
  * unassigned (unless explicitly assigned) so RR runs once.
+ *
+ * Phase D: bounded retries + structured contention logs around the cursor txn.
+ * No counter/cursor sharding.
  */
+
+const { runTransactionWithRetry } = require("../helpers/retry");
 
 /**
  * Filter telecallers to the configured activeAgents pool (or all if empty).
@@ -149,27 +154,31 @@ async function determineAllocation(db) {
     }
 
     const routingRef = db.doc("settings/routing");
-    const picked = await db.runTransaction(async (txn) => {
-      const snap = await txn.get(routingRef);
-      const data = snap.exists ? snap.data() : {};
-      const lastAgentId = data.roundRobinCursor || "";
-      const next = pickNextRoundRobinAgent({
-        pool,
-        activeAgentIds,
-        lastAgentId,
-      });
-      if (next.assignedTo) {
-        txn.set(
-          routingRef,
-          {
-            roundRobinCursor: next.assignedTo,
-            roundRobinCursorAt: new Date().toISOString(),
-          },
-          { merge: true },
-        );
-      }
-      return next;
-    });
+    const picked = await runTransactionWithRetry(
+      db,
+      async (txn) => {
+        const snap = await txn.get(routingRef);
+        const data = snap.exists ? snap.data() : {};
+        const lastAgentId = data.roundRobinCursor || "";
+        const next = pickNextRoundRobinAgent({
+          pool,
+          activeAgentIds,
+          lastAgentId,
+        });
+        if (next.assignedTo) {
+          txn.set(
+            routingRef,
+            {
+              roundRobinCursor: next.assignedTo,
+              roundRobinCursorAt: new Date().toISOString(),
+            },
+            { merge: true },
+          );
+        }
+        return next;
+      },
+      { label: "settings/routing.roundRobinCursor" },
+    );
 
     return picked;
   } catch (err) {
