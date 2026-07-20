@@ -5,6 +5,7 @@ import { Phone } from "lucide-react";
 import SidebarNav from "@/shared/components/SidebarNav";
 import { AppShellContext } from "@/shared/layouts/AppShellContext";
 import { useModalRegistry } from "@/shared/layouts/ModalRegistryContext";
+import type { DialerStatus, TemplateModalContext } from "@/shared/layouts/ModalRegistryContext";
 import { Capacitor } from "@capacitor/core";
 import { App } from "@capacitor/app";
 import { useToast } from "@/shared/components/Toast";
@@ -167,7 +168,7 @@ export default function ModalHost({
   const [callLogLead, setCallLogLead] = useState<Lead | null>(null);
   const [callLogDuration, setCallLogDuration] = useState(0);
 
-  const [templateCtx, setTemplateCtx] = useState({
+  const [templateCtx, setTemplateCtx] = useState<TemplateModalContext>({
     clientName: "",
     phone: "",
     projectName: "",
@@ -177,7 +178,7 @@ export default function ModalHost({
 
 
   const [activeDialerLead, setActiveDialerLead] = useState<Lead | null>(null);
-  const [dialerStatus, setDialerStatus] = useState("Dialing...");
+  const [dialerStatus, setDialerStatus] = useState<DialerStatus>("Dialing...");
   const [dialerSeconds, setDialerSeconds] = useState(0);
   const [dialerMuted, setDialerMuted] = useState(false);
   const [dialerSpeaker, setDialerSpeaker] = useState(false);
@@ -284,7 +285,7 @@ export default function ModalHost({
   const openTemplates = useCallback(() => setIsTemplatesOpen(true), []);
   const openShortcuts = useCallback(() => setIsShortcutsOpen(true), []);
   const setTemplateContext = useCallback(
-    (ctx: any) => setTemplateCtx((prev) => ({ ...prev, ...ctx })),
+    (ctx: Partial<TemplateModalContext>) => setTemplateCtx((prev) => ({ ...prev, ...ctx })),
     []
   );
 
