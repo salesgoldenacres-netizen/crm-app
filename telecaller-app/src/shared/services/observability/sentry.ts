@@ -2,14 +2,17 @@
  * Optional Sentry wiring for the web app.
  *
  * Enabled only when VITE_SENTRY_DSN is set. Missing DSN → warn, never a deploy blocker.
- * No full APM / tracing mesh in this wave (tracesSampleRate: 0).
+ * The @sentry/react SDK is dynamically imported so the vendor chunk is only fetched
+ * on builds/environments that actually configure a DSN (P-3).
+ * No full APM / tracing mesh in this wave (tracesSampleRate defaults low).
  */
-
-import * as Sentry from "@sentry/react";
 
 import { logger, setLoggerCaptureHook } from "@/shared/utils/logger";
 
+type SentryModule = typeof import("@sentry/react");
+
 let initialized = false;
+let sentry: SentryModule | null = null;
 
 function readDsn(): string {
   return String(import.meta.env.VITE_SENTRY_DSN || "").trim();
@@ -19,7 +22,7 @@ function readDsn(): string {
  * Initialize Sentry + wire logger capture. Safe to call once at startup.
  * @returns true when SDK is active
  */
-export function initAppSentry(): boolean {
+export async function initAppSentry(): Promise<boolean> {
   const dsn = readDsn();
   if (!dsn) {
     logger.warn(
@@ -30,6 +33,10 @@ export function initAppSentry(): boolean {
   }
 
   if (initialized) return true;
+
+  // Only pull the SDK bundle into the network graph when a DSN is present.
+  const Sentry = await import("@sentry/react");
+  sentry = Sentry;
 
   const envRate = import.meta.env.VITE_SENTRY_TRACES_SAMPLE_RATE;
   let tracesSampleRate = 0.05; // Default prod rate
@@ -99,8 +106,8 @@ export function captureException(
   error: unknown,
   context?: Record<string, unknown>,
 ): void {
-  if (!initialized) return;
-  Sentry.captureException(error, context ? { extra: context } : undefined);
+  if (!initialized || !sentry) return;
+  sentry.captureException(error, context ? { extra: context } : undefined);
 }
 
 export function isSentryEnabled(): boolean {

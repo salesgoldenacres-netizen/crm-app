@@ -18,9 +18,9 @@ interface LeadsTableRowProps {
   isLeadIdle: (lead: Lead) => boolean;
   shouldHideEmail: boolean;
   shouldHideLeadSource: boolean;
-  logCall: (leadId: string, logData: any) => Promise<void>;
+  logCall: (leadId: string, logData: Record<string, unknown>) => Promise<void>;
   setActiveLead: (lead: Lead) => void;
-  setCallLogForm: (form: any) => void;
+  setCallLogForm: (form: Record<string, unknown>) => void;
   user: User;
   toast: (msg: string, type?: "success" | "error" | "info") => void;
   safeFormatDateTime: (dateStr?: string, showTime?: boolean) => string;
@@ -318,9 +318,10 @@ function LeadsTableRow({
             await archiveLeads([lead.id], user.username);
             toast(`Moved ${lead.name} to the bin successfully.`, "success");
             setBinConfirmOpen(false);
-          } catch (err: any) {
+          } catch (err: unknown) {
             setBinConfirmOpen(false);
-            toast(`Failed to move lead: ${err.message}`, "error");
+            const msg = err instanceof Error ? err.message : String(err);
+            toast(`Failed to move lead: ${msg}`, "error");
           }
         }}
       />,

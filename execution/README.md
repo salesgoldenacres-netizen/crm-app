@@ -49,6 +49,20 @@ python execution/backfill_call_logs.py --apply --confirm BACKFILL
 
 See `directives/phase-c-call-logs-migration.md`.
 
+### SEC-1 — backfill leads.assignedToUid
+
+Required **before** deploying tightened lead read rules:
+
+```bash
+# Dry-run (default)
+python execution/backfill_assigned_to_uid.py
+
+# Apply
+python execution/backfill_assigned_to_uid.py --apply
+```
+
+Maps `assignedTo` (users doc id) → `users/{id}.uid` on every lead. Idempotent.
+
 ## Security / Phase 0 one-shots
 
 ### Scrub plaintext passwords from Firestore users

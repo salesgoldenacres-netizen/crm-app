@@ -2,9 +2,13 @@ const { onCall, HttpsError } = require('firebase-functions/v2/https');
 const admin = require('firebase-admin');
 const axios = require('axios');
 const { cleanLeadData } = require('../leads/cleanLeadData');
+const { loadIntegrationSettings } = require('../webhooks/secrets');
+const { assertCallerCanContactLead } = require('../helpers/leadAccess');
 
 const triggerOutboundCall = onCall(
-  { region: 'us-central1' },
+  // enforceAppCheck: client initializes App Check (ReCaptcha v3), so callers
+  // must present a valid App Check token (SEC-7).
+  { region: 'us-central1', enforceAppCheck: true },
   async (request) => {
     const db = admin.firestore();
     // 1. Authenticate user
@@ -41,12 +45,13 @@ const triggerOutboundCall = onCall(
         throw new HttpsError('invalid-argument', 'Lead has no phone number.');
       }
 
-      // 4. Fetch IVR integrations settings
-      const configSnap = await db.doc('settings/integrations').get();
-      if (!configSnap.exists) {
-        throw new HttpsError('failed-precondition', 'IVR integration settings are not configured.');
-      }
-      const config = configSnap.data();
+      // 3b. Authorize: caller must own the lead or be managerial (SEC-3 IDOR).
+      await assertCallerCanContactLead({ db, auth: request.auth, lead, agentDoc });
+
+      // 4. Load IVR integration settings via the merged loader so provider
+      // secrets (Twilio/Exotel tokens) come from settings/integrations_secrets
+      // and env, never the auth-readable settings/integrations doc (SEC-2).
+      const config = await loadIntegrationSettings(db);
 
       if (!config.enableIvr) {
         throw new HttpsError('failed-precondition', 'IVR dialing is currently disabled.');
@@ -217,7 +222,10 @@ const triggerOutboundCall = onCall(
 
     } catch (err) {
       console.error('Outbound call triggering failed:', err);
-      throw new HttpsError('internal', err.message || 'Failed to trigger outbound call.');
+      // Preserve explicit HttpsError codes (e.g. permission-denied, not-found)
+      // instead of masking everything as 'internal'.
+      if (err instanceof HttpsError) throw err;
+      throw new HttpsError('internal', 'Failed to trigger outbound call.');
     }
   }
 );

@@ -13,12 +13,33 @@ import { getIstDateString } from "@/shared/contracts";
 import { useTimelineEvents } from "@/features/messaging";
 import { computeLeadIntelligence } from "@/features/leads/intelligence";
 import { buildCopilotContext } from "@/features/leads/copilot";
+import { useAnalytics } from "@/shared/services/analytics/AnalyticsContext";
+import { LogCallPayload } from "@/features/leads/hooks/useLeadsStore";
 
 export function useLeadData(user: User, isCopilotOpen: boolean) {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
 
-  const { updateLead, logCall } = useLeadsStore();
+  const { updateLead: baseUpdateLead, logCall: baseLogCall } = useLeadsStore();
+  const { refreshDashboard } = useAnalytics();
+
+  const logCall = useCallback(
+    async (leadId: string, payload: LogCallPayload) => {
+      await baseLogCall(leadId, payload);
+      refreshDashboard();
+    },
+    [baseLogCall, refreshDashboard]
+  );
+
+  const updateLead = useCallback(
+    async (leadId: string, patch: Partial<Lead>, options?: { suppressTimeline?: boolean }) => {
+      await baseUpdateLead(leadId, patch, options);
+      if (patch.status !== undefined) {
+        refreshDashboard();
+      }
+    },
+    [baseUpdateLead, refreshDashboard]
+  );
   const { projects, isLoaded: projectsLoaded } = useProjectsStore();
   const { users } = useUsersStore();
   const { addNotification } = useNotificationsStore(user?.id);

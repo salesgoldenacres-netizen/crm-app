@@ -1,14 +1,16 @@
 import { useState } from "react";
 import { Clock, ChevronRight, Zap, Lightbulb, X } from "lucide-react";
-import { safeFormatTime, formatDuration } from "@/shared/utils/dateUtils";
+import { safeFormatTime } from "@/shared/utils/dateUtils";
 import { User, AttendanceRecord } from "@/shared/types";
 import Dialog from "@/shared/components/ui/Dialog";
+import {
+  DashboardBreakDuration,
+  DashboardShiftDuration,
+} from "@/features/dashboard/components/DashboardTimerDisplay";
 
 interface MobileStatusPanelProps {
   user: User;
   todayAttendance: AttendanceRecord | null | undefined;
-  elapsedWorkSeconds: number;
-  elapsedBreakSeconds: number;
   myAgentStatus: string;
   showAnnouncement: boolean;
   setShowAnnouncement: (val: boolean) => void;
@@ -25,8 +27,6 @@ interface MobileStatusPanelProps {
 export default function MobileStatusPanel({
   user,
   todayAttendance,
-  elapsedWorkSeconds,
-  elapsedBreakSeconds,
   myAgentStatus,
   showAnnouncement,
   setShowAnnouncement,
@@ -53,7 +53,9 @@ export default function MobileStatusPanel({
       >
         <div className="flex items-center gap-2 min-w-0">
           <Clock className="w-3.5 h-3.5 text-theme-accent shrink-0" aria-hidden />
-          <span className="tabular-nums">Shift: {formatDuration(elapsedWorkSeconds * 1000)}</span>
+          <span className="tabular-nums">
+            Shift: <DashboardShiftDuration />
+          </span>
           <span
             className={`w-1.5 h-1.5 rounded-full shrink-0 ${
               todayAttendance.checkOut ? "bg-theme-muted" : "bg-theme-success"
@@ -107,7 +109,7 @@ export default function MobileStatusPanel({
                 Break duration
               </span>
               <span className="font-bold text-theme-text tabular-nums">
-                {formatDuration(elapsedBreakSeconds * 1000)}
+                <DashboardBreakDuration />
               </span>
             </div>
 

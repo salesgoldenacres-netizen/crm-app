@@ -26,7 +26,7 @@ export default function AdminAttendanceTab({
   users,
   isManagerial: checkIsManagerial,
 }: AdminAttendanceTabProps) {
-  const { allAttendance } = useAttendanceStore(user?.id);
+  const { allAttendance } = useAttendanceStore(user?.id, { managerial: checkIsManagerial(user.role) });
   const { leaveRequests, updateLeaveStatus } = useLeaveRequestsStore();
   const { logAuditEvent } = useAuditLogsStore();
   const { agentStatuses } = useAgentStatusStore();
@@ -369,7 +369,7 @@ export default function AdminAttendanceTab({
 
                         let cellText = "A";
                         let cellColor =
-                          "bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-955/30 dark:text-rose-400 dark:border-rose-900/50";
+                          "bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-950/30 dark:text-rose-400 dark:border-rose-900/50";
 
                         const dateObj = new Date(
                           selectedYear,

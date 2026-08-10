@@ -1,13 +1,13 @@
 import { Link } from "react-router-dom";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import { User, Project } from "@/shared/types";
+import { User, Project, Branding } from "@/shared/types";
 import SidebarNavigationMenu from "./SidebarNavigationMenu";
 import SidebarFooter from "./SidebarFooter";
-import { useBrandingStore } from "@/features/admin/hooks/useBrandingStore";
 
 interface DesktopSidebarProps {
   user: User | null;
   projects: Record<string, Project> | null;
+  branding: Branding;
   isSidebarCollapsed: boolean;
   toggleSidebar: () => void;
   openTemplates: () => void;
@@ -23,6 +23,7 @@ interface DesktopSidebarProps {
 export default function DesktopSidebar({
   user,
   projects,
+  branding,
   isSidebarCollapsed,
   toggleSidebar,
   openTemplates,
@@ -34,7 +35,6 @@ export default function DesktopSidebar({
   activeTab,
   activeSubtab,
 }: DesktopSidebarProps) {
-  const { branding } = useBrandingStore();
   const companyLabel = (branding.companyName || "Golden Acres").toUpperCase();
   const tagline = branding.tagline || "PORTAL";
 

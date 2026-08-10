@@ -9,7 +9,7 @@ import {
   scrubPiiFromText,
   phoneLast4,
 } from "./index";
-import { computeLeadIntelligence } from "@/features/leads/intelligence";
+import { computeLeadIntelligence } from "@/shared/services/leads/intelligence";
 import { leadBriefV1Contract } from "../PromptRegistry";
 
 const baseLead = {

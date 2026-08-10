@@ -4,9 +4,9 @@ import {
   BRAND_PALETTE,
   resolveStructuralTokens,
 } from "@/shared/constants/brandPalette";
+import type { Appearance, ResolvedMode } from "@/shared/types/theme";
 
-export type Appearance = "light" | "dark" | "system";
-export type ResolvedMode = "light" | "dark";
+export type { Appearance, ResolvedMode };
 
 /** Fired after structural tokens + dark class are applied (branding re-syncs). */
 export const APPEARANCE_CHANGED_EVENT = "ga:appearance-changed";

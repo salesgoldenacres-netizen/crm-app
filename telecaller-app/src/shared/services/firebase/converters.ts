@@ -26,6 +26,17 @@ import {
   NotificationItem,
   CallLogDocument,
 } from "@/shared/types";
+import {
+  deserializeProjectPlotsForApp,
+  serializeProjectForFirestore,
+} from "./projectFirestore";
+
+export {
+  deserializePlotPointsForApp,
+  deserializeProjectPlotsForApp,
+  serializePlotPointsForFirestore,
+  serializeProjectForFirestore,
+} from "./projectFirestore";
 
 // Generic Firestore Data Converter
 export const genericConverter = <T extends object>(): FirestoreDataConverter<T> => ({
@@ -43,6 +54,20 @@ export const genericConverter = <T extends object>(): FirestoreDataConverter<T> 
   },
 });
 
+/** Project converter: encodes nested coordinate arrays before setDoc. */
+export const projectConverter: FirestoreDataConverter<Project> = {
+  toFirestore(model: Project): DocumentData {
+    return serializeProjectForFirestore(model);
+  },
+  fromFirestore(snapshot: QueryDocumentSnapshot): Project {
+    const data = snapshot.data();
+    return deserializeProjectPlotsForApp({
+      id: snapshot.id,
+      ...data,
+    } as Project);
+  },
+};
+
 // Helper function to get typed collections
 export const getCollectionRef = <T extends object>(
   collectionName: string
@@ -56,7 +81,7 @@ export const callLogsRef = getCollectionRef<CallLogDocument>(COLLECTIONS.CALL_LO
 export const archivedLeadsRef = getCollectionRef<Lead>(COLLECTIONS.ARCHIVED_LEADS);
 export const usersRef = getCollectionRef<User>(COLLECTIONS.USERS);
 export const customRolesRef = getCollectionRef<CustomRole>(COLLECTIONS.CUSTOM_ROLES);
-export const projectsRef = getCollectionRef<Project>(COLLECTIONS.PROJECTS);
+export const projectsRef = collection(db, COLLECTIONS.PROJECTS).withConverter(projectConverter);
 export const rostersRef = getCollectionRef<Roster>(COLLECTIONS.ROSTERS);
 export const callTargetsRef = getCollectionRef<CallTarget>(COLLECTIONS.CALL_TARGETS);
 export const auditLogsRef = getCollectionRef<AuditLog>(COLLECTIONS.AUDIT_LOGS);

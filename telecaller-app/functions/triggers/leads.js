@@ -2,6 +2,8 @@ const { onDocumentCreated, onDocumentUpdated } = require('firebase-functions/v2/
 const admin = require('firebase-admin');
 const { generateUlid } = require('../helpers/ulid');
 const { determineAllocation } = require('../leads/allocation');
+const { buildLeadCreatePatches } = require('../leads/leadCreatePatches');
+const { resolveAssignedToUid } = require('../helpers/leadAssignment');
 const { publishNotification } = require('../notifications/publishNotification');
 const { sendFcm } = require('../services/fcm');
 
@@ -13,32 +15,41 @@ const onLeadCreated = onDocumentCreated(
     if (!lead) return;
 
     // --- (a) Stateless time-sortable leadReference assignment (no write hotspot) ---
-    let assignedLeadReference = lead.leadReference || '';
-    if (!assignedLeadReference) {
-      assignedLeadReference = generateUlid();
+    // ULID generation is impure, so resolve it here (only when missing).
+    const leadReference = lead.leadReference || generateUlid();
+
+    // --- (b) Auto round-robin assignment (transactional I/O stays in the trigger) ---
+    let allocation = null;
+    if (!lead.assignedTo || lead.assignedTo === 'Unassigned') {
+      allocation = await determineAllocation(db);
     }
 
-    // --- (b) Auto round-robin assignment ---
-    let assignedTo = lead.assignedTo;
-    let assignedToName = lead.assignedToName;
+    // Pure decision: consolidate reference + assignment into a single write.
+    const { patches, assignedTo } = buildLeadCreatePatches({
+      lead,
+      leadReference,
+      allocation,
+    });
 
-    if (!assignedTo || assignedTo === 'Unassigned') {
-      const alloc = await determineAllocation(db);
-      if (alloc.assignedTo) {
-        assignedTo = alloc.assignedTo;
-        assignedToName = alloc.assignedToName;
+    // SEC-1 increment: backfill assignedToUid when assignee is known but uid missing.
+    const effectiveAssignee = assignedTo || lead.assignedTo;
+    if (
+      effectiveAssignee &&
+      effectiveAssignee !== 'Unassigned' &&
+      !lead.assignedToUid &&
+      !patches.assignedToUid
+    ) {
+      try {
+        const userSnap = await db.collection('users').doc(effectiveAssignee).get();
+        if (userSnap.exists) {
+          const uid = resolveAssignedToUid(effectiveAssignee, userSnap.data());
+          if (uid) patches.assignedToUid = uid;
+        }
+      } catch (err) {
+        console.error('[onLeadCreated] assignedToUid backfill failed:', err.message || err);
       }
     }
 
-    // Consolidate all patches into a single write
-    const patches = {};
-    if (assignedLeadReference !== (lead.leadReference || '')) {
-      patches.leadReference = assignedLeadReference;
-    }
-    if (assignedTo !== lead.assignedTo) {
-      patches.assignedTo = assignedTo;
-      patches.assignedToName = assignedToName;
-    }
     if (Object.keys(patches).length > 0) {
       patches.updatedAt = new Date().toISOString();
       await event.data.ref.update(patches);

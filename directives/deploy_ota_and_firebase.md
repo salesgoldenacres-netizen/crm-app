@@ -41,4 +41,4 @@ If a bad OTA or Hosting deploy ships:
 4. **Firestore rules / indexes:** Only roll forward with a reviewed fix when possible. Rolling rules backward can re-open closed security holes — treat rules rollback as a security decision, not a routine DevOps step.
 5. **Failed mid-script deploy:** The deploy script restores `package.json` version on build/deploy failure. Confirm live `updates/manifest.json` version manually after any partial failure.
 
-GitHub `.github/workflows/deploy.yml` is a **manual stub** until `FIREBASE_TOKEN` (or WIF) is configured; prefer this directive’s local/agent path for production deploys.
+GitHub [`.github/workflows/deploy.yml`](../.github/workflows/deploy.yml) provides a manual `workflow_dispatch` deploy (rules, storage, functions, optional Hosting). Requires `FIREBASE_SERVICE_ACCOUNT_JSON` and uses GitHub Environment `production`. Prefer this directive’s local/agent path for routine OTA + backend releases; use the workflow for ops-triggered backend-only deploys.

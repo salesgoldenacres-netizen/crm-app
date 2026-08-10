@@ -207,6 +207,11 @@ export default function SalesCopilotDrawer({
     [assignableUsers],
   );
 
+  const resolveAssignee = useCallback(
+    (assignedTo: string) => assignableUsers?.find((u) => u.id === assignedTo),
+    [assignableUsers],
+  );
+
   const validateAssignment = useCallback(
     (userId: string): AssignmentValidationResult => {
       const matched = assignableUsers?.find((u) => u.id === userId);
@@ -235,9 +240,10 @@ export default function SalesCopilotDrawer({
         updateLead,
         logCall,
         resolveAssigneeName,
+        resolveAssignee,
         validateAssignment,
       }),
-    [logCall, resolveAssigneeName, updateLead, validateAssignment],
+    [logCall, resolveAssignee, resolveAssigneeName, updateLead, validateAssignment],
   );
 
   const handleRetry = useCallback(() => {

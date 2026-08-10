@@ -4,8 +4,8 @@
  */
 
 import type { LeadIntelligence } from "@/shared/contracts";
-import type { ComputeLeadIntelligenceOptions } from "@/features/leads/intelligence";
-import type { LeadActivitySnapshot } from "@/features/leads/intelligence/leadActivity";
+import type { ComputeLeadIntelligenceOptions } from "@/shared/services/leads/intelligence";
+import type { LeadActivitySnapshot } from "@/shared/contracts/leadActivity";
 
 /** Minimal lead shape for allowlisted context (store Lead is compatible). */
 export interface LeadContextSource extends LeadActivitySnapshot {

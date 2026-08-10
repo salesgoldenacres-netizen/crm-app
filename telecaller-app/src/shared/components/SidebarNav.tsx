@@ -5,20 +5,24 @@ import { useAppShell } from "@/shared/layouts/AppShellContext";
 import DesktopSidebar from "./DesktopSidebar";
 import MobileBottomNav from "./MobileBottomNav";
 import MobileProfileDrawer from "./MobileProfileDrawer";
-import { User, Project } from "@/shared/types";
+import { User, Project, Branding } from "@/shared/types";
 
 interface SidebarNavProps {
   user: User | null;
   projects: Record<string, Project> | null;
+  branding: Branding;
   openTemplates: () => void;
   openShortcuts: () => void;
+  themeToggle?: React.ReactNode;
 }
 
 export default function SidebarNav({
   user,
   projects,
+  branding,
   openTemplates,
   openShortcuts,
+  themeToggle,
 }: SidebarNavProps) {
   const location = useLocation();
   const navigate = useNavigate();
@@ -78,6 +82,7 @@ export default function SidebarNav({
       <DesktopSidebar
         user={user}
         projects={projects}
+        branding={branding}
         isSidebarCollapsed={isSidebarCollapsed}
         toggleSidebar={toggleSidebar}
         openTemplates={openTemplates}
@@ -110,6 +115,7 @@ export default function SidebarNav({
         toggleFullscreen={toggleFullscreen}
         openShortcuts={openShortcuts}
         handleLogout={handleLogout}
+        themeToggle={themeToggle}
       />
     </>
   );

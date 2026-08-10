@@ -1,7 +1,7 @@
 import { useState, FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { Lock, User, Eye, EyeOff, Compass } from "lucide-react";
-import ThemeToggle from "@/shared/components/ThemeToggle";
+import ThemeToggle from "@/features/settings/components/ThemeToggle";
 import {
   loginWithEmailAndPassword,
   loginWithGoogle,

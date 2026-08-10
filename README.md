@@ -62,3 +62,14 @@ python execution/import_leads_csv.py --csv .tmp/leads_import.csv --project-id <i
 1. Write a directive SOP in `directives/<verb>_<noun>.md`
 2. Write the execution script in `execution/<verb>_<noun>.py`
 3. Test the script; update the directive with any learnings
+
+---
+
+## The CRM app (`telecaller-app/`)
+
+The React/Firebase CRM lives in [`telecaller-app/`](telecaller-app/). Start with its architecture pointer:
+
+- [`telecaller-app/ARCHITECTURE.md`](telecaller-app/ARCHITECTURE.md) — living index of architecture & process docs
+- [`telecaller-app/architecture_guide.md`](telecaller-app/architecture_guide.md) — feature-based architecture & conventions
+- [`telecaller-app/CONTRIBUTING.md`](telecaller-app/CONTRIBUTING.md) — local checks, branch model, hardening notes
+- [`telecaller-app/WEBHOOK_API.md`](telecaller-app/WEBHOOK_API.md) — Cloud Functions webhook + callable API

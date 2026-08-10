@@ -1,7 +1,6 @@
 import { LogOut, Minimize2, Maximize2, Keyboard } from "lucide-react";
-import { User } from "@/shared/types";
-import ThemeToggle from "@/shared/components/ThemeToggle";
-import Drawer from "@/shared/components/ui/Drawer";
+import { ReactNode } from "react";
+import { User } from "@/shared/types";import Drawer from "@/shared/components/ui/Drawer";
 import { NAV_LABELS } from "@/shared/constants/navTaxonomy";
 
 interface MobileProfileDrawerProps {
@@ -12,6 +11,7 @@ interface MobileProfileDrawerProps {
   toggleFullscreen: () => void;
   openShortcuts: () => void;
   handleLogout: () => Promise<void>;
+  themeToggle?: ReactNode;
 }
 
 export default function MobileProfileDrawer({
@@ -22,6 +22,7 @@ export default function MobileProfileDrawer({
   toggleFullscreen,
   openShortcuts,
   handleLogout,
+  themeToggle,
 }: MobileProfileDrawerProps) {
   const footer = (
     <div className="w-full">
@@ -73,8 +74,7 @@ export default function MobileProfileDrawer({
       <div className="space-y-2">
         <div className="w-full flex items-center justify-between px-4 py-3 bg-theme-surface rounded-theme border border-theme-border">
           <span className="text-xs font-bold text-theme-text">Appearance</span>
-          <ThemeToggle compact />
-        </div>
+          {themeToggle}        </div>
         <button
           type="button"
           onClick={() => {

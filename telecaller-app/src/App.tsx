@@ -2,11 +2,12 @@ import { useEffect, lazy, Suspense } from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { SplashScreen } from "@capacitor/splash-screen";
 import { isManagerial } from "@/shared/utils/roleUtils";
-import AppShell from "./shared/layouts/AppShell";
+import AppShell, { type AppShellProps } from "./shared/layouts/AppShell";
 import { useCustomRolesStore, useBrandingStore } from "./features/admin/hooks/adminStores";
 import { DatabaseProvider } from "./shared/services/DatabaseContext";
 import { useAuth } from "./features/auth/hooks/useAuth";
 import BrandedBootScreen from "@/shared/components/BrandedBootScreen";
+import { logger } from "@/shared/utils/logger";
 
 // Import Modal Registry and Feature components/stores
 import { ModalRegistryContext } from "@/shared/layouts/ModalRegistryContext";
@@ -19,7 +20,11 @@ import { useProjectsStore } from "@/features/plots/hooks/useProjectsStore";
 import { useLeadsStore } from "@/features/leads/hooks/useLeadsStore";
 import { useIVRStore } from "@/features/calls/hooks/useIVRStore";
 import { useThemeStore } from "@/features/settings/hooks/useThemeStore";
+import InCallWhatsAppBar from "@/features/calls/components/InCallWhatsAppBar";
+import { useAgentOpenLeads } from "@/features/leads/hooks/useAgentOpenLeads";
+import ThemeToggle from "@/features/settings/components/ThemeToggle";
 import { useNotificationsStore } from "@/features/dashboard/hooks/useNotificationsStore";
+import { FeatureAnalyticsProvider } from "@/features/dashboard/components/FeatureAnalyticsProvider";
 import { User } from "@/shared/types";
 
 interface AuthenticatedShellProps {
@@ -28,10 +33,11 @@ interface AuthenticatedShellProps {
 }
 
 function AuthenticatedShell({ user, children }: AuthenticatedShellProps) {
-  // Call hooks at composition root (branding is applied at App root for login/boot)
   useThemeStore(user.id);
   useNotificationsStore(user.id);
 
+  const { branding } = useBrandingStore();
+  const { openLeads } = useAgentOpenLeads();
   const projectsStore = useProjectsStore();
   const leadsStore = useLeadsStore();
   const ivrStore = useIVRStore(user.id);
@@ -48,8 +54,12 @@ function AuthenticatedShell({ user, children }: AuthenticatedShellProps) {
       <AppShell
         user={user}
         projects={projectsStore.projects}
-        leadsStore={leadsStore}
+        openLeads={openLeads}
+        branding={branding}
+        leadsStore={leadsStore as unknown as AppShellProps["leadsStore"]}
         ivrStore={ivrStore}
+        InCallWhatsAppBar={InCallWhatsAppBar}
+        themeToggle={<ThemeToggle compact />}
       >
         {children}
       </AppShell>
@@ -62,6 +72,9 @@ const Dashboard = lazy(() => import("./features/dashboard/pages/Dashboard"));
 const ProjectMap = lazy(() => import("./features/plots/pages/ProjectMap"));
 const Admin = lazy(() => import("./features/admin/pages/Admin"));
 const AdminMapEditor = lazy(() => import("./features/plots/pages/AdminMapEditor"));
+const PublicProjectLayout = lazy(
+  () => import("./features/plots/pages/PublicProjectLayout")
+);
 const LeadDetailsPage = lazy(() => import("./features/leads/pages/LeadDetailsPage"));
 const NotFound = lazy(() => import("./shared/components/NotFound"));
 
@@ -78,7 +91,7 @@ function App() {
       try {
         await SplashScreen.hide();
       } catch (e) {
-        console.warn("SplashScreen.hide() failed", e);
+        logger.warn("App", "SplashScreen.hide() failed", e);
       }
     };
     hideSplash();
@@ -102,6 +115,7 @@ function App() {
         userRole={user?.role}
         customRoles={customRoles}
       >
+        <FeatureAnalyticsProvider>
         <Suspense
           fallback={
             <BrandedBootScreen
@@ -176,9 +190,23 @@ function App() {
                 )
               }
             />
+            {/* Authenticated share: Firestore projects require auth read; token checked in page */}
+            <Route
+              path="/public/layout/:projectId"
+              element={
+                user ? (
+                  <AuthenticatedShell user={user}>
+                    <PublicProjectLayout />
+                  </AuthenticatedShell>
+                ) : (
+                  <Navigate to="/login" />
+                )
+              }
+            />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </Suspense>
+        </FeatureAnalyticsProvider>
       </DatabaseProvider>
     </BrowserRouter>
   );

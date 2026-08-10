@@ -14,6 +14,7 @@
 const { chunkArray, resolveBulkChunkSize } = require("../helpers/chunk");
 const { mapWithConcurrency } = require("../helpers/parallel");
 const { generateUlid } = require("../helpers/ulid");
+const { buildAssignmentFields } = require("../helpers/leadAssignment");
 
 const DEFAULT_LOOKUP_CONCURRENCY = 15;
 const DEFAULT_CALLLOG_CONCURRENCY = 10;
@@ -198,13 +199,33 @@ async function processBulkImportChunk(deps, indexedLeads, options = {}) {
 
   // --- writeBatch create lead docs ---
   if (toCreate.length > 0) {
+    const assigneeIds = [
+      ...new Set(
+        toCreate
+          .map((row) => row.lead.assignedTo)
+          .filter((id) => typeof id === "string" && id),
+      ),
+    ];
+    const assigneeDocs = new Map();
+    await Promise.all(
+      assigneeIds.map(async (assigneeId) => {
+        const snap = await db.collection("users").doc(assigneeId).get();
+        if (snap.exists) assigneeDocs.set(assigneeId, snap.data());
+      }),
+    );
+
     const batch = db.batch();
     const now = new Date().toISOString();
     for (const row of toCreate) {
-      const assignedTo = row.lead.assignedTo || "";
-      const assignedToName = assignedTo
+      const assignedToRaw = row.lead.assignedTo || "";
+      const assignedToNameRaw = assignedToRaw
         ? row.lead.assignedToName || "Agent"
         : "Unassigned";
+      const { assignedTo, assignedToName, assignedToUid } = buildAssignmentFields(
+        assignedToRaw,
+        assignedToNameRaw,
+        assigneeDocs.get(assignedToRaw),
+      );
       const leadRecord = {
         id: row.newLeadId,
         leadReference: generateUlid(),
@@ -215,6 +236,7 @@ async function processBulkImportChunk(deps, indexedLeads, options = {}) {
         plotId: row.lead.plotId || "",
         assignedTo,
         assignedToName,
+        assignedToUid,
         status: row.lead.status || "new",
         priority: row.lead.priority || "warm",
         notes: row.lead.notes || "CSV Bulk imported lead.",

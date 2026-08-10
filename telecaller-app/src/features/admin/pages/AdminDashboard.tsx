@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 
-import { useLeadsStore } from "@/features/leads/hooks/useLeadsStore";
+
+import { useDashboardContext } from "@/features/dashboard/context/DashboardContext";
 import { useAttendanceStore } from "@/features/attendance/hooks/useAttendanceStore";
 import { useLeaveRequestsStore } from "@/features/attendance/hooks/useLeaveRequestsStore";
 import { useUsersStore } from "@/features/employees/hooks/useUsersStore";
@@ -40,7 +41,7 @@ export default function AdminDashboard({ user }: { user: import("@/shared/types"
   const { toast } = useToast();
 
   const { users } = useUsersStore();
-  const { updateLead } = useLeadsStore();
+  const { updateLead } = useDashboardContext();
   const { allAttendance, forceClockOut } = useAttendanceStore();
   const { leaveRequests, updateLeaveStatus } = useLeaveRequestsStore();
   const { goals } = useGoalsStore();

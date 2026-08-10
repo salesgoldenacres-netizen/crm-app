@@ -6,8 +6,9 @@ import ErrorBoundary from "@/shared/components/ErrorBoundary";
 import { initAppSentry } from "@/shared/services/observability/sentry";
 import { initializeUpdater } from "@/shared/services/updater";
 
-// Optional Sentry (no-op warn when VITE_SENTRY_DSN missing — not a deploy blocker)
-initAppSentry();
+// Optional Sentry (no-op warn when VITE_SENTRY_DSN missing — not a deploy blocker).
+// Dynamically imports the SDK only when a DSN is configured; fire-and-forget.
+void initAppSentry();
 
 // Initialize the OTA update system
 initializeUpdater();

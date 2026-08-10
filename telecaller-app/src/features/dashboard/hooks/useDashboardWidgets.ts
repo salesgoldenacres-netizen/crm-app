@@ -24,6 +24,8 @@ export function useDashboardWidgets(
     { id: "tasksWidget", title: "Personal Tasks List", w: 1, h: 285, visible: true },
     { id: "callLogsWidget", title: "Recent Call Timeline", w: 2, h: 285, visible: true },
     { id: "leaveRequests", title: "Leave Requests", w: 1, h: 285, visible: true },
+    { id: "weeklyRoster", title: "Shift Planner & Roster", w: 1, h: 285, visible: true },
+    { id: "telecallerMetrics", title: "Performance Stats", w: 1, h: 285, visible: true },
   ]);
 
   const [lastSyncedWidgetsStr, setLastSyncedWidgetsStr] = useState<string>("");

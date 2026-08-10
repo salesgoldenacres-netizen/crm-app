@@ -464,6 +464,7 @@ describe("proposalExecution", () => {
       expect(updateLead).toHaveBeenCalledWith(lead.id, {
         assignedTo: "user-2",
         assignedToName: "New Owner",
+        assignedToUid: "",
       });
     });
   });

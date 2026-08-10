@@ -1,4 +1,4 @@
-import { AnalyticsProvider, AnalyticsService as IAnalyticsService, MetricType, CacheClass } from "./analyticsContracts";
+import { AnalyticsProvider, AnalyticsService as IAnalyticsService, MetricType, CacheClass, InvalidateCacheOptions } from "./analyticsContracts";
 import { AnalyticsError } from "./analyticsErrors";
 import {
   DashboardMetrics,
@@ -56,10 +56,40 @@ export class AnalyticsService implements IAnalyticsService {
     this.checkPermission = checkPermission;
   }
 
-  /** Cache Invalidation */
-  public invalidateCache(): void {
-    this.cache.clear();
-    this.activePromises.clear();
+  /** Cache Invalidation.
+   * Called with no arguments: clears the entire cache (original behaviour).
+   * Called with options: evicts only entries whose cache key contains the
+   * specified metric type(s) and, when projectId is provided, the specified
+   * project segment. Unmatched entries are left intact.
+   */
+  public invalidateCache(options?: InvalidateCacheOptions): void {
+    if (!options || (!options.metrics && !options.projectId)) {
+      // Full clear — backwards-compatible original behaviour.
+      this.cache.clear();
+      this.activePromises.clear();
+      return;
+    }
+
+    const { metrics, projectId } = options;
+
+    for (const key of this.cache.keys()) {
+      const segments = key.split(":");
+      // Cache key format: userId:role:projectId:metric:username
+      const keyProject = segments[2];
+      const keyMetric = segments[3] as MetricType;
+
+      const metricMatches = !metrics || metrics.includes(keyMetric);
+      const projectMatches =
+        !projectId ||
+        keyProject === projectId ||
+        keyProject === "global" ||
+        projectId === "global";
+
+      if (metricMatches && projectMatches) {
+        this.cache.delete(key);
+        this.activePromises.delete(key);
+      }
+    }
   }
 
   /** Gets active project scoping, defaults to context value if not passed */

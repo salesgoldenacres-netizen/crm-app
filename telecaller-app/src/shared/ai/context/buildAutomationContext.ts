@@ -12,8 +12,8 @@ import {
   getOverdueDays,
   getStaleDays,
   resolveFollowUpYmd,
-} from "@/features/leads/intelligence";
-import { isFollowUpMissing } from "@/features/leads/intelligence/leadActivity";
+  isFollowUpMissing,
+} from "@/shared/contracts/leadActivity";
 import type {
   AutomationContextPack,
   BuildAutomationContextOptions,

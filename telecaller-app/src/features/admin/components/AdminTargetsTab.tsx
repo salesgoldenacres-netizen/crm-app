@@ -1,6 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Users, Activity, Globe, Megaphone } from "lucide-react";
 import { useCallTargetStore, useGoalsStore, useAuditLogsStore } from "@/features/admin/hooks/adminStores";
+import type { Goals } from "@/shared/types";
 import { useNotificationsStore } from "@/features/dashboard/hooks/useNotificationsStore";
 import { User } from "@/shared/types";
 import Button from "@/shared/components/ui/Button";
@@ -39,17 +40,19 @@ export default function AdminTargetsTab({
     type: "info",
   });
 
-  useEffect(() => {
-    if (goals) {
-      /* eslint-disable-next-line react-hooks/set-state-in-effect */
-      setGoalsForm({
-        monthlyCallGoal: goals.monthlyCallGoal || 1000,
-        monthlyBookingGoal: goals.monthlyBookingGoal || 20,
-        customGoalText: goals.customGoalText || "",
-        targetRevenue: goals.targetRevenue || 5000000,
-      });
-    }
-  }, [goals]);
+  // Hydrate the editable form whenever a new goals document arrives. Adjusting
+  // state during render (React's recommended "derive from changed input"
+  // pattern) avoids the set-state-in-effect render cascade.
+  const [prevGoals, setPrevGoals] = useState<Goals | null>(null);
+  if (goals && goals !== prevGoals) {
+    setPrevGoals(goals);
+    setGoalsForm({
+      monthlyCallGoal: goals.monthlyCallGoal || 1000,
+      monthlyBookingGoal: goals.monthlyBookingGoal || 20,
+      customGoalText: goals.customGoalText || "",
+      targetRevenue: goals.targetRevenue || 5000000,
+    });
+  }
 
   return (
     <div className="space-y-6 animate-fadeIn text-sm">

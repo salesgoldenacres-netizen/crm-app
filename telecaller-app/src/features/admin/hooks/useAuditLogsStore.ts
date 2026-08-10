@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { logger } from "@/shared/utils/logger";
 import { AuditLog } from "@/shared/types";
 import { AuditLogsRepository } from "@/shared/services/firebase/repositories";
+import { logAuditEventViaCallable } from "@/shared/services/leads/leadsSec1Api";
 
 export interface UseAuditLogsStoreOptions {
   /**
@@ -24,12 +25,10 @@ export function useAuditLogsStore(options: UseAuditLogsStoreOptions = {}) {
   const [isLoaded, setIsLoaded] = useState(!subscribeToList);
 
   useEffect(() => {
-    if (!subscribeToList) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setAuditLogs([]);
-      setIsLoaded(true);
-      return;
-    }
+    // Write-only mode: no listener. State already starts empty + loaded via the
+    // useState initializers, so there is nothing to set here (avoids
+    // set-state-in-effect).
+    if (!subscribeToList) return;
 
     const unsubscribe = AuditLogsRepository.subscribeList(
       listLimit != null ? { limit: listLimit } : {},
@@ -49,17 +48,13 @@ export function useAuditLogsStore(options: UseAuditLogsStoreOptions = {}) {
   }, [subscribeToList, listLimit]);
 
   const logAuditEvent = async (event: Partial<AuditLog>): Promise<void> => {
-    const newId = Date.now().toString();
     try {
-      const newLog: AuditLog = {
-        id: newId,
-        timestamp: new Date().toISOString(),
+      await logAuditEventViaCallable({
         action: event.action || "Unknown Action",
         details: event.details || "",
         user: event.user || "system",
         changes: event.changes || null,
-      };
-      await AuditLogsRepository.add(newLog);
+      });
     } catch (err) {
       logger.error("AuditLogsStore", "Failed to write audit log event", err);
     }

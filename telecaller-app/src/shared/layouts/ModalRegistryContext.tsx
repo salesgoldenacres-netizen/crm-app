@@ -1,6 +1,6 @@
 import React, { createContext, useContext } from "react";
 import { User, Lead, Project, CallLog } from "@/shared/types";
-import { IVRActiveCall, IVRSettings } from "@/features/calls/hooks/useIVRStore";
+import type { IVRActiveCall, IVRSettings } from "@/shared/types/ivr";
 
 /** Template Center modal pre-fill payload (AppShell → TemplateCenterModal). */
 export interface TemplateModalContext {

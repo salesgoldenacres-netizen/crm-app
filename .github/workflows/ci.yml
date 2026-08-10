@@ -29,6 +29,14 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Dependency audit (SCA)
+        # Soft-fail: DO-2 waiver — GHSA-qwww-vcr4-c8h2 (RSC-mode CSRF) affects
+        # react-router 7.12–8.2; this SPA uses BrowserRouter only (no RSC/SSR).
+        # Pinning to 7.11.0 clears that advisory but re-opens 12+ other highs.
+        # Hard gate resumes when upstream ships a patched 7.18.x+ release.
+        continue-on-error: true
+        run: npm audit --audit-level=high --omit=dev
+
       - name: Lint
         run: npm run lint
 
@@ -70,5 +78,29 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Dependency audit (SCA)
+        run: npm audit --audit-level=high --omit=dev
+
       - name: Unit tests
         run: npm test
+
+  rules:
+    name: Firebase rules (compile + unit tests)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: telecaller-app
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: telecaller-app/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Rules unit tests (compile + behavior)
+        run: npm run test:rules

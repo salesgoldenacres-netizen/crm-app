@@ -44,6 +44,7 @@ export class TanStackVirtualEngine implements VirtualizationEngine {
 export function useTanStackVirtualEngine(
   options: VirtualizationOptions
 ): TanStackVirtualEngine {
+  // eslint-disable-next-line react-hooks/incompatible-library -- Known third-party React Compiler compatibility advisory: TanStack Virtual's useVirtualizer returns functions on the instance that React Compiler skips memoizing by default. This wrapper isolates the third-party boundary.
   const virtualizer = useVirtualizer<HTMLElement, Element>({
     count: options.count,
     estimateSize: options.estimateSize,

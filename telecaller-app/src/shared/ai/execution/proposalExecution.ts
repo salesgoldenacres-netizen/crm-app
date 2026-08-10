@@ -1,4 +1,5 @@
-import type { Lead } from "@/shared/types";
+import type { Lead, User } from "@/shared/types";
+import { buildAssignmentFields } from "@/shared/utils/leadAssignment";
 import { getIstDateString, planStatusTransition } from "@/shared/contracts";
 import { validateYmdDate } from "@/shared/contracts/dateValidation";
 import {
@@ -137,6 +138,7 @@ export interface ProposalExecutionDependencies {
     },
   ) => Promise<void>;
   resolveAssigneeName?: (userId: string) => string | undefined;
+  resolveAssignee?: (userId: string) => Pick<User, "id" | "uid"> | undefined;
   validateAssignment?: (userId: string) => AssignmentValidationResult;
 }
 
@@ -595,10 +597,14 @@ async function executeAssignmentProposal(input: {
     input.proposal.payload.assignedToName ||
     input.deps.resolveAssigneeName?.(assignedTo) ||
     "Unassigned";
-  await input.deps.updateLead(input.lead.id, {
-    assignedTo,
-    assignedToName,
-  });
+  await input.deps.updateLead(
+    input.lead.id,
+    buildAssignmentFields(
+      assignedTo,
+      assignedToName,
+      input.deps.resolveAssignee?.(assignedTo),
+    ),
+  );
 }
 
 function isPlainObject(

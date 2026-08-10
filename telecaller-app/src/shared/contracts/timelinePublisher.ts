@@ -7,11 +7,11 @@
 import {
   recordTimelineEvent,
   type RecordTimelineEventInput,
-} from "@/features/messaging/services/recordTimelineEvent";
+} from "@/shared/services/messaging/recordTimelineEvent";
 import type {
   TimelineEventSource,
   TimelineEventType,
-} from "@/features/messaging/timelineTypes";
+} from "@/shared/types/timeline";
 import {
   isBookedLikeStatus,
   normalizeLeadStatus,

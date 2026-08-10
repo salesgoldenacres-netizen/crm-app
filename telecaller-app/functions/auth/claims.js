@@ -4,7 +4,7 @@
  * Firestore rules use `request.auth.token.managerial == true`.
  * Break-glass: Admin SDK / execution/stamp_managerial_claims.py only.
  */
-const { HttpsError } = require('firebase-functions/v2/https');
+const { onCall, HttpsError } = require('firebase-functions/v2/https');
 const admin = require('firebase-admin');
 
 const DEFAULT_MANAGERIAL_ROLES = [
@@ -26,30 +26,18 @@ function isManagerialRoleCode(roleCode, customRoles) {
 }
 
 /**
- * Caller may manage claims if token already has managerial claim, OR
- * (transition) Firestore userRoles + customRoles mark them managerial.
+ * Caller may manage claims only when the Auth token already carries the
+ * managerial custom claim (SEC-11R). Firestore userRoles alone must not
+ * confer claim-management authority — that blocked the linkUserProfile →
+ * userRoles → setManagerialClaim self-elevation chain.
  * @param {import('firebase-admin').auth.DecodedIdToken} token
- * @param {FirebaseFirestore.Firestore} db
  */
-async function assertCallerCanManageClaims(token, db) {
-  if (token.managerial === true) return;
-
-  const roleSnap = await db.doc(`userRoles/${token.uid}`).get();
-  if (!roleSnap.exists) {
-    throw new HttpsError(
-      'permission-denied',
-      'Only managerial users can set custom claims.'
-    );
-  }
-  const roleCode = roleSnap.data().role;
-  const rolesSnap = await db.collection('customRoles').get();
-  const customRoles = rolesSnap.docs.map((d) => ({ id: d.id, ...d.data() }));
-  if (!isManagerialRoleCode(roleCode, customRoles)) {
-    throw new HttpsError(
-      'permission-denied',
-      'Only managerial users can set custom claims.'
-    );
-  }
+function assertCallerCanManageClaims(token) {
+  if (token && token.managerial === true) return;
+  throw new HttpsError(
+    'permission-denied',
+    'Only managerial users can set custom claims.',
+  );
 }
 
 /**
@@ -62,7 +50,7 @@ async function handleSetManagerialClaim(request, db) {
     throw new HttpsError('unauthenticated', 'Sign in required');
   }
 
-  await assertCallerCanManageClaims(request.auth.token, db);
+  assertCallerCanManageClaims(request.auth.token);
 
   const { uid, managerial, role } = request.data || {};
   if (!uid || typeof uid !== 'string') {
@@ -70,6 +58,14 @@ async function handleSetManagerialClaim(request, db) {
   }
   if (typeof managerial !== 'boolean') {
     throw new HttpsError('invalid-argument', 'managerial must be a boolean');
+  }
+
+  // SEC-11R: belt-and-suspenders — never allow self-elevation without claim.
+  if (managerial && uid === request.auth.uid && request.auth.token.managerial !== true) {
+    throw new HttpsError(
+      'permission-denied',
+      'Managerial elevation requires an existing manager.',
+    );
   }
 
   const user = await admin.auth().getUser(uid);
@@ -118,9 +114,11 @@ async function handleLinkUserProfile(request, db) {
   }
 
   let userDoc = null;
+  let matchedBy = null;
   const byEmail = await db.collection('users').where('email', '==', email).limit(1).get();
   if (!byEmail.empty) {
     userDoc = byEmail.docs[0];
+    matchedBy = 'email';
   } else {
     const username = email.split('@')[0].toLowerCase();
     const byUsername = await db
@@ -130,6 +128,7 @@ async function handleLinkUserProfile(request, db) {
       .get();
     if (!byUsername.empty) {
       userDoc = byUsername.docs[0];
+      matchedBy = 'username';
     }
   }
 
@@ -149,6 +148,30 @@ async function handleLinkUserProfile(request, db) {
     );
   }
 
+  const role = data.role || 'telecaller';
+  const rolesSnap = await db.collection('customRoles').get();
+  const customRoles = rolesSnap.docs.map((d) => ({ id: d.id, ...d.data() }));
+  const roleIsManagerial = isManagerialRoleCode(role, customRoles);
+  const emailVerified = request.auth.token.email_verified === true;
+
+  // SEC-11: never let a bare email/username match confer managerial access.
+  // A managerial profile may only be linked when the caller proves control of
+  // the *exact* profile email (verified), which closes both username-collision
+  // and unverified-email escalation paths. Even then we do NOT stamp the
+  // managerial custom claim here — claims are granted only via
+  // setManagerialClaim (by an existing manager) or the break-glass admin script
+  // (execution/stamp_managerial_claims.py). This disables opportunistic
+  // managerial escalation entirely.
+  if (roleIsManagerial && !(matchedBy === 'email' && emailVerified)) {
+    console.warn(
+      `[claims] BLOCKED managerial link attempt uid=${authUid} matchedBy=${matchedBy} emailVerified=${emailVerified} profile=users/${userDoc.id}`
+    );
+    throw new HttpsError(
+      'permission-denied',
+      'Managerial profiles require a verified email match and must be elevated by an administrator.'
+    );
+  }
+
   const updates = {
     uid: authUid,
     email,
@@ -158,25 +181,32 @@ async function handleLinkUserProfile(request, db) {
   };
   await userDoc.ref.update(updates);
 
-  const role = data.role || 'telecaller';
   await db.collection('userRoles').doc(authUid).set({ role }, { merge: true });
 
-  // If profile is managerial, ensure claims exist (idempotent stamp).
-  const rolesSnap = await db.collection('customRoles').get();
-  const customRoles = rolesSnap.docs.map((d) => ({ id: d.id, ...d.data() }));
-  if (isManagerialRoleCode(role, customRoles)) {
-    const authUser = await admin.auth().getUser(authUid);
-    const claims = { ...(authUser.customClaims || {}), managerial: true, role };
-    await admin.auth().setCustomUserClaims(authUid, claims);
-  }
-
-  console.log(`[claims] linked profile users/${userDoc.id} -> uid=${authUid}`);
+  console.log(
+    `[claims] linked profile users/${userDoc.id} -> uid=${authUid} (managerial claim NOT auto-granted)`
+  );
   return { success: true, userId: userDoc.id, uid: authUid, role };
 }
+
+// Callable wrappers. enforceAppCheck: client initializes App Check
+// (ReCaptcha v3), so require a valid App Check token (SEC-7).
+const CALLABLE_OPTS = { region: 'us-central1', enforceAppCheck: true };
+
+const setManagerialClaim = onCall(CALLABLE_OPTS, (request) =>
+  handleSetManagerialClaim(request, admin.firestore())
+);
+
+const linkUserProfile = onCall(CALLABLE_OPTS, (request) =>
+  handleLinkUserProfile(request, admin.firestore())
+);
 
 module.exports = {
   handleSetManagerialClaim,
   handleLinkUserProfile,
+  setManagerialClaim,
+  linkUserProfile,
+  assertCallerCanManageClaims,
   isManagerialRoleCode,
   DEFAULT_MANAGERIAL_ROLES,
 };

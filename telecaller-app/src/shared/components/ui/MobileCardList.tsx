@@ -72,7 +72,7 @@ export default function MobileCardList<T>({
                 {primaryCol && (
                   <div className="text-sm font-semibold text-theme-text mb-3 flex items-center justify-between gap-2">
                     <span className="truncate">
-                      {primaryCol.render ? primaryCol.render(row, rowIndex) : String((row as any)[primaryCol.key] ?? "")}
+                      {primaryCol.render ? primaryCol.render(row, rowIndex) : String((row as Record<string, unknown>)[primaryCol.key] ?? "")}
                     </span>
                   </div>
                 )}
@@ -82,7 +82,7 @@ export default function MobileCardList<T>({
                   {detailCols.map((col) => {
                     const value = col.render
                       ? col.render(row, rowIndex)
-                      : String((row as any)[col.key] ?? "");
+                      : String((row as Record<string, unknown>)[col.key] ?? "");
 
                     return (
                       <div key={col.key} className="flex flex-col gap-0.5">

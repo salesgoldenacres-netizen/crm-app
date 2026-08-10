@@ -11,6 +11,11 @@ const ENV_SECRET_KEYS = {
   apiWebhookKey: 'API_WEBHOOK_KEY',
   evolutionWebhookSecret: 'EVOLUTION_WEBHOOK_SECRET',
   metaAccessToken: 'META_ACCESS_TOKEN',
+  // App secret used to verify Meta X-Hub-Signature-256 (SEC-4).
+  metaAppSecret: 'META_APP_SECRET',
+  // IVR provider tokens — read via the merged loader, never the public doc (SEC-2).
+  exotelToken: 'EXOTEL_TOKEN',
+  twilioAuthToken: 'TWILIO_AUTH_TOKEN',
 };
 
 /**
@@ -64,6 +69,7 @@ async function loadIntegrationSettings(db) {
     googleWebhookKey: '',
     metaVerifyToken: '',
     metaAccessToken: '',
+    metaAppSecret: '',
     apiWebhookKey: '',
     evolutionWebhookSecret: '',
   };
@@ -134,6 +140,53 @@ function assertWebhookSecret({ presented, expected, context }) {
   return { ok: true };
 }
 
+/**
+ * Verify a Meta webhook `X-Hub-Signature-256` header (SEC-4).
+ * Meta signs the raw request body with the app secret: `sha256=<hex hmac>`.
+ * Fails closed if the app secret is not configured or the signature is
+ * missing / malformed / mismatched. Never logs secret material.
+ *
+ * @param {object} opts
+ * @param {Buffer|string|undefined} opts.rawBody - exact bytes Meta POSTed
+ * @param {unknown} opts.signature - value of the X-Hub-Signature-256 header
+ * @param {unknown} opts.appSecret - Meta app secret (from merged loader)
+ * @returns {{ ok: true } | { ok: false, reason: string }}
+ */
+function verifyMetaSignature({ rawBody, signature, appSecret }) {
+  if (!isSecretConfigured(appSecret)) {
+    return { ok: false, reason: 'app_secret_not_configured' };
+  }
+  const presented = typeof signature === 'string' ? signature.trim() : '';
+  if (!presented) {
+    return { ok: false, reason: 'missing_signature' };
+  }
+  const match = /^sha256=([A-Fa-f0-9]+)$/.exec(presented);
+  if (!match) {
+    return { ok: false, reason: 'malformed_signature' };
+  }
+  const provided = match[1].toLowerCase();
+
+  let bodyBuffer;
+  if (Buffer.isBuffer(rawBody)) {
+    bodyBuffer = rawBody;
+  } else if (typeof rawBody === 'string') {
+    bodyBuffer = Buffer.from(rawBody, 'utf8');
+  } else {
+    // No raw body captured — cannot verify, fail closed.
+    return { ok: false, reason: 'missing_raw_body' };
+  }
+
+  const expected = crypto
+    .createHmac('sha256', String(appSecret))
+    .update(bodyBuffer)
+    .digest('hex');
+
+  if (!timingSafeEqualString(provided, expected)) {
+    return { ok: false, reason: 'signature_mismatch' };
+  }
+  return { ok: true };
+}
+
 module.exports = {
   timingSafeEqualString,
   normalizePresentedSecret,
@@ -141,5 +194,6 @@ module.exports = {
   loadIntegrationSettings,
   resolveWhatsAppWebhookSecret,
   assertWebhookSecret,
+  verifyMetaSignature,
   ENV_SECRET_KEYS,
 };

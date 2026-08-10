@@ -147,6 +147,53 @@ describe("AnalyticsService Core Architecture", () => {
 
       expect(mockClientProvider.getDashboardMetrics).toHaveBeenCalledTimes(2);
     });
+
+    it("targetedly invalidates dashboard cache without clearing unrelated pipeline metrics", async () => {
+      vi.mocked(mockClientProvider.getPipelineMetrics).mockResolvedValue({ stages: {}, totalCount: 5, unassignedCount: 0 });
+
+      await service.getDashboardMetrics();
+      await service.getPipelineMetrics();
+
+      // Targeted invalidation for dashboard only
+      service.invalidateCache({ metrics: ["dashboard"], projectId: "project-alpha" });
+
+      await service.getDashboardMetrics(); // Should re-fetch (count = 2)
+      await service.getPipelineMetrics();  // Should hit cache (count = 1)
+
+      expect(mockClientProvider.getDashboardMetrics).toHaveBeenCalledTimes(2);
+      expect(mockClientProvider.getPipelineMetrics).toHaveBeenCalledTimes(1);
+    });
+
+    it("targetedly invalidates team cache for specified project only", async () => {
+      vi.mocked(mockClientProvider.getTeamMetrics).mockResolvedValue({ teamGoals: [], rankings: [] });
+
+      await service.getTeamMetrics(); // activeProjectId = project-alpha
+
+      // Invalidate project-beta team metrics (unrelated project)
+      service.invalidateCache({ metrics: ["team"], projectId: "project-beta" });
+      await service.getTeamMetrics();
+      expect(mockClientProvider.getTeamMetrics).toHaveBeenCalledTimes(1);
+
+      // Invalidate project-alpha team metrics
+      service.invalidateCache({ metrics: ["team"], projectId: "project-alpha" });
+      await service.getTeamMetrics();
+      expect(mockClientProvider.getTeamMetrics).toHaveBeenCalledTimes(2);
+    });
+
+    it("clears all entries when invalidateCache is called with no arguments", async () => {
+      vi.mocked(mockClientProvider.getPipelineMetrics).mockResolvedValue({ stages: {}, totalCount: 5, unassignedCount: 0 });
+
+      await service.getDashboardMetrics();
+      await service.getPipelineMetrics();
+
+      service.invalidateCache();
+
+      await service.getDashboardMetrics();
+      await service.getPipelineMetrics();
+
+      expect(mockClientProvider.getDashboardMetrics).toHaveBeenCalledTimes(2);
+      expect(mockClientProvider.getPipelineMetrics).toHaveBeenCalledTimes(2);
+    });
   });
 
   describe("Authorization & Scoping Boundaries", () => {

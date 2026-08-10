@@ -1,4 +1,4 @@
-﻿import type { CSSProperties } from "react";
+import type { CSSProperties } from "react";
 import { Sun, Moon, Smartphone, Tablet as TabletIcon, Monitor } from "lucide-react";
 
 interface ThemeMockupPreviewProps {
@@ -300,7 +300,7 @@ export default function ThemeMockupPreview({
                 </div>
               </div>
 
-              <div className="flex-1 bg-slate-55 dark:bg-slate-950 p-6 flex flex-col justify-center text-center font-bold">
+              <div className="flex-1 bg-slate-50 dark:bg-slate-950 p-6 flex flex-col justify-center text-center font-bold">
                 <span className="text-[28px] opacity-20">📂</span>
                 <h5 className="font-bold mt-2" style={{ color: "var(--text-p)" }}>Sidebar Preview Mode</h5>
                 <p className="text-[10px] max-w-[160px] mx-auto mt-1 font-medium" style={{ color: "var(--text-s)" }}>

@@ -114,6 +114,8 @@ export default function AdminRosterTab({
       <DataTable
         data={users.filter((u) => !checkIsManagerial(u.role))}
         columns={columns}
+        getRowKey={(u) => u.id}
+        pageSize={15}
       />
     </div>
   );

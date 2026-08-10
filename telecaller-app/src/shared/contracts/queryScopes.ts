@@ -113,7 +113,7 @@ export function buildAgentLeadsQuery(
   uid: string,
   options: LeadScopeOptions = {},
 ): Query {
-  if ("offset" in options && (options as any).offset !== undefined) {
+  if ("offset" in options && (options as Record<string, unknown>).offset !== undefined) {
     throw new Error("Offset-based pagination is explicitly prohibited.");
   }
   const orderField = options.orderField ?? "updatedAt";
@@ -138,7 +138,7 @@ export function buildAgentLeadsQuery(
  * Realtime listeners must pass an explicit `limit` — there is no company-wide default of 500.
  */
 export function buildManagerLeadsQuery(options: LeadScopeOptions = {}): Query {
-  if ("offset" in options && (options as any).offset !== undefined) {
+  if ("offset" in options && (options as Record<string, unknown>).offset !== undefined) {
     throw new Error("Offset-based pagination is explicitly prohibited.");
   }
   const orderField = options.orderField ?? "updatedAt";

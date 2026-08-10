@@ -4,7 +4,7 @@
  * `computeLeadIntelligence` (or accepts a precomputed snapshot).
  */
 
-import { computeLeadIntelligence } from "@/features/leads/intelligence";
+import { computeLeadIntelligence } from "@/shared/services/leads/intelligence";
 import type {
   BuildIntelligenceContextOptions,
   IntelligenceContextPack,

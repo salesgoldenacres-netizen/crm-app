@@ -2,6 +2,7 @@ import React from "react";
 import { TransformWrapper, TransformComponent } from "react-zoom-pan-pinch";
 import { ZoomIn, ZoomOut, Maximize, Eye, EyeOff } from "lucide-react";
 import { Plot, Project } from "@/shared/types";
+import { formatPlotLabel } from "@/features/plots/utils/adminMapMetrics";
 
 interface ProjectMapCanvasProps {
   project: Project;
@@ -242,6 +243,8 @@ export default function ProjectMapCanvas({
                   src={project.image}
                   alt={project.name}
                   onLoad={handleImageLoad}
+                  loading="lazy"
+                  decoding="async"
                   className="h-full w-auto block shadow-xl"
                   draggable="false"
                   style={{
@@ -349,25 +352,41 @@ export default function ProjectMapCanvas({
                             );
                           })()}
 
-                        {showLabels && plot.status !== "road" && (
-                          <text
-                            x={labelX}
-                            y={labelY}
-                            transform={`rotate(${labelRot}, ${labelX}, ${labelY})`}
-                            fill="white"
-                            fontSize="1.2"
-                            fontWeight="bold"
-                            textAnchor="middle"
-                            alignmentBaseline="middle"
-                            className="drop-shadow-md pointer-events-none select-none"
-                            style={{
-                              textShadow: "0 0 3px rgba(0,0,0,0.8)",
-                              opacity: isHovered ? 1 : 0.85,
-                            }}
-                          >
-                            {plot.number}
-                          </text>
-                        )}
+                        {showLabels && plot.status !== "road" && (() => {
+                          const labelLines = formatPlotLabel(
+                            plot,
+                            plot.points || [],
+                            project.scaleRatio || 0,
+                            project.labelContentMode || "number"
+                          ).split("\n");
+                          return (
+                            <text
+                              x={labelX}
+                              y={labelY}
+                              transform={`rotate(${labelRot}, ${labelX}, ${labelY})`}
+                              fill="white"
+                              fontSize="1.2"
+                              fontWeight="bold"
+                              textAnchor="middle"
+                              alignmentBaseline="middle"
+                              className="drop-shadow-md pointer-events-none select-none"
+                              style={{
+                                textShadow: "0 0 3px rgba(0,0,0,0.8)",
+                                opacity: isHovered ? 1 : 0.85,
+                              }}
+                            >
+                              {labelLines.map((line, lineIdx) => (
+                                <tspan
+                                  key={`${plot.id}-lbl-${lineIdx}`}
+                                  x={labelX}
+                                  dy={lineIdx === 0 ? 0 : 1.35}
+                                >
+                                  {line}
+                                </tspan>
+                              ))}
+                            </text>
+                          );
+                        })()}
                       </g>
                     );
                   })}

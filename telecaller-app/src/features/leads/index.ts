@@ -42,4 +42,6 @@ export * from "./hooks/useAgentOpenLeads";
 export * from "./hooks/useLeadQuery";
 
 export * from "./constants/leadTemplates";
-export * from "./utils/leadColors";
+// leadColors moved to @/shared/utils/leadColors (audit A-1). Re-exported here for
+// backwards compatibility with existing `@/features/leads` barrel consumers.
+export * from "@/shared/utils/leadColors";

@@ -24,7 +24,8 @@ import {
   useWhatsAppConversations,
   type WhatsAppMessage,
 } from "@/features/messaging";
-import { getLeadStatusColor } from "@/features/leads/utils/leadColors";
+import { isManagerial } from "@/shared/utils/roleUtils";
+import { getLeadStatusColor } from "@/shared/utils/leadColors";
 
 interface WhatsAppInboxViewProps {
   user: User;
@@ -97,8 +98,13 @@ export default function WhatsAppInboxView({
   const [sendError, setSendError] = useState<string | null>(null);
   const bottomRef = useRef<HTMLDivElement | null>(null);
 
+  const managerial = isManagerial(user.role);
   const { isConnected, publicConfig, status } = useMessagingStatus(true);
-  const { conversations } = useWhatsAppConversations(150);
+  const { conversations } = useWhatsAppConversations({
+    max: 150,
+    assignedTo: managerial ? undefined : user.id,
+    managerial,
+  });
   const selectedLead =
     leads.find((l) => l.id === simulatedWaLeadId) || null;
 
@@ -375,7 +381,14 @@ export default function WhatsAppInboxView({
                         {m.type === "image" && m.mediaUrl && (
                           <img
                             src={m.mediaUrl}
-                            alt=""
+                            alt={
+                              m.mediaFileName ||
+                              (mine
+                                ? "Image sent in this WhatsApp conversation"
+                                : "Image received in this WhatsApp conversation")
+                            }
+                            loading="lazy"
+                            decoding="async"
                             className="rounded-lg mb-1.5 max-h-40 object-cover"
                           />
                         )}

@@ -2,7 +2,7 @@ import { ArrowLeft, PhoneForwarded, Sparkles, BookOpen } from "lucide-react";
 import Button from "@/shared/components/ui/Button";
 import Badge from "@/shared/components/ui/Badge";
 import { Lead } from "@/shared/types";
-import { getLeadStatusBadgeVariant } from "@/features/leads/utils/leadColors";
+import { getLeadStatusBadgeVariant } from "@/shared/utils/leadColors";
 
 interface LeadDetailsHeaderProps {
   activeLead: Lead;

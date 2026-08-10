@@ -28,7 +28,7 @@ interface SiteVisitSchedulerProps {
   user: User;
   users: User[];
   updateLead: (id: string, data: Partial<Lead>) => Promise<void>;
-  addNotification: (data: any) => Promise<void>;
+  addNotification: (data: Record<string, unknown>) => Promise<void>;
   isManagerial: (role: string) => boolean;
 }
 

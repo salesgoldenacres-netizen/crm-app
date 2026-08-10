@@ -30,7 +30,7 @@ High-level map of the Golden Acres Projects workspace and the Telecaller CRM. Fo
 | `directives/` | SOPs (what to do) |
 | `execution/` | Deterministic Python scripts (how to do it) |
 | `telecaller-app/` | CRM web/mobile client + Cloud Functions |
-| `.github/workflows/` | CI, optional scheduled backup, deploy stub |
+| `.github/workflows/` | CI (`ci.yml`), manual deploy (`deploy.yml`), scheduled backup |
 | `backups/` | Local Firestore JSON backups (gitignored) |
 
 ## CRM app (`telecaller-app/`)
@@ -51,14 +51,17 @@ High-level map of the Golden Acres Projects workspace and the Telecaller CRM. Fo
 
 | Surface | Runner | Notes |
 |---------|--------|-------|
-| App unit/UI tests | Vitest (`npm test` in `telecaller-app/`) | Excludes `functions/` |
-| Scoped coverage | `npm run test:coverage` | Light gate on `dateUtils` |
-| Functions unit tests | `node --test` (`npm test` in `functions/`) | Pure helpers only in CI |
-| PR/push CI | `.github/workflows/ci.yml` | Lint + app tests + build + functions tests |
+| App unit tests | Vitest (`npm test` in `telecaller-app/`) | Excludes `functions/`, `rules/` |
+| Scoped coverage | `npm run test:coverage` | Business-logic thresholds in `vite.config.js` |
+| Functions unit tests | `node --test` (`npm test` in `functions/`) | Hard audit at `--audit-level=high` |
+| Rules unit tests | `npm run test:rules` | Firestore + Storage emulators |
+| PR/push CI | `.github/workflows/ci.yml` | Three parallel jobs: app, functions, rules |
 
 ## Deployment
 
-Prefer `directives/deploy_ota_and_firebase.md` / `execution/deploy_ota_and_firebase.py`. GitHub deploy is a **manual stub** until a Firebase CI token is configured (see `.github/workflows/deploy.yml`). Rollback notes live in the deploy directive.
+Primary path: `directives/deploy_ota_and_firebase.md` / `execution/deploy_ota_and_firebase.py` (OTA + Firebase).
+
+GitHub Actions: [`.github/workflows/deploy.yml`](.github/workflows/deploy.yml) — manual `workflow_dispatch` for rules, storage, functions, and optional Hosting. Requires `FIREBASE_SERVICE_ACCOUNT_JSON`; gated by GitHub Environment **`production`**. See `telecaller-app/DEPLOYMENTS.md` for secrets, WIF upgrade path, and rollback notes.
 
 ## Backups
 

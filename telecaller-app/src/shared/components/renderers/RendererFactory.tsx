@@ -1,6 +1,7 @@
 import DataTableRenderer from "./DataTableRenderer";
 import VirtualizedRenderer from "./VirtualizedRenderer";
 import MobileCardRenderer from "./MobileCardRenderer";
+import VirtualizedMobileCardRenderer from "./VirtualizedMobileCardRenderer";
 import { VirtualizationErrorBoundary } from "./VirtualizationErrorBoundary";
 import { DataTableProps } from "../DataTable";
 
@@ -31,14 +32,22 @@ export default function RendererFactory<T>({
   const threshold = config.virtualizationThreshold ?? DEFAULT_RENDERER_CONFIGURATION.virtualizationThreshold;
   const overscan = config.overscan ?? DEFAULT_RENDERER_CONFIGURATION.overscan;
 
-  if (mode === "mobile") {
-    return <MobileCardRenderer data={data} {...tableProps} />;
-  }
-
-  // Desktop checks
   const shouldVirtualize =
     virtualization === "always" ||
     (virtualization === "auto" && data.length >= threshold);
+
+  if (mode === "mobile") {
+    // Mobile card lists window only above the configured threshold (F-3); small
+    // lists keep the simpler non-virtualized card layout.
+    if (shouldVirtualize) {
+      return (
+        <VirtualizationErrorBoundary data={data} {...tableProps}>
+          <VirtualizedMobileCardRenderer data={data} overscan={overscan} {...tableProps} />
+        </VirtualizationErrorBoundary>
+      );
+    }
+    return <MobileCardRenderer data={data} {...tableProps} />;
+  }
 
   if (shouldVirtualize) {
     return (

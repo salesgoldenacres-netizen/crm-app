@@ -49,6 +49,17 @@ exports.messagingTestConnection = messagingTestConnection;
 exports.messagingInstanceAction = messagingInstanceAction;
 exports.messagingSend = messagingSend;
 
+// SEC-1 — scoped aggregates, phone dedup, audit log writes (Admin SDK)
+const {
+  getLeadPipelineCounts,
+  findLeadsByPhone,
+  logAuditEventCallable,
+} = require('./leads/sec1Callables');
+
+exports.getLeadPipelineCounts = getLeadPipelineCounts;
+exports.findLeadsByPhone = findLeadsByPhone;
+exports.logAuditEventCallable = logAuditEventCallable;
+
 // Export API / Webhooks Express App
 const { api } = require('./routes');
 exports.api = api;

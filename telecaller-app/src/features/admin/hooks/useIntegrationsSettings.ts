@@ -189,6 +189,11 @@ export function useIntegrationsSettings({
         enableIvr: integrationSettings.enableIvr ?? false,
         ivrProvider: integrationSettings.ivrProvider ?? "mock",
         ivrVirtualNumber: integrationSettings.ivrVirtualNumber ?? "",
+        exotelVirtualNumber: integrationSettings.exotelVirtualNumber ?? "",
+        ivrCustomOutboundUrl: integrationSettings.ivrCustomOutboundUrl ?? "",
+        ivrCustomMethod: integrationSettings.ivrCustomMethod ?? "POST",
+        ivrCustomHeaders: integrationSettings.ivrCustomHeaders ?? "",
+        ivrCustomPayload: integrationSettings.ivrCustomPayload ?? "",
         duplicateHandlingRule: integrationSettings.duplicateHandlingRule ?? "merge",
         messagingProviderId: integrationSettings.messagingProviderId ?? "evolution",
         messagingEnabled: !!integrationSettings.evolutionEnabled,
@@ -234,6 +239,9 @@ export function useIntegrationsSettings({
         evolutionApiKey: integrationSettings.evolutionApiKey ?? "",
         evolutionInstanceToken: integrationSettings.evolutionInstanceToken ?? "",
         evolutionWebhookSecret: integrationSettings.evolutionWebhookSecret ?? "",
+        exotelSid: integrationSettings.exotelSid ?? "",
+        exotelToken: integrationSettings.exotelToken ?? "",
+        ivrCustomAuthHeader: integrationSettings.ivrCustomAuthHeader ?? "",
       };
 
       await SettingsRepository.setIntegrations(publicFields);

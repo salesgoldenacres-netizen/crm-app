@@ -109,9 +109,10 @@ export default function DataTable<T>({
     if (!activeSearchQuery || searchFields.length === 0) return data;
     const query = activeSearchQuery.toLowerCase().trim();
 
-    return data.filter((item: any) => {
+    return data.filter((item) => {
+      const record = item as Record<string, unknown>;
       return searchFields.some((field) => {
-        const val = item[field];
+        const val = record[field];
         if (val === undefined || val === null) return false;
         return String(val).toLowerCase().includes(query);
       });
@@ -123,22 +124,25 @@ export default function DataTable<T>({
     if (!sortConfig) return filteredData;
 
     const sorted = [...filteredData];
-    sorted.sort((a: any, b: any) => {
-      let valA = a[sortConfig.key];
-      let valB = b[sortConfig.key];
+    sorted.sort((a, b) => {
+      let valA: unknown = (a as Record<string, unknown>)[sortConfig.key];
+      let valB: unknown = (b as Record<string, unknown>)[sortConfig.key];
 
       // Safe fallback/conversions
       if (valA === undefined || valA === null) valA = "";
       if (valB === undefined || valB === null) valB = "";
 
       if (typeof valA === "string") {
+        const strB = valB as string;
         return sortConfig.direction === "asc"
-          ? valA.localeCompare(valB)
-          : valB.localeCompare(valA);
+          ? valA.localeCompare(strB)
+          : strB.localeCompare(valA);
       } else {
+        const numA = valA as number;
+        const numB = valB as number;
         return sortConfig.direction === "asc"
-          ? (valA > valB ? 1 : -1)
-          : (valB > valA ? 1 : -1);
+          ? (numA > numB ? 1 : -1)
+          : (numB > numA ? 1 : -1);
       }
     });
 
@@ -156,7 +160,9 @@ export default function DataTable<T>({
 
   // Selection logic helper
   const allIds = useMemo(() => {
-    return sortedData.map((row) => (getRowKey ? getRowKey(row) : (row as any).id || ""));
+    return sortedData.map((row) =>
+      getRowKey ? getRowKey(row) : String((row as Record<string, unknown>).id ?? "")
+    );
   }, [sortedData, getRowKey]);
 
   const allSelected = useMemo(() => {
@@ -180,7 +186,7 @@ export default function DataTable<T>({
     const rows = sortedData.map((row) => {
       return columns
         .map((col) => {
-          const rawVal = (row as any)[col.key];
+          const rawVal = (row as Record<string, unknown>)[col.key];
           const val = rawVal !== undefined && rawVal !== null ? String(rawVal) : "";
           return `"${val.replace(/"/g, '""')}"`;
         })
@@ -312,7 +318,7 @@ export default function DataTable<T>({
                 const customRowClass = rowClassName ? rowClassName(row, rIdx) : "";
                 const id = getRowKey
                   ? getRowKey(row)
-                  : String((row as any).id ?? "");
+                  : String((row as Record<string, unknown>).id ?? "");
                 const rowKey = id || `row-${rIdx}`;
                 const isChecked = selectedRowIds?.includes(id) || false;
 
@@ -346,7 +352,9 @@ export default function DataTable<T>({
                         key={col.key}
                         className={`${cellPadClass} whitespace-nowrap align-middle text-theme-text ${col.className || ""}`}
                       >
-                        {col.render ? col.render(row, rIdx) : (row as any)[col.key]}
+                        {col.render
+                          ? col.render(row, rIdx)
+                          : ((row as Record<string, unknown>)[col.key] as React.ReactNode)}
                       </td>
                     ))}
                   </tr>

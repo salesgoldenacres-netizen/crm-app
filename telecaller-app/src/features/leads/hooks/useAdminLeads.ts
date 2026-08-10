@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Lead, User, Project, AuditLog } from "@/shared/types";
 import { safeFormatDateTime } from "@/shared/utils/dateUtils";
+import { buildAssignmentFields } from "@/shared/utils/leadAssignment";
 
 interface UseAdminLeadsProps {
   user: User;
@@ -111,12 +112,20 @@ export function useAdminLeads({
       });
       await updateLead(editingLead.id, {
         ...leadFormValues,
-        assignedToName,
+        ...buildAssignmentFields(
+          leadFormValues.assignedTo || "",
+          assignedToName,
+          selectedTC,
+        ),
       });
     } else {
       await addLead({
         ...leadFormValues,
-        assignedToName,
+        ...buildAssignmentFields(
+          leadFormValues.assignedTo || "",
+          assignedToName,
+          selectedTC,
+        ),
       } as Partial<Lead> & { name: string; phone: string });
     }
     await logAuditEvent({
@@ -151,7 +160,10 @@ export function useAdminLeads({
   const handleAssigneeChange = async (leadId: string, userId: string) => {
     const selectedTC = users.find((u) => u.id === userId);
     const assignedToName = selectedTC ? selectedTC.username : "Unassigned";
-    await updateLead(leadId, { assignedTo: userId, assignedToName });
+    await updateLead(
+      leadId,
+      buildAssignmentFields(userId, assignedToName, selectedTC),
+    );
     await logAuditEvent({
       action: "Reassign Lead",
       details: `Lead ID: ${leadId} assigned to agent: ${assignedToName}`,

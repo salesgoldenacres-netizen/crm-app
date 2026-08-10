@@ -58,11 +58,11 @@ export default function ProjectMap({ user }: ProjectMapProps) {
   const [filter, setFilter] = useState("all");
   const [tooltipPos, setTooltipPos] = useState({ x: 0, y: 0 });
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
-  const transformRef = useRef<any>(null);
+  const transformRef = useRef<unknown>(null);
 
   const handleImageLoad = () => {
     if (transformRef.current) {
-      transformRef.current.centerView();
+      (transformRef.current as { centerView?: () => void }).centerView?.();
     }
   };
 
@@ -329,7 +329,7 @@ export default function ProjectMap({ user }: ProjectMapProps) {
       // Zoom and center the element using react-zoom-pan-pinch zoomToElement API
       if (transformRef.current) {
         setTimeout(() => {
-          transformRef.current.zoomToElement(`poly-${plot.id}`, 3.5, 600);
+          (transformRef.current as any).zoomToElement(`poly-${plot.id}`, 3.5, 600);
         }, 100);
       }
 

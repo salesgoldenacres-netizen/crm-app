@@ -3,6 +3,13 @@ import { Project, Plot, EditingPlot } from "@/shared/types";
 import Drawer from "@/shared/components/ui/Drawer";
 import Button from "@/shared/components/ui/Button";
 import { useMediaQuery } from "@/shared/hooks/useMediaQuery";
+import {
+  areaSqFt,
+  edgeLengthsFt,
+  facingHint,
+  perimeterFt,
+} from "@/features/plots/utils/adminMapMetrics";
+import { isSoftLockedStatus } from "@/features/plots/utils/adminMapEditorPrecision";
 
 interface AdminMapSidebarProps {
   editingPlot: EditingPlot;
@@ -26,6 +33,11 @@ interface AdminMapSidebarProps {
     }>
   >;
   executeSubdivision: () => void;
+  frontageForm?: { edgeIndex: number; depthFt: number };
+  setFrontageForm?: React.Dispatch<
+    React.SetStateAction<{ edgeIndex: number; depthFt: number }>
+  >;
+  executeFrontageSplit?: () => void;
   plotForm: {
     number: string;
     size: string;
@@ -118,6 +130,9 @@ function AdminMapSidebarBody({
   subdivisionForm,
   setSubdivisionForm,
   executeSubdivision,
+  frontageForm,
+  setFrontageForm,
+  executeFrontageSplit,
   plotForm,
   setPlotForm,
   handleSavePlot,
@@ -137,6 +152,24 @@ function AdminMapSidebarBody({
     if (!isNaN(s) && !isNaN(r)) return (s * r).toLocaleString("en-IN");
     return currentPrice;
   };
+
+  const scale = project.scaleRatio || 0;
+  const liveArea =
+    scale > 0 && editingPlot.points?.length >= 3
+      ? Math.round(areaSqFt(editingPlot.points, scale))
+      : null;
+  const livePerimeter =
+    scale > 0 && editingPlot.points?.length >= 2
+      ? Math.round(perimeterFt(editingPlot.points, scale))
+      : null;
+  const edgeLens =
+    scale > 0 && editingPlot.points?.length >= 2
+      ? edgeLengthsFt(editingPlot.points, scale)
+      : [];
+  const frontageLen =
+    edgeLens.length > 0 ? Math.round(Math.max(...edgeLens)) : null;
+  const facing = editingPlot.points?.length >= 2 ? facingHint(editingPlot.points) : "";
+  const softLocked = isSoftLockedStatus(plotForm.status || editingPlot.status);
 
   return (
     <div className="flex flex-col flex-1 min-h-0">
@@ -279,6 +312,65 @@ function AdminMapSidebarBody({
                 <option value="horizontal">Horizontal Slices (Top-to-Bottom)</option>
               </select>
             </div>
+
+            {frontageForm && setFrontageForm && executeFrontageSplit && (
+              <div className="pt-3 border-t border-theme-border space-y-3">
+                <label className={labelCapsClass}>Frontage Split</label>
+                <div>
+                  <label className={labelClass}>Frontage edge</label>
+                  <select
+                    value={frontageForm.edgeIndex}
+                    onChange={(e) =>
+                      setFrontageForm({
+                        ...frontageForm,
+                        edgeIndex: parseInt(e.target.value) || 0,
+                      })
+                    }
+                    className={fieldClass}
+                  >
+                    {editingPlot.points.map((_, i) => {
+                      const len =
+                        edgeLens[i] != null ? ` (${Math.round(edgeLens[i])} ft)` : "";
+                      return (
+                        <option key={i} value={i}>
+                          Edge {i + 1}
+                          {len}
+                        </option>
+                      );
+                    })}
+                  </select>
+                </div>
+                <div>
+                  <label className={labelClass}>Depth (ft)</label>
+                  <input
+                    type="number"
+                    min="1"
+                    step="1"
+                    value={frontageForm.depthFt}
+                    onChange={(e) =>
+                      setFrontageForm({
+                        ...frontageForm,
+                        depthFt: Math.max(1, parseFloat(e.target.value) || 1),
+                      })
+                    }
+                    className={fieldClass}
+                  />
+                  {!project.scaleRatio && (
+                    <span className="text-[10px] text-theme-warning font-semibold block mt-1">
+                      Calibrate scale ruler in settings first.
+                    </span>
+                  )}
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={executeFrontageSplit}
+                >
+                  Preview Frontage Split
+                </Button>
+              </div>
+            )}
           </div>
 
           <div className="flex justify-end gap-2 pt-4 border-t border-theme-border mt-6 flex-wrap">
@@ -298,6 +390,38 @@ function AdminMapSidebarBody({
       ) : (
         <form onSubmit={handleSavePlot} className="space-y-4 flex-1 flex flex-col justify-between">
           <div className="space-y-4">
+            {softLocked && (
+              <p className="text-xs text-theme-warning font-semibold">
+                Soft-locked ({plotForm.status}) — geometry edits require confirmation.
+              </p>
+            )}
+            {(liveArea != null || livePerimeter != null) && (
+              <div className="text-xs text-theme-muted space-y-0.5">
+                {liveArea != null && (
+                  <p>
+                    Live area:{" "}
+                    <span className="text-theme-text font-semibold">{liveArea} sq ft</span>
+                  </p>
+                )}
+                {livePerimeter != null && (
+                  <p>
+                    Perimeter:{" "}
+                    <span className="text-theme-text font-semibold">
+                      {livePerimeter} ft
+                    </span>
+                  </p>
+                )}
+                {frontageLen != null && (
+                  <p>
+                    Frontage (longest):{" "}
+                    <span className="text-theme-text font-semibold">
+                      {frontageLen} ft
+                      {facing ? ` · ${facing}` : ""}
+                    </span>
+                  </p>
+                )}
+              </div>
+            )}
             <div>
               <label className={labelClass}>Name / Number</label>
               <input
@@ -502,7 +626,7 @@ function AdminMapSidebarBody({
                     type="button"
                     onClick={() => orthogonalizePlot(editingPlot.id)}
                     className="text-theme-success hover:opacity-80 flex items-center min-h-11 px-2 rounded-theme focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-theme-ring"
-                    title="Snap vertices to horizontal/vertical align"
+                    title="Align vertices to horizontal/vertical"
                   >
                     <Grid className="w-3.5 h-3.5 mr-1" aria-hidden="true" /> Align
                   </button>

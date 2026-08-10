@@ -360,6 +360,7 @@ export default function AttendanceTab({ user }: AttendanceTabProps) {
               data={userAttendanceRecords}
               getRowKey={(rec) => rec.id}
               density="comfortable"
+              pageSize={15}
               defaultSort={{ key: "date", direction: "desc" }}
               emptyMessage="No attendance records found"
               className="[&>div]:border-0 [&>div]:shadow-none [&>div]:rounded-none"

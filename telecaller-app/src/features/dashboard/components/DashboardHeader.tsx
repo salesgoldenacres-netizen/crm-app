@@ -1,12 +1,16 @@
 import { useRef, useEffect, useState } from "react";
 import { Clock, ChevronRight, Bell, Menu, LayoutDashboard } from "lucide-react";
 import { useToast } from "@/shared/components/Toast";
-import ThemeToggle from "@/shared/components/ThemeToggle";
+import ThemeToggle from "@/features/settings/components/ThemeToggle";
 import Dialog from "@/shared/components/ui/Dialog";
 import EmptyState from "@/shared/components/ui/EmptyState";
-import { safeFormatTime, formatDuration } from "@/shared/utils/dateUtils";
+import { safeFormatTime } from "@/shared/utils/dateUtils";
 import { User, AttendanceRecord } from "@/shared/types";
 import { NAV_LABELS } from "@/shared/constants/navTaxonomy";
+import {
+  DashboardBreakDuration,
+  DashboardShiftDuration,
+} from "@/features/dashboard/components/DashboardTimerDisplay";
 
 const STATUS_OPTIONS: { value: string; label: string; dot: string }[] = [
   { value: "available", label: "Available", dot: "bg-theme-success" },
@@ -40,8 +44,6 @@ interface DashboardHeaderProps {
   notifications: any[];
   markAllAsRead: () => void;
   markAsRead: (id: string) => void;
-  elapsedWorkSeconds: number;
-  elapsedBreakSeconds: number;
   clockIn: (username: string) => Promise<void>;
   clockOut: (username: string) => Promise<void>;
   startBreak: (username: string, type: string) => Promise<void>;
@@ -64,8 +66,6 @@ export default function DashboardHeader({
   notifications,
   markAllAsRead,
   markAsRead,
-  elapsedWorkSeconds,
-  elapsedBreakSeconds,
   clockIn,
   clockOut,
   startBreak,
@@ -381,7 +381,7 @@ export default function DashboardHeader({
                 Shift:
               </span>
               <span className="type-kpi text-[11px] text-theme-text">
-                {formatDuration(elapsedWorkSeconds * 1000)}
+                <DashboardShiftDuration />
               </span>
             </div>
             <div className="h-3 w-[1px] bg-theme-border hidden sm:block" />
@@ -390,7 +390,7 @@ export default function DashboardHeader({
                 Break:
               </span>
               <span className="type-kpi text-[11px] text-theme-text">
-                {formatDuration(elapsedBreakSeconds * 1000)}
+                <DashboardBreakDuration />
               </span>
               {(todayAttendance.breaks || []).some((b) => b.end === null) && (
                 <span className="inline-flex items-center px-1.5 py-0.5 rounded-theme text-[9px] font-bold bg-theme-warning/20 text-theme-warning border border-theme-warning/40">

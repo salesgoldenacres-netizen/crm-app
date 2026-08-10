@@ -1,4 +1,4 @@
-﻿import { Activity } from "lucide-react";
+import { Activity } from "lucide-react";
 import { Lead } from "@/shared/types";
 
 interface LeadAcquisitionAnalyticsProps {
@@ -77,10 +77,10 @@ export default function LeadAcquisitionAnalytics({ leads }: LeadAcquisitionAnaly
           ))}
         </div>
 
-        <div className="col-span-3 h-28 bg-gray-55 dark:bg-gray-900/50 rounded-theme border dark:border-gray-800 flex items-end justify-around px-4 pb-2 pt-4">
+        <div className="col-span-3 h-28 bg-gray-50 dark:bg-gray-900/50 rounded-theme border dark:border-gray-800 flex items-end justify-around px-4 pb-2 pt-4">
           {items.map((item) => (
             <div key={item.label} className="flex flex-col items-center w-16 space-y-1.5 group">
-              <div className="text-[10px] font-bold text-gray-650 dark:text-gray-400 group-hover:scale-105 transition-transform">
+              <div className="text-[10px] font-bold text-gray-600 dark:text-gray-400 group-hover:scale-105 transition-transform">
                 {item.count}
               </div>
               <div className="w-8 bg-gray-200 dark:bg-gray-700 rounded-t h-16 relative flex items-end">

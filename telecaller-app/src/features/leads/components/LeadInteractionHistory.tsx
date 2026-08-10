@@ -17,7 +17,7 @@ import {
   GitMerge,
 } from "lucide-react";
 import { safeFormatDateTime } from "@/shared/utils/dateUtils";
-import { getLeadStatusColor } from "@/features/leads/utils/leadColors";
+import { getLeadStatusColor } from "@/shared/utils/leadColors";
 import CallRecordingPlayer from "@/shared/components/CallRecordingPlayer";
 import { Lead, CallLogDocument } from "@/shared/types";
 import { useTimelineEvents } from "@/features/messaging";

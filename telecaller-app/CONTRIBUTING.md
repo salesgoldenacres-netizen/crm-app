@@ -17,10 +17,29 @@ npm run lint
 npm run typecheck
 npm test
 npm run test:coverage
+npm run test:rules
 cd functions && npm test
 ```
 
-CI also runs a production Vite build (with placeholder Firebase env vars).
+### Dual test runners (Vitest vs rules)
+
+| Command | Runner | Scope |
+|---------|--------|--------|
+| `npm test` / `npm run test:coverage` | **Vitest** (jsdom) | App unit/integration tests under `src/**` — **excludes** `rules/**` and `functions/**` |
+| `npm run test:rules` | **node:test** + Firebase emulators | Firestore + Storage security rules in `rules/*.test.js` |
+| `cd functions && npm test` | **node:test** | Cloud Functions helpers/controllers |
+
+Do not add `rules/**` to Vitest — rules tests require `@firebase/rules-unit-testing` and emulators (`test:rules` only). See `architecture_guide.md` § Testing.
+
+CI also runs a production Vite build (with placeholder Firebase env vars), Firebase rules validation
+(`npm run test:rules`), and dependency audits for both the app and `functions/`.
+
+| Audit target | Gate | Notes |
+|--------------|------|-------|
+| `functions/` | **hard** at `--audit-level=high` | Clean after `npm audit fix` |
+| App | **soft** (`continue-on-error`) | DO-2 waiver: [GHSA-qwww-vcr4-c8h2](https://github.com/advisories/GHSA-qwww-vcr4-c8h2) — RSC-only; SPA uses `BrowserRouter`. See [DEPLOYMENTS.md](./DEPLOYMENTS.md) |
+
+Deploy secrets and manual GitHub Actions deploy: [DEPLOYMENTS.md](./DEPLOYMENTS.md).
 
 ### Scoped lint for leads (critical domain)
 
@@ -66,5 +85,6 @@ Incident response: [../directives/incident-runbook.md](../directives/incident-ru
 ## PR expectations
 
 - Keep diffs focused; no drive-by refactors.
-- Add or extend **targeted** tests for the production path you touch (Meta helpers, LeadQueryService, productivity markers, call-log ids) — not coverage theater.
+- Add or extend **targeted** tests for the production path you touch (Meta helpers, LeadQueryService, productivity markers, call-log ids, auth, repositories) — not coverage theater.
+- Coverage gate (`npm run test:coverage`) targets business logic under `shared/` + feature hooks; see `architecture_guide.md` § Testing for policy and emulator residuals.
 - Update the relevant directive when you learn an edge case (self-anneal).

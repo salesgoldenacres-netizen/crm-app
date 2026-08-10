@@ -1,4 +1,4 @@
-﻿import React, { useMemo, useState, useRef } from "react";
+import React, { useMemo, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   BarChart3,

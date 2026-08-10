@@ -1,0 +1,39 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // Managerial / admin gate via Firebase Custom Claims (mirrors firestore.rules).
+    function isAdmin() {
+      return isAuthenticated() && request.auth.token.managerial == true;
+    }
+
+    // Only accept reasonably-sized image uploads for the known asset folders.
+    function isImageUpload() {
+      return request.resource.size < 10 * 1024 * 1024
+        && request.resource.contentType.matches('image/.*');
+    }
+
+    // Project layout images (uploadFile('layouts', ...)).
+    // Read: authenticated in-app display. Write: admin only.
+    match /layouts/{allPaths=**} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin() && isImageUpload();
+    }
+
+    // Branding assets (uploadFile('branding', ...)).
+    // Login screen consumes the tokenized download URL, so read stays authenticated.
+    match /branding/{allPaths=**} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin() && isImageUpload();
+    }
+
+    // Default deny.
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

@@ -1,33 +1,9 @@
 import { useState, useEffect } from "react";
+import { splitIvrSettingsFields } from "@/shared/constants/integrationSecretFields";
 import { IvrCallsRepository, SettingsRepository } from "@/shared/services/firebase/repositories";
+import type { IVRActiveCall, IVRSettings } from "@/shared/types/ivr";
 
-export interface IVRSettings {
-  enableIvr: boolean;
-  ivrProvider: string;
-  ivrVirtualNumber: string;
-  twilioAccountSid: string;
-  twilioAuthToken: string;
-  twilioPhoneNumber: string;
-  exotelSid: string;
-  exotelToken: string;
-  exotelVirtualNumber: string;
-  ivrCustomOutboundUrl: string;
-  ivrCustomMethod: string;
-  ivrCustomAuthHeader: string;
-  ivrCustomHeaders: string;
-  ivrCustomPayload: string;
-  [key: string]: string | boolean;
-}
-
-export interface IVRActiveCall {
-  id: string;
-  agentId?: string;
-  timestamp: string;
-  callerPhone: string;
-  callerName: string;
-  leadId: string;
-  status: string;
-}
+export type { IVRSettings, IVRActiveCall };
 
 const DEFAULT_IVR_SETTINGS: IVRSettings = {
   enableIvr: false,
@@ -71,7 +47,15 @@ export function useIVRStore(userId: string | null | undefined) {
   }, [userId]);
 
   const updateIvrSettings = async (settings: Partial<IVRSettings>) => {
-    await SettingsRepository.setIntegrations(settings);
+    const { publicFields, secretFields } = splitIvrSettingsFields(
+      settings as Record<string, unknown>,
+    );
+    if (Object.keys(publicFields).length > 0) {
+      await SettingsRepository.setIntegrations(publicFields);
+    }
+    if (Object.keys(secretFields).length > 0) {
+      await SettingsRepository.setIntegrationsSecrets(secretFields);
+    }
   };
 
   const clearActiveIvrCall = async () => {

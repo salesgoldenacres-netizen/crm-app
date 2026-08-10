@@ -14,8 +14,16 @@ export interface AnalyticsProvider {
   getTeamMetrics(projectId?: string): Promise<TeamMetrics>;
 }
 
+/** Options for targeted analytics cache invalidation. */
+export interface InvalidateCacheOptions {
+  /** Only invalidate these metric types. Omit to invalidate all metric types. */
+  metrics?: MetricType[];
+  /** Only invalidate entries for this project. Omit to invalidate across all projects. */
+  projectId?: string;
+}
+
 export interface AnalyticsService extends AnalyticsProvider {
-  invalidateCache(): void;
+  invalidateCache(options?: InvalidateCacheOptions): void;
 }
 export type MetricType = "dashboard" | "activity" | "pipeline" | "booking" | "team";
 export type CacheClass = "realtime" | "summary" | "count";

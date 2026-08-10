@@ -6,7 +6,7 @@
     "shell": "firebase functions:shell",
     "start": "npm run shell",
     "deploy": "firebase deploy --only functions",
-    "test": "node --test ai/*.test.js webhooks/*.test.js leads/*.test.js messaging/*.test.js automation/*.test.js productivity/*.test.js helpers/*.test.js"
+    "test": "node --test ai/*.test.js auth/*.test.js services/*.test.js webhooks/*.test.js leads/*.test.js messaging/*.test.js automation/*.test.js productivity/*.test.js helpers/*.test.js"
   },
   "engines": {
     "node": "22"

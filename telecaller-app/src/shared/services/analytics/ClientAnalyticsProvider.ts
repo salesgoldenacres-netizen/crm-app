@@ -16,14 +16,14 @@ import {
 export class ClientAnalyticsProvider implements AnalyticsProvider {
   private getLeads: () => Lead[];
   private getUsers: () => User[];
-  private getTargets: () => Record<string, { targetCount?: number }>;
+  private getTargets: () => Record<string, { targetCount?: number; bookingTargetCount?: number }>;
   private getGoals: () => { target?: number; achieved?: number; label?: string }[];
   private isManagerial: boolean;
 
   constructor(
     getLeads: () => Lead[],
     getUsers: () => User[],
-    getTargets: () => Record<string, { targetCount?: number }>,
+    getTargets: () => Record<string, { targetCount?: number; bookingTargetCount?: number }>,
     getGoals: () => { target?: number; achieved?: number; label?: string }[],
     isManagerial = false
   ) {
@@ -110,11 +110,15 @@ export class ClientAnalyticsProvider implements AnalyticsProvider {
       bookingsCount: agentBookings[u.id] || 0,
     })).sort((a, b) => b.callsCount - a.callsCount);
 
+    const bookingTarget = userObj
+      ? targetMap[userObj.id]?.bookingTargetCount || 5
+      : 5;
+
     return {
       callsLoggedToday,
       callTarget,
       bookingsToday,
-      bookingTarget: 5, // Default monthly target placeholder
+      bookingTarget,
       pipelineStats,
       leaderboard,
     };
@@ -201,10 +205,37 @@ export class ClientAnalyticsProvider implements AnalyticsProvider {
     if (this.isManagerial) {
       throw new Error("In-memory compute unavailable for managerial scope");
     }
+
+    const leads = this.getLeads();
+    const nowIST = new Date(new Date().getTime() + 5.5 * 60 * 60 * 1000);
+    const monthStartIST = new Date(nowIST.getFullYear(), nowIST.getMonth(), 1);
+
+    let teamCallsThisMonth = 0;
+    let teamBookingsThisMonth = 0;
+    leads.forEach((lead) => {
+      (lead.callLogs || []).forEach((log) => {
+        if (!log.date) return;
+        const logDateIST = new Date(
+          new Date(log.date).getTime() + 5.5 * 60 * 60 * 1000
+        );
+        if (logDateIST < monthStartIST) return;
+        if (!(log.note || "").includes("[WhatsApp")) {
+          teamCallsThisMonth += 1;
+        }
+        if (log.status === "booked" || log.status === "reserved") {
+          teamBookingsThisMonth += 1;
+        }
+      });
+    });
+
     const rawGoals = this.getGoals();
-    const teamGoals = rawGoals.map((g) => ({
+    const computedAchieved = [teamCallsThisMonth, teamBookingsThisMonth];
+    const teamGoals = rawGoals.map((g, index) => ({
       target: g.target || 0,
-      achieved: g.achieved || 0,
+      // Prefer live lead-derived progress; injected goals currently stub achieved as 0.
+      achieved:
+        computedAchieved[index] ??
+        (typeof g.achieved === "number" ? g.achieved : 0),
       label: g.label || "Goal",
     }));
 

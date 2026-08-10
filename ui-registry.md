@@ -169,7 +169,7 @@ Screenshot PNGs for the Wave 1 visual baseline remain an **operational follow-up
 | **Admin chrome** | Mobile tab strip: `min-h-11` + `rounded-theme` (not tiny pills). Dense toolbars (Leads / Users / Projects / Attendance) wrap + ≥44px controls. |
 | **PageHeader** | `min-h-14` with column stack on narrow; actions `flex-wrap`; breadcrumb may scroll horizontally. |
 | **Tables** | Prefer existing mobile alternatives (`LeadsMobileGrid`, `ResponsiveDataView`). Wide matrices (Admin timesheet) → horizontal scroll + sticky header + sticky first column. `DataTable` already scrolls + sticky thead. |
-| **Map header** | `AdminMapHeader` stacks below `lg`; tool strip scrolls; bulk bar `flex-wrap` so landscape phones don’t clip. |
+| **Map header** | `AdminMapHeader` matches PageHeader chrome (`header-brand-strip`, stacked rows); utilities + tools `flex-wrap`; secondary tools use a More menu below `md`; bulk bar `flex-wrap`. No primary horizontal scrollbar. |
 | **Power Dialer** | `PowerDialerWidget` on `theme-*` / `rounded-theme` / `Badge`; controls `min-h-11`; no indigo/purple/emoji/ping islands. |
 | **Bulk bar** | `BulkActionsPanel` theme tokens + ≥44px controls; sits above mobile bottom nav (`bottom-20`). |
 

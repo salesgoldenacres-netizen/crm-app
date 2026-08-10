@@ -3,9 +3,9 @@ const assert = require("node:assert/strict");
 const { buildAgentPool, pickNextRoundRobinAgent } = require("./allocation");
 
 const agents = [
-  { id: "a1", username: "Alice" },
-  { id: "a2", username: "Bob" },
-  { id: "a3", username: "Cara" },
+  { id: "a1", username: "Alice", uid: "uid-a1" },
+  { id: "a2", username: "Bob", uid: "uid-a2" },
+  { id: "a3", username: "Cara", uid: "uid-a3" },
 ];
 
 test("buildAgentPool returns all telecallers when activeAgents empty", () => {
@@ -27,7 +27,7 @@ test("pickNextRoundRobinAgent returns Unassigned when no active agents", () => {
     activeAgentIds: new Set(),
     lastAgentId: "a1",
   });
-  assert.deepEqual(result, { assignedTo: "", assignedToName: "Unassigned" });
+  assert.deepEqual(result, { assignedTo: "", assignedToName: "Unassigned", assignedToUid: "" });
 });
 
 test("pickNextRoundRobinAgent picks first agent when lastAgent unknown", () => {
@@ -38,6 +38,7 @@ test("pickNextRoundRobinAgent picks first agent when lastAgent unknown", () => {
   });
   assert.equal(result.assignedTo, "a1");
   assert.equal(result.assignedToName, "Alice");
+  assert.equal(result.assignedToUid, "uid-a1");
 });
 
 test("pickNextRoundRobinAgent advances to next agent after last", () => {

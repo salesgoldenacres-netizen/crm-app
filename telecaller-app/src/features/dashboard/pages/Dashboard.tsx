@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useRef } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Plus } from "lucide-react";
 
@@ -10,22 +10,28 @@ import ConfettiEffect from "@/shared/components/ConfettiEffect";
 import DashboardHeader from "@/features/dashboard/components/DashboardHeader";
 import MobileDrawer from "@/features/dashboard/components/MobileDrawer";
 import MobileStatusPanel from "@/features/dashboard/components/MobileStatusPanel";
-import DialerOverlay from "@/features/calls/components/DialerOverlay";
+import DashboardDialerHost, {
+  DashboardDialerHandle,
+} from "@/features/dashboard/components/DashboardDialerHost";
+import DashboardTimerHost from "@/features/dashboard/components/DashboardTimerHost";
 import AddLeadModal, { AddLeadFormState } from "@/features/leads/components/AddLeadModal";
 import CustomizerDrawer from "@/features/dashboard/components/CustomizerDrawer";
 import DashboardTabContent from "@/features/dashboard/components/DashboardTabContent";
+import {
+  DashboardProvider,
+  DashboardContextValue,
+} from "@/features/dashboard/context/DashboardContext";
 import { getAgentBadgesAndStats } from "@/features/dashboard/utils/agentStats";
 
 // Custom Feature Hooks
 import { useDashboardLeads } from "@/features/dashboard/hooks/useDashboardLeads";
 import { useDashboardPushConfig } from "@/features/dashboard/hooks/useDashboardPushConfig";
-import { useDashboardDialer } from "@/features/dashboard/hooks/useDashboardDialer";
-import { useDashboardTimers } from "@/features/dashboard/hooks/useDashboardTimers";
 import { useDashboardWidgets } from "@/features/dashboard/hooks/useDashboardWidgets";
 
 // Global Stores
 import { useProjectsStore } from "@/features/plots/hooks/useProjectsStore";
-import { useLeadsStore } from "@/features/leads/hooks/useLeadsStore";
+import { useLeadsStore, LogCallPayload } from "@/features/leads/hooks/useLeadsStore";
+import { useAnalytics } from "@/shared/services/analytics/AnalyticsContext";
 import { useAgentOpenLeads } from "@/features/leads/hooks/useAgentOpenLeads";
 import { AGENT_OPEN_LEADS_REALTIME_BOUND } from "@/shared/services/leads/leadQueryConstants";
 import { useUsersStore } from "@/features/employees/hooks/useUsersStore";
@@ -49,7 +55,7 @@ import {
 
 // Utils
 import { isManagerial as isManagerialUtil } from "@/shared/utils/roleUtils";
-import { User } from "@/shared/types";
+import { User, Lead } from "@/shared/types";
 import { useAuthorization } from "@/shared/services/AuthorizationContext";
 interface DashboardProps {
   user: User;
@@ -75,7 +81,39 @@ export default function Dashboard({ user, onLogout: _onLogout }: DashboardProps)
 
   // Global Stores Fetches
   const { projects, isLoaded: projectsLoaded } = useProjectsStore();
-  const { addLead } = useLeadsStore();
+  const { addLead: baseAddLead, updateLead: baseUpdateLead, logCall: baseLogCall } = useLeadsStore();
+  const { refreshDashboard } = useAnalytics();
+
+  const logCall = useCallback(
+    async (leadId: string, payload: LogCallPayload) => {
+      await baseLogCall(leadId, payload);
+      refreshDashboard();
+    },
+    [baseLogCall, refreshDashboard]
+  );
+
+  const updateLead = useCallback(
+    async (
+      id: string,
+      updatedFields: Partial<Lead>,
+      options?: { suppressTimeline?: boolean }
+    ) => {
+      await baseUpdateLead(id, updatedFields, options);
+      if (updatedFields.status !== undefined) {
+        refreshDashboard();
+      }
+    },
+    [baseUpdateLead, refreshDashboard]
+  );
+
+  const addLead = useCallback(
+    async (leadData: Partial<Lead> & { name: string; phone: string }) => {
+      const result = await baseAddLead(leadData);
+      refreshDashboard();
+      return result;
+    },
+    [baseAddLead, refreshDashboard]
+  );
   const { openLeads: leads, isLoaded: leadsLoaded } = useAgentOpenLeads();
   const { users } = useUsersStore();
 
@@ -145,13 +183,17 @@ export default function Dashboard({ user, onLogout: _onLogout }: DashboardProps)
     [setSearchParams]
   );
 
-  // Advanced Filters State
-  const advancedFilters = {
-    status: "",
-    source: "",
-    dateRange: "all",
-    budgetMax: "",
-  };
+  // Advanced Filters State — hoisted/memoized so its reference is stable across
+  // renders and does not invalidate useDashboardLeads' memo every render (F-2).
+  const advancedFilters = useMemo(
+    () => ({
+      status: "",
+      source: "",
+      dateRange: "all",
+      budgetMax: "",
+    }),
+    []
+  );
 
   // Derived states
   const agentStats = useMemo(() => {
@@ -211,15 +253,6 @@ export default function Dashboard({ user, onLogout: _onLogout }: DashboardProps)
   const [isAddLeadModalOpen, setIsAddLeadModalOpen] = useState(false);
   const [triggerConfetti] = useState(false);
 
-  // Dialer log form states
-  const [, setCallLogForm] = useState({
-    note: "",
-    status: "contacted",
-    followUpDate: "",
-    priority: "warm",
-    disposition: "Connected",
-  });
-
   // Add lead form state
   const [addLeadForm, setAddLeadForm] = useState<AddLeadFormState>({
     name: "",
@@ -251,36 +284,22 @@ export default function Dashboard({ user, onLogout: _onLogout }: DashboardProps)
     navigate(`/lead/${leadId}`);
   }, [navigate]);
 
-  // Hook 3: Outbound Dialer
-  const {
-    activeDialerLead,
-    dialerStatus,
-    dialerSeconds,
-    dialerMuted,
-    setDialerMuted,
-    dialerSpeaker,
-    setDialerSpeaker,
-    handleStartCall,
-    handleEndCall,
-    handleAnswerIvrCall,
-  } = useDashboardDialer(
-    user,
-    isManagerial,
-    updateAgentStatus,
-    ivrSettings,
-    activeIvrCall,
-    clearActiveIvrCall,
-    matchedIvrLead,
-    toast,
-    setActiveLeadId,
-    setIsAddLeadModalOpen,
-    setAddLeadForm
+  const setActiveLead = useCallback(
+    (lead: Lead | null) => {
+      if (lead?.id) navigate(`/lead/${lead.id}`);
+    },
+    [navigate]
   );
 
-  // Hook 4: Shift Work Hours & Breaks timers
-  const { elapsedWorkSeconds, elapsedBreakSeconds } = useDashboardTimers(todayAttendance);
+  // Hook 3: Outbound Dialer — state lives inside DashboardDialerHost so its 1Hz
+  // duration ticker does not re-render the whole Dashboard tab tree (P-4).
+  // Shift/break timers live inside DashboardTimerHost (H-1) the same way.
+  const dialerRef = useRef<DashboardDialerHandle>(null);
+  const handleStartCall = useCallback((lead: Lead) => {
+    dialerRef.current?.startCall(lead);
+  }, []);
 
-  // Hook 5: Widget grid preferences
+  // Hook 4: Widget grid preferences
   const {
     widgets: dbWidgetsPreference,
     isLoaded: prefsLoaded,
@@ -317,7 +336,6 @@ export default function Dashboard({ user, onLogout: _onLogout }: DashboardProps)
     deleteTask,
     clearCompletedTasks,
   } = useTasksStore(user?.id, { enabled: needsWidgetStores });
-  const toggleTaskDone = useCallback((taskId: string) => toggleTask(taskId, true), [toggleTask]);
 
   const { leaveRequests, submitLeaveRequest } = useLeaveRequestsStore({
     enabled: needsWidgetStores,
@@ -405,6 +423,162 @@ export default function Dashboard({ user, onLogout: _onLogout }: DashboardProps)
   const skipLinkClassName =
     "sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-[100] focus:px-4 focus:py-2 focus:bg-theme-accent focus:text-theme-accent-fg focus:rounded-theme focus:outline-none focus:ring-2 focus:ring-theme-ring focus:ring-offset-2 focus:ring-offset-theme-bg";
 
+  // Aggregated Dashboard state shared with the tab tree via context (F-1).
+  const dashboardContextValue: DashboardContextValue = useMemo(
+    () => ({
+      activeTab,
+      user,
+      users,
+      leads,
+      myLeads,
+      projects,
+      isManagerial,
+      totalAssigned,
+      rawCount,
+      hotCount,
+      overdueCount,
+      followupsToday,
+      newCount,
+      notAttemptedCount,
+      bookedCount,
+      contactedCount,
+      interestedCount,
+      notInterestedCount,
+      siteVisitCompletedCount,
+      siteVisitConfirmed,
+      rnrCount,
+      reEngagedCount,
+      addNotification: addDashboardNotification,
+      targets,
+      goals,
+      rosters,
+      coachingTip,
+      todaysEvents,
+      latestAnnouncement,
+      markAsRead,
+      followUpAlertLeads,
+      setLeadStatusFilter,
+      backendTasks,
+      addTask,
+      toggleTask,
+      deleteTask,
+      clearCompletedTasks,
+      leaveRequests,
+      submitLeaveRequest,
+      todayAttendance,
+      allAttendance,
+      clockIn: clockInCurrentUser,
+      startBreak: startBreakCurrentUser,
+      endBreak: endBreakCurrentUser,
+      clockOut: clockOutCurrentUser,
+      widgets,
+      setWidgets,
+      updateWidgets,
+      widgetStyle,
+      updateWidgetStyle,
+      widgetDensity,
+      updateWidgetDensity,
+      isCustomizerOpen,
+      setIsCustomizerOpen,
+      logAuditEvent,
+      agentStats,
+      resetPreferences,
+      setActiveLead,
+      leadsSubTab,
+      setLeadsSubTab,
+      handleStartCall,
+      setSimulatedWaLeadId,
+      setCallsSubTab,
+      setActiveTab,
+      projectSearchQuery,
+      setProjectSearchQuery,
+      mapSelectedProject,
+      setMapSelectedProject,
+      callsSubTab,
+      simulatedWaLeadId,
+      trainingData,
+      refreshDashboard,
+      logCall,
+      updateLead,
+    }),
+    [
+      activeTab,
+      user,
+      users,
+      leads,
+      myLeads,
+      projects,
+      isManagerial,
+      totalAssigned,
+      rawCount,
+      hotCount,
+      overdueCount,
+      followupsToday,
+      newCount,
+      notAttemptedCount,
+      bookedCount,
+      contactedCount,
+      interestedCount,
+      notInterestedCount,
+      siteVisitCompletedCount,
+      siteVisitConfirmed,
+      rnrCount,
+      reEngagedCount,
+      addDashboardNotification,
+      targets,
+      goals,
+      rosters,
+      coachingTip,
+      todaysEvents,
+      latestAnnouncement,
+      markAsRead,
+      followUpAlertLeads,
+      setLeadStatusFilter,
+      backendTasks,
+      addTask,
+      toggleTask,
+      deleteTask,
+      clearCompletedTasks,
+      leaveRequests,
+      submitLeaveRequest,
+      todayAttendance,
+      allAttendance,
+      clockInCurrentUser,
+      startBreakCurrentUser,
+      endBreakCurrentUser,
+      clockOutCurrentUser,
+      widgets,
+      setWidgets,
+      updateWidgets,
+      widgetStyle,
+      updateWidgetStyle,
+      widgetDensity,
+      updateWidgetDensity,
+      isCustomizerOpen,
+      setIsCustomizerOpen,
+      logAuditEvent,
+      agentStats,
+      resetPreferences,
+      setActiveLead,
+      leadsSubTab,
+      setLeadsSubTab,
+      handleStartCall,
+      setSimulatedWaLeadId,
+      setCallsSubTab,
+      setActiveTab,
+      projectSearchQuery,
+      setProjectSearchQuery,
+      mapSelectedProject,
+      setMapSelectedProject,
+      callsSubTab,
+      simulatedWaLeadId,
+      trainingData,
+      refreshDashboard,
+      logCall,
+      updateLead,
+    ]
+  );
+
   // Loading skeleton screen
   if (!projectsLoaded || !leadsLoaded || !prefsLoaded) {
     return (
@@ -445,7 +619,8 @@ export default function Dashboard({ user, onLogout: _onLogout }: DashboardProps)
   }
 
   return (
-    <div className="h-full min-h-0 flex flex-col overflow-hidden w-full">
+    <DashboardTimerHost todayAttendance={todayAttendance}>
+      <div className="h-full min-h-0 flex flex-col overflow-hidden w-full">
       <a href="#main-content" className={skipLinkClassName}>
         Skip to main content
       </a>
@@ -462,8 +637,6 @@ export default function Dashboard({ user, onLogout: _onLogout }: DashboardProps)
           notifications={notifications}
           markAllAsRead={markAllAsRead}
           markAsRead={markAsRead}
-          elapsedWorkSeconds={elapsedWorkSeconds}
-          elapsedBreakSeconds={elapsedBreakSeconds}
           clockIn={clockIn}
           clockOut={clockOut}
           startBreak={startBreak}
@@ -495,8 +668,6 @@ export default function Dashboard({ user, onLogout: _onLogout }: DashboardProps)
         <MobileStatusPanel
           user={user}
           todayAttendance={todayAttendance}
-          elapsedWorkSeconds={elapsedWorkSeconds}
-          elapsedBreakSeconds={elapsedBreakSeconds}
           myAgentStatus={myAgentStatus}
           showAnnouncement={showAnnouncement}
           setShowAnnouncement={setShowAnnouncement}
@@ -510,80 +681,9 @@ export default function Dashboard({ user, onLogout: _onLogout }: DashboardProps)
           updateAgentStatus={updateAgentStatus}
         />
         <div className="w-full max-w-full mx-auto py-4 sm:py-6 px-3 sm:px-6 lg:px-12">
-          <DashboardTabContent
-            activeTab={activeTab}
-            user={user}
-            users={users}
-            leads={leads}
-            myLeads={myLeads}
-            projects={projects}
-            isManagerial={isManagerial}
-            totalAssigned={totalAssigned}
-            rawCount={rawCount}
-            hotCount={hotCount}
-            overdueCount={overdueCount}
-            followupsToday={followupsToday}
-            newCount={newCount}
-            notAttemptedCount={notAttemptedCount}
-            bookedCount={bookedCount}
-            contactedCount={contactedCount}
-            interestedCount={interestedCount}
-            notInterestedCount={notInterestedCount}
-            siteVisitCompletedCount={siteVisitCompletedCount}
-            siteVisitConfirmed={siteVisitConfirmed}
-            rnrCount={rnrCount}
-            reEngagedCount={reEngagedCount}
-            addNotification={addDashboardNotification}
-            targets={targets}
-            goals={goals}
-            rosters={rosters}
-            coachingTip={coachingTip}
-            todaysEvents={todaysEvents}
-            latestAnnouncement={latestAnnouncement}
-            markAsRead={markAsRead}
-            followUpAlertLeads={followUpAlertLeads}
-            setLeadStatusFilter={setLeadStatusFilter}
-            backendTasks={backendTasks}
-            addTask={addTask}
-            toggleTask={toggleTaskDone}
-            deleteTask={deleteTask}
-            clearCompletedTasks={clearCompletedTasks}
-            leaveRequests={leaveRequests}
-            submitLeaveRequest={submitLeaveRequest}
-            todayAttendance={todayAttendance}
-            allAttendance={allAttendance}
-            clockIn={clockInCurrentUser}
-            startBreak={startBreakCurrentUser}
-            endBreak={endBreakCurrentUser}
-            clockOut={clockOutCurrentUser}
-            elapsedWorkSeconds={elapsedWorkSeconds}
-            elapsedBreakSeconds={elapsedBreakSeconds}
-            widgets={widgets}
-            setWidgets={setWidgets}
-            updateWidgets={updateWidgets}
-            widgetStyle={widgetStyle}
-            updateWidgetStyle={updateWidgetStyle}
-            widgetDensity={widgetDensity}
-            updateWidgetDensity={updateWidgetDensity}
-            isCustomizerOpen={isCustomizerOpen}
-            setIsCustomizerOpen={setIsCustomizerOpen}
-            logAuditEvent={logAuditEvent}
-            agentStats={agentStats}
-            resetPreferences={resetPreferences}
-            leadsSubTab={leadsSubTab}
-            setLeadsSubTab={setLeadsSubTab}
-            handleStartCall={handleStartCall}
-            setSimulatedWaLeadId={setSimulatedWaLeadId}
-            setCallsSubTab={setCallsSubTab}
-            setActiveTab={setActiveTab}
-            projectSearchQuery={projectSearchQuery}
-            setProjectSearchQuery={setProjectSearchQuery}
-            mapSelectedProject={mapSelectedProject}
-            setMapSelectedProject={setMapSelectedProject}
-            callsSubTab={callsSubTab}
-            simulatedWaLeadId={simulatedWaLeadId}
-            trainingData={trainingData}
-          />
+          <DashboardProvider value={dashboardContextValue}>
+            <DashboardTabContent />
+          </DashboardProvider>
         </div>
       </main>
 
@@ -591,22 +691,23 @@ export default function Dashboard({ user, onLogout: _onLogout }: DashboardProps)
         Outbound dialer for Dashboard-local call state only.
         IVR ringing is hosted solely by ModalHost DialerOverlay to avoid dual
         focus-trapped modals (Wave 10 Agent 7).
+        Dialer state (incl. the 1Hz duration ticker) is encapsulated here so it
+        does not re-render the Dashboard tab tree every second (P-4).
       */}
-      <DialerOverlay
-        activeDialerLead={activeDialerLead}
-        dialerStatus={dialerStatus}
-        dialerSeconds={dialerSeconds}
-        dialerMuted={dialerMuted}
-        setDialerMuted={setDialerMuted}
-        dialerSpeaker={dialerSpeaker}
-        setDialerSpeaker={setDialerSpeaker}
-        handleEndCall={() => handleEndCall(setCallLogForm as any)}
-        activeIvrCall={null}
+      <DashboardDialerHost
+        ref={dialerRef}
+        user={user}
+        isManagerial={isManagerial}
+        updateAgentStatus={updateAgentStatus}
         ivrSettings={ivrSettings}
-        matchedIvrLead={null}
-        projects={projects}
+        activeIvrCall={activeIvrCall}
         clearActiveIvrCall={clearActiveIvrCall}
-        handleAnswerIvrCall={handleAnswerIvrCall}
+        matchedIvrLead={matchedIvrLead}
+        toast={toast}
+        setActiveLeadId={setActiveLeadId}
+        setIsAddLeadModalOpen={setIsAddLeadModalOpen}
+        setAddLeadForm={setAddLeadForm}
+        projects={projects}
       />
 
       {/* Modular Form Modal for manual Lead submission */}
@@ -666,6 +767,7 @@ export default function Dashboard({ user, onLogout: _onLogout }: DashboardProps)
           <Plus className="w-6 h-6" aria-hidden="true" />
         </button>
       )}
-    </div>
+      </div>
+    </DashboardTimerHost>
   );
 }

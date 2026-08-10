@@ -4,6 +4,7 @@ import { auth } from "@/shared/services/firebase";
 import { UsersRepository } from "@/shared/services/firebase/repositories";
 import { logout as apiLogout } from "@/shared/services/auth";
 import { User } from "@/shared/types";
+import { logger } from "@/shared/utils/logger";
 
 export function useAuth() {
   const [user, setUser] = useState<User | null>(null);
@@ -14,7 +15,7 @@ export function useAuth() {
     const timer = setTimeout(() => {
       setLoading((curr) => {
         if (curr) {
-          console.warn("Auth initialization timed out.");
+          logger.warn("useAuth", "Auth initialization timed out.");
           return false;
         }
         return curr;
@@ -79,13 +80,15 @@ export function useAuth() {
               }
 
               // Truly not found — sign out
-              console.warn(
+              logger.warn(
+                "useAuth",
                 "User authenticated but not found in users collection. Signing out."
               );
               apiLogout();
               setLoading(false);
             } catch (err) {
-              console.error(
+              logger.error(
+                "useAuth",
                 "Error fetching user by email/username fallback:",
                 err
               );
@@ -94,7 +97,7 @@ export function useAuth() {
           }
         },
         (err) => {
-          console.error("Error fetching user by UID snapshot:", err);
+          logger.error("useAuth", "Error fetching user by UID snapshot:", err);
           setLoading(false);
         }
       );
@@ -111,7 +114,7 @@ export function useAuth() {
     try {
       await apiLogout();
     } catch (err) {
-      console.error("Logout failed:", err);
+      logger.error("useAuth", "Logout failed:", err);
     }
   };
 

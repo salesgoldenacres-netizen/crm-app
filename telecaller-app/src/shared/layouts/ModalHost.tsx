@@ -9,20 +9,25 @@ import type { DialerStatus, TemplateModalContext } from "@/shared/layouts/ModalR
 import { Capacitor } from "@capacitor/core";
 import { App } from "@capacitor/app";
 import { useToast } from "@/shared/components/Toast";
-import { User, Project, Lead } from "@/shared/types";
-import InCallWhatsAppBar from "@/features/calls/components/InCallWhatsAppBar";
+import { User, Project, Lead, Branding, CallLog } from "@/shared/types";
+import { useAnalytics } from "@/shared/services/analytics/AnalyticsContext";
+import type { IVRActiveCall, IVRSettings } from "@/shared/types/ivr";
+import type { InCallWhatsAppBarProps } from "@/shared/layouts/AppShell";
 
 interface ModalHostProps {
   user: User | null;
   projects: Record<string, Project> | null;
   children: ReactNode;
   leads: Lead[];
-  addLead: (lead: any) => Promise<any>;
-  updateLead: (id: string, data: any) => Promise<any>;
-  logCall: (leadId: string, call: any) => Promise<any>;
-  ivrSettings: any;
-  activeIvrCall: any;
+  branding: Branding;
+  addLead: (lead: Partial<Lead>) => Promise<unknown>;
+  updateLead: (id: string, data: Partial<Lead>) => Promise<unknown>;
+  logCall: (leadId: string, call: Partial<CallLog>) => Promise<unknown>;
+  ivrSettings: IVRSettings | null;
+  activeIvrCall: IVRActiveCall | null;
   clearActiveIvrCall: () => Promise<void>;
+  InCallWhatsAppBar?: React.ComponentType<InCallWhatsAppBarProps>;
+  themeToggle?: ReactNode;
 }
 
 export default function ModalHost({
@@ -36,11 +41,15 @@ export default function ModalHost({
   ivrSettings,
   activeIvrCall,
   clearActiveIvrCall,
+  branding,
+  InCallWhatsAppBar,
+  themeToggle,
 }: ModalHostProps) {
   const location = useLocation();
   const navigate = useNavigate();
   const { toast } = useToast();
   const { TemplateCenterModal, DialPadDrawer, DialerOverlay, CallLogModal } = useModalRegistry();
+  const { refreshDashboard } = useAnalytics();
 
   // ── Fullscreen state ──────────────────────────────────────────────────────
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -384,8 +393,10 @@ export default function ModalHost({
         <SidebarNav
           user={user}
           projects={projects}
+          branding={branding}
           openTemplates={openTemplates}
           openShortcuts={openShortcuts}
+          themeToggle={themeToggle}
         />
         <div className="flex-1 flex flex-col min-w-0 w-full min-h-0 h-full overflow-hidden">
           {children}
@@ -414,7 +425,10 @@ export default function ModalHost({
           leads={leads}
           onStartCall={handleStartCall}
           projects={projects || undefined}
-          addLead={addLead}
+          addLead={async (lead) => {
+            const result = await addLead(lead);
+            return (result as Lead | null) ?? null;
+          }}
         />
       )}
       {DialerOverlay && (
@@ -435,7 +449,7 @@ export default function ModalHost({
           handleAnswerIvrCall={handleAnswerIvrCall}
         />
       )}
-      {user && activeDialerLead && dialerStatus === "Active Call" && (
+      {user && activeDialerLead && dialerStatus === "Active Call" && InCallWhatsAppBar && (
         <InCallWhatsAppBar
           lead={activeDialerLead}
           user={user}
@@ -448,8 +462,16 @@ export default function ModalHost({
           onClose={() => setIsCallLogModalOpen(false)}
           lead={callLogLead}
           durationSeconds={callLogDuration}
-          logCall={logCall}
-          updateLead={updateLead}
+          logCall={async (leadId, call) => {
+            await logCall(leadId, call);
+            refreshDashboard();
+          }}
+          updateLead={async (id, data) => {
+            await updateLead(id, data);
+            if (data.status !== undefined) {
+              refreshDashboard();
+            }
+          }}
           user={user!}
         />
       )}

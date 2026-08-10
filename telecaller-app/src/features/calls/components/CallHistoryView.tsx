@@ -5,7 +5,7 @@ import { safeFormatDateTime } from "@/shared/utils/dateUtils";
 import CallRecordingPlayer from "@/shared/components/CallRecordingPlayer";
 import Badge from "@/shared/components/ui/Badge";
 import EmptyState from "@/shared/components/ui/EmptyState";
-import { getLeadStatusBadgeVariant } from "@/features/leads/utils/leadColors";
+import { getLeadStatusBadgeVariant } from "@/shared/utils/leadColors";
 
 interface CallHistoryViewProps {
   user: User;

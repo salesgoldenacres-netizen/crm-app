@@ -243,11 +243,11 @@ function LeadsDesktopTable({
                 onChange={(e) => {
                   if (e.target.checked) {
                     if (typeof setSelectedLeadIds === "function") {
-                      (setSelectedLeadIds as any)(myLeads.map((l) => l.id));
+                      setSelectedLeadIds(myLeads.map((l) => l.id));
                     }
                   } else {
                     if (typeof setSelectedLeadIds === "function") {
-                      (setSelectedLeadIds as any)([]);
+                      setSelectedLeadIds([]);
                     }
                   }
                 }}

@@ -1,7 +1,7 @@
 {
   "name": "telecaller-app",
   "private": true,
-  "version": "0.0.61",
+  "version": "0.0.80",
   "type": "module",
   "engines": {
     "node": ">=22"
@@ -14,7 +14,8 @@
     "typecheck": "tsc --noEmit",
     "preview": "vite preview",
     "test": "vitest run",
-    "test:coverage": "vitest run --coverage src/shared/utils/dateUtils.test.ts src/shared/services/leads/LeadQueryService.test.ts src/shared/services/firebase/callLogIds.test.ts src/shared/services/performance/pagination/pagination.test.ts"
+    "test:coverage": "vitest run --coverage",
+    "test:rules": "firebase emulators:exec --only firestore,storage \"node --test rules/*.test.js\""
   },
   "dependencies": {
     "@capacitor/android": "^8.4.0",
@@ -31,7 +32,7 @@
     "polygon-clipping": "^0.15.7",
     "react": "^19.2.6",
     "react-dom": "^19.2.6",
-    "react-router-dom": "^7.15.1",
+    "react-router-dom": "7.18.1",
     "react-zoom-pan-pinch": "^4.0.3",
     "tailwind-merge": "^3.6.0",
     "zod": "^4.4.3"
@@ -39,6 +40,7 @@
   "devDependencies": {
     "@capacitor/cli": "^8.4.0",
     "@eslint/js": "^10.0.1",
+    "@firebase/rules-unit-testing": "^5.0.1",
     "@tailwindcss/postcss": "^4.3.0",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
@@ -50,6 +52,7 @@
     "eslint": "^10.3.0",
     "eslint-plugin-react-hooks": "^7.1.1",
     "eslint-plugin-react-refresh": "^0.5.2",
+    "firebase-tools": "^14.0.0",
     "globals": "^17.6.0",
     "jsdom": "^29.1.1",
     "postcss": "^8.5.15",

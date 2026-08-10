@@ -46,24 +46,22 @@ export default function AdminMapEditor({ user }: AdminMapEditorProps) {
     draggedLabelId,
     slicePoints,
     setSlicePoints,
+    roadCutPoints,
+    setRoadCutPoints,
+    geometryPreview,
+    frontageForm,
+    setFrontageForm,
     mousePos,
     editingPlot,
     setEditingPlot,
     plotForm,
     setPlotForm,
-    snapToGrid,
-    setSnapToGrid,
-    snapToGeometry,
-    setSnapToGeometry,
-    snapTolerancePx,
-    setSnapTolerancePx,
     subdivisionActive,
     setSubdivisionActive,
     subdivisionForm,
     setSubdivisionForm,
     selectedPlotIds,
     setSelectedPlotIds,
-    snappedPoint,
     showSettings,
     setShowSettings,
     bulkStatus,
@@ -82,6 +80,11 @@ export default function AdminMapEditor({ user }: AdminMapEditorProps) {
     setSearchQuery,
     flashPlotId,
     mapTransform,
+    calibrationPoints,
+    setCalibrationPoints,
+    dragPreviewPlots,
+    canUndo,
+    canRedo,
     getBoundingBox,
     getCenter,
     getPlotLayer,
@@ -89,12 +92,21 @@ export default function AdminMapEditor({ user }: AdminMapEditorProps) {
     handleUndo,
     handleRedo,
     handleMapEditorImageUpload,
+    handleRemoveMapImage,
+    handleClearCalibration,
     handleEditShapeClick,
     handleFinishDrawing,
+    handleFinishRoadCut,
+    handleBatchRenumber,
+    executeFrontageSplit,
     handleSvgClick,
     handleMouseMove,
     handleMouseUp,
     handleMouseLeave,
+    handleMapPanStart,
+    handleMapPanMove,
+    handleMapPanEnd,
+    resetMapTransform,
     handleMergePlots,
     handlePlotClick,
     handlePlotDoubleClick,
@@ -107,6 +119,7 @@ export default function AdminMapEditor({ user }: AdminMapEditorProps) {
     handleSelectAll,
     handleBulkDelete,
     startTransform,
+    startDragVertex,
     startDragLabel,
     insertPoint,
     handleVertexManualEdit,
@@ -164,11 +177,17 @@ export default function AdminMapEditor({ user }: AdminMapEditorProps) {
     return <div className="p-10 text-center text-theme-text">Project not found</div>;
   }
 
+  const gatedPlotClick = canEditMaps ? handlePlotClick : () => undefined;
   const gatedPlotDoubleClick = canEditMaps
     ? handlePlotDoubleClick
     : () => undefined;
-
   const gatedSvgClick = canEditMaps ? handleSvgClick : () => undefined;
+
+  // Enable Undo while drawing even when plot-history past is empty.
+  const pastHistoryLength = canUndo
+    ? Math.max(history.past.length, mode === "draw" && drawingPoints.length > 0 ? 1 : 0)
+    : 0;
+  const futureHistoryLength = canRedo ? history.future.length : 0;
 
   return (
     <div className="h-full min-h-0 flex flex-col bg-theme-bg transition-colors">
@@ -180,8 +199,9 @@ export default function AdminMapEditor({ user }: AdminMapEditorProps) {
         handleSearchFocus={handleSearchFocus}
         handleUndo={handleUndo}
         handleRedo={handleRedo}
-        pastHistoryLength={history.past.length}
-        futureHistoryLength={history.future.length}
+        resetMapTransform={resetMapTransform}
+        pastHistoryLength={pastHistoryLength}
+        futureHistoryLength={futureHistoryLength}
         mode={mode}
         setMode={setMode}
         setActivePlotId={setActivePlotId}
@@ -203,7 +223,10 @@ export default function AdminMapEditor({ user }: AdminMapEditorProps) {
         setEditSubMode={setEditSubMode}
         setDrawingPoints={setDrawingPoints}
         handleFinishDrawing={handleFinishDrawing}
-        setCalibrationPoints={() => {}}
+        setCalibrationPoints={setCalibrationPoints}
+        setRoadCutPoints={setRoadCutPoints}
+        handleFinishRoadCut={handleFinishRoadCut}
+        handleBatchRenumber={handleBatchRenumber}
         pushToHistory={pushToHistory}
         updateProject={updateProject as any}
         canEditMaps={canEditMaps}
@@ -212,10 +235,26 @@ export default function AdminMapEditor({ user }: AdminMapEditorProps) {
       <div className="flex-1 flex flex-col md:flex-row overflow-hidden relative">
         <div
           ref={viewportRef}
-          className="flex-1 relative overflow-auto bg-theme-surface flex justify-center items-center p-4"
+          className="flex-1 relative overflow-hidden bg-theme-surface flex justify-center items-center p-4 touch-none"
+          onMouseDown={handleMapPanStart}
+          onMouseMove={(e) => {
+            if (isMouseDown) handleMapPanMove(e);
+          }}
+          onMouseUp={() => {
+            handleMapPanEnd();
+            handleMouseUp();
+          }}
+          onMouseLeave={() => {
+            handleMapPanEnd();
+            handleMouseLeave();
+          }}
         >
           <AdminMapCanvas
-            project={project}
+            project={
+              dragPreviewPlots
+                ? { ...project, plots: dragPreviewPlots }
+                : project
+            }
             layers={layers}
             mode={canEditMaps ? mode : "view"}
             editSubMode={editSubMode}
@@ -224,9 +263,10 @@ export default function AdminMapEditor({ user }: AdminMapEditorProps) {
             selectedPlotIds={canEditMaps ? selectedPlotIds : []}
             drawingPoints={canEditMaps ? drawingPoints : []}
             slicePoints={canEditMaps ? slicePoints : []}
-            calibrationPoints={[]}
+            calibrationPoints={calibrationPoints}
+            roadCutPoints={canEditMaps ? roadCutPoints : []}
+            geometryPreview={canEditMaps ? geometryPreview : null}
             mousePos={mousePos}
-            snappedPoint={snappedPoint}
             draggedPointIdx={draggedPointIdx}
             setDraggedPointIdx={setDraggedPointIdx}
             draggedLabelId={draggedLabelId}
@@ -237,13 +277,14 @@ export default function AdminMapEditor({ user }: AdminMapEditorProps) {
             setSelectedPlotIds={setSelectedPlotIds}
             svgRef={svgRef}
             mapElementRef={mapElementRef}
-            handlePlotClick={handlePlotClick}
+            handlePlotClick={gatedPlotClick}
             handlePlotDoubleClick={gatedPlotDoubleClick}
             handleSvgClick={gatedSvgClick}
             handleMouseMove={handleMouseMove}
             handleMouseUp={handleMouseUp}
             handleMouseLeave={handleMouseLeave}
             startTransform={startTransform}
+            startDragVertex={startDragVertex}
             insertPoint={insertPoint}
             startDragLabel={startDragLabel}
             getCenter={getCenter}
@@ -262,7 +303,7 @@ export default function AdminMapEditor({ user }: AdminMapEditorProps) {
             <div className="absolute bottom-4 md:bottom-6 left-1/2 transform -translate-x-1/2 bg-theme-text/90 text-theme-bg px-4 md:px-6 py-2 md:py-3 rounded-theme shadow-lg flex items-center space-x-2 md:space-x-3 pointer-events-none w-[90%] md:w-auto justify-center text-xs md:text-sm z-10">
               <span>
                 {mode === "draw" &&
-                  "Click corners to plot polygon. Press Ctrl+Z to undo points. Click 'Save' to input details."}
+                  "Click corners to plot polygon. Ctrl+Z undoes points. Tab: distance+angle. Hold Alt to snap."}
                 {mode === "editShape" &&
                   (editSubMode === "vertices"
                     ? "Drag corners to adjust shape. Click edges to insert a corner. Double-click area for details."
@@ -271,7 +312,10 @@ export default function AdminMapEditor({ user }: AdminMapEditorProps) {
                   (!activePlotId
                     ? "Click an area to choose it for cutting."
                     : "Click two cut points across the area to split it.")}
-                {mode === "calibrate" && "Calibrating map scale..."}
+                {mode === "roadCut" &&
+                  "Draw a road centerline, then Finish to enter width (ft). Hold Alt to snap."}
+                {mode === "calibrate" &&
+                  "Click two points on a known distance, then enter feet. Cancel clears the line."}
                 {mode === "editLabels" &&
                   "Drag green circles/plot labels to change label offset placements."}
               </span>
@@ -288,6 +332,9 @@ export default function AdminMapEditor({ user }: AdminMapEditorProps) {
             subdivisionForm={subdivisionForm}
             setSubdivisionForm={setSubdivisionForm}
             executeSubdivision={executeSubdivision}
+            frontageForm={frontageForm}
+            setFrontageForm={setFrontageForm}
+            executeFrontageSplit={executeFrontageSplit}
             plotForm={plotForm}
             setPlotForm={setPlotForm}
             handleSavePlot={handleSavePlot}
@@ -311,18 +358,18 @@ export default function AdminMapEditor({ user }: AdminMapEditorProps) {
           updateProject={updateProject as any}
           projectId={id || ""}
           pushToHistory={pushToHistory}
-          snapToGrid={snapToGrid}
-          setSnapToGrid={setSnapToGrid}
-          snapToGeometry={snapToGeometry}
-          setSnapToGeometry={setSnapToGeometry}
-          snapTolerancePx={snapTolerancePx}
-          setSnapTolerancePx={setSnapTolerancePx}
           layers={layers}
-          setLayers={setLayers}
+          setLayers={setLayers as any}
           setMode={setMode}
-          setCalibrationPoints={() => {}}
+          setCalibrationPoints={setCalibrationPoints as any}
           handleMapEditorImageUpload={handleMapEditorImageUpload}
           uploadingImage={uploadingImage}
+          handleRemoveMapImage={handleRemoveMapImage}
+          handleClearCalibration={handleClearCalibration}
+          setDrawingPoints={setDrawingPoints}
+          setSlicePoints={setSlicePoints}
+          setActivePlotId={setActivePlotId}
+          setSelectedPlotIds={setSelectedPlotIds}
         />
       )}
 

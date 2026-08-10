@@ -18,7 +18,7 @@ function shiftLocalDateStr(daysBack: number): string {
   return getLocalDateStr(d);
 }
 
-export function useAttendanceStore(userId?: string) {
+export function useAttendanceStore(userId?: string, options?: { managerial?: boolean }) {
   const [todayAttendance, setTodayAttendance] = useState<AttendanceRecord | null>(null);
   const [allAttendance, setAllAttendance] = useState<AttendanceRecord[]>([]);
   const [isLoaded, setIsLoaded] = useState(!userId);
@@ -32,9 +32,13 @@ export function useAttendanceStore(userId?: string) {
   useEffect(() => {
     const endDate = getLocalDateStr();
     const startDate = shiftLocalDateStr(ATTENDANCE_LIST_RANGE_DAYS);
+    const managerial = options?.managerial === true;
 
-    // 1. Date-ranged attendance list (replaces full-collection listener)
-    const unsubscribeAll = AttendanceRepository.subscribeRange(startDate, endDate, (records) => {
+    // 1. Date-ranged attendance list — managerial sees all; agents only self (SEC-1)
+    const unsubscribeAll = AttendanceRepository.subscribeRange(
+      startDate,
+      endDate,
+      (records) => {
       // Sort by checkIn descending
       records.sort(
         (a, b) =>
@@ -45,7 +49,9 @@ export function useAttendanceStore(userId?: string) {
       if (!userId) {
         setIsLoaded(true);
       }
-    });
+    },
+      managerial ? undefined : userId,
+    );
 
     // 2. Subscribe to today's record for this user if logged in
     let unsubscribeToday = () => {};
@@ -62,7 +68,7 @@ export function useAttendanceStore(userId?: string) {
       unsubscribeAll();
       unsubscribeToday();
     };
-  }, [userId]);
+  }, [userId, options?.managerial]);
 
   const clockIn = async (username: string, shiftId = "morning_shift") => {
     if (!userId) return;

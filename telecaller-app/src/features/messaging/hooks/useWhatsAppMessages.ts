@@ -57,7 +57,7 @@ export function useWhatsAppMessages(leadId: string | null | undefined, max = 200
             legacyUnsub();
             legacyUnsub = null;
           }
-          const rows = snap.docs.map((d: any) => mapDoc(d.id, d.data()));
+          const rows = snap.docs.map((d) => mapDoc(d.id, d.data()));
           setMessages(rows);
           setConversationId(rows[rows.length - 1]?.conversationId || null);
           setError(null);
@@ -71,7 +71,7 @@ export function useWhatsAppMessages(leadId: string | null | undefined, max = 200
           max,
           (legacySnap) => {
             if (cancelled) return;
-            const rows = legacySnap.docs.map((d: any) =>
+            const rows = legacySnap.docs.map((d) =>
               mapDoc(d.id, { ...d.data(), leadId, conversationId: "" }),
             );
             setMessages(rows);

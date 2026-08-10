@@ -2,7 +2,16 @@ import { useEffect, useState } from "react";
 import { WhatsAppConversationsRepository } from "@/shared/services/firebase/repositories";
 import type { WhatsAppConversation } from "../types";
 
-export function useWhatsAppConversations(max = 100) {
+export interface UseWhatsAppConversationsOptions {
+  max?: number;
+  /** Firestore users doc id — scopes agent inbox (SEC-1). */
+  assignedTo?: string;
+  managerial?: boolean;
+}
+
+export function useWhatsAppConversations(options: UseWhatsAppConversationsOptions = {}) {
+  const max = options.max ?? 100;
+  const { assignedTo, managerial = false } = options;
   const [conversations, setConversations] = useState<WhatsAppConversation[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -18,7 +27,7 @@ export function useWhatsAppConversations(max = 100) {
       (snap) => {
         if (cancelled) return;
         setConversations(
-          snap.docs.map((d: any) => {
+          snap.docs.map((d) => {
             const data = d.data();
             return {
               id: d.id,
@@ -47,6 +56,7 @@ export function useWhatsAppConversations(max = 100) {
         setError(err.message || "Failed to load conversations");
         setLoading(false);
       },
+      { managerial, assignedTo },
     );
 
     return () => {
@@ -54,7 +64,7 @@ export function useWhatsAppConversations(max = 100) {
       window.clearTimeout(timer);
       unsub();
     };
-  }, [max]);
+  }, [max, assignedTo, managerial]);
 
   return { conversations, loading, error };
 }

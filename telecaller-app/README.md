@@ -18,6 +18,7 @@ src/
 │   ├── dashboard/          # Widgets, notifications, preferences
 │   ├── employees/          # Users, teams, agent status
 │   ├── leads/              # Lead workspace, import, details
+│   ├── messaging/          # WhatsApp timeline events, messaging status hooks
 │   ├── plots/              # Projects, SVG map editor/viewer
 │   └── settings/           # Theme store
 │
@@ -26,7 +27,7 @@ src/
 │   ├── constants/          # Firestore collection names, templates
 │   ├── layouts/            # AppShell, ModalHost
 │   ├── services/           # Firebase init, auth, repositories, converters
-│   ├── types/              # Re-exports of feature domain types
+│   ├── types/              # Domain types (leads, admin, timeline, IVR, theme)
 │   ├── utils/              # logger, formatters, uploadFile, roleUtils
 │   └── validation/         # Zod schemas (lead, user, leave)
 │

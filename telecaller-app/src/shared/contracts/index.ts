@@ -14,3 +14,4 @@ export * from "./leadIntelligence";
 export * from "./taskContract";
 export * from "./automation";
 export * from "./siteVisit";
+export * from "./leadActivity";

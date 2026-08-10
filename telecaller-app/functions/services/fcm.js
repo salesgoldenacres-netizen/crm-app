@@ -1,6 +1,7 @@
 const { onCall, HttpsError } = require('firebase-functions/v2/https');
 const admin = require('firebase-admin');
 const { isInvalidFcmTokenError } = require('../helpers/firestoreWrites');
+const { tokenIsManagerial } = require('../helpers/leadAccess');
 
 // Helper to send FCM notification (prunes invalid tokens)
 async function sendFcm(userId, payload) {
@@ -41,17 +42,33 @@ async function sendFcm(userId, payload) {
   }
 }
 
-const sendFcmNotification = onCall(
-  { region: 'us-central1' },
-  async (request) => {
-    if (!request.auth) {
-      throw new HttpsError('unauthenticated', 'Method must be called authenticated.');
-    }
+/**
+ * SEC-FCM-1: callers may notify themselves or managers may notify anyone.
+ * @param {{ uid?: string, token?: object } | null | undefined} auth
+ * @param {string} targetUserId
+ */
+function assertCallerCanSendFcmNotification(auth, targetUserId) {
+  if (!auth || !auth.uid) {
+    throw new HttpsError('unauthenticated', 'Method must be called authenticated.');
+  }
+  if (auth.uid === targetUserId) return;
+  if (tokenIsManagerial(auth)) return;
+  throw new HttpsError(
+    'permission-denied',
+    'You can only send notifications to yourself unless you are managerial.',
+  );
+}
 
+const sendFcmNotification = onCall(
+  // enforceAppCheck: client initializes App Check (ReCaptcha v3) (SEC-7).
+  { region: 'us-central1', enforceAppCheck: true },
+  async (request) => {
     const { targetUserId, title, body, extraData } = request.data;
     if (!targetUserId || !title || !body) {
       throw new HttpsError('invalid-argument', 'Missing parameters.');
     }
+
+    assertCallerCanSendFcmNotification(request.auth, targetUserId);
 
     await sendFcm(targetUserId, {
       notification: { title, body },
@@ -65,4 +82,5 @@ const sendFcmNotification = onCall(
 module.exports = {
   sendFcm,
   sendFcmNotification,
+  assertCallerCanSendFcmNotification,
 };

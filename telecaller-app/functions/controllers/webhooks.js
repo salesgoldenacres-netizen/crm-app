@@ -6,6 +6,7 @@ const {
   isSecretConfigured,
   resolveWhatsAppWebhookSecret,
   normalizePresentedSecret,
+  verifyMetaSignature,
 } = require('../webhooks/secrets');
 const {
   collectLeadgenEntries,
@@ -26,6 +27,18 @@ const { publishNotification } = require('../notifications/publishNotification');
 const { sendFcm } = require('../services/fcm');
 const { getMessagingProvider } = require('../services/messaging');
 const { generateUlid } = require('../helpers/ulid');
+
+// Generic client-facing message for unexpected 5xx errors (SEC-9): details are
+// logged server-side, never echoed to the caller.
+const GENERIC_SERVER_ERROR = 'Internal server error.';
+
+// Max leads accepted in a single /leads/bulk request (SEC-8). Oversized
+// payloads are rejected early before any Firestore work. Env-overridable for
+// legitimate large migrations.
+const MAX_BULK_LEADS = (() => {
+  const n = Number(process.env.MAX_BULK_LEADS);
+  return Number.isFinite(n) && n > 0 ? Math.floor(n) : 5000;
+})();
 
 // Helper to load integration settings
 async function getIntegrationSettings() {
@@ -89,6 +102,19 @@ const handlePostLeads = async (req, res) => {
       isGoogle = true;
 
     } else if (req.body.object === 'page' && req.body.entry) {
+      // SEC-4: verify Meta's X-Hub-Signature-256 HMAC over the raw body with the
+      // app secret. Fail closed like every other webhook.
+      const metaSig = verifyMetaSignature({
+        rawBody: req.rawBody,
+        signature:
+          req.get('x-hub-signature-256') || req.headers['x-hub-signature-256'],
+        appSecret: settings.metaAppSecret,
+      });
+      if (!metaSig.ok) {
+        console.warn(`[webhook-auth] REJECTED meta_leads: ${metaSig.reason}`);
+        return res.status(401).send('Unauthorized');
+      }
+
       if (!isSecretConfigured(settings.metaAccessToken)) {
         console.warn('[webhook-auth] REJECTED meta_leads: access token not configured');
         return res.status(401).send('Unauthorized');
@@ -444,7 +470,7 @@ const handlePostLeads = async (req, res) => {
 
   } catch (err) {
     console.error('Failed to ingest lead: ', err);
-    return res.status(500).send('Ingestion error: ' + err.message);
+    return res.status(500).send(GENERIC_SERVER_ERROR);
   }
 };
 
@@ -470,6 +496,20 @@ const handlePostBulkLeads = async (req, res) => {
     const rawLeads = req.body.leads || [];
     if (!Array.isArray(rawLeads) || rawLeads.length === 0) {
       return res.status(400).send('Expected an array of leads in the "leads" field.');
+    }
+
+    // SEC-8: reject oversized batches early, before any Firestore work.
+    if (rawLeads.length > MAX_BULK_LEADS) {
+      console.warn(
+        JSON.stringify({
+          event: 'bulk_import_rejected_oversized',
+          received: rawLeads.length,
+          max: MAX_BULK_LEADS,
+        }),
+      );
+      return res
+        .status(413)
+        .send(`Too many leads in one request. Max ${MAX_BULK_LEADS} per batch.`);
     }
 
     const { summary, results, failures } = await runBulkImport(
@@ -519,7 +559,7 @@ const handlePostBulkLeads = async (req, res) => {
         message: err && err.message ? err.message : String(err),
       }),
     );
-    return res.status(500).send('Bulk upload error: ' + err.message);
+    return res.status(500).send(GENERIC_SERVER_ERROR);
   }
 };
 
@@ -613,7 +653,7 @@ const handlePostIvr = async (req, res) => {
 
   } catch (err) {
     console.error('Failed to trigger IVR Call: ', err);
-    return res.status(500).send('IVR triggering error: ' + err.message);
+    return res.status(500).send(GENERIC_SERVER_ERROR);
   }
 };
 
@@ -656,7 +696,7 @@ async function handleWhatsAppWebhook(req, res) {
     return res.status(200).json(result);
   } catch (err) {
     console.error('WhatsApp webhook error:', err);
-    return res.status(500).json({ error: err.message });
+    return res.status(500).json({ error: GENERIC_SERVER_ERROR });
   }
 }
 

@@ -30,18 +30,111 @@ service cloud.firestore {
       ]);
     }
 
+    // Map Firestore users/{docId} to the signed-in Auth uid (doc id or linked uid field).
+    function userDocUidMatchesAuth(userDocId) {
+      return userDocId == request.auth.uid ||
+        (exists(/databases/$(database)/documents/users/$(userDocId)) &&
+         get(/databases/$(database)/documents/users/$(userDocId)).data.uid == request.auth.uid);
+    }
+
+    function isManagerialRoleCode(roleCode) {
+      return roleCode in ['admin', 'upper_management', 'middle_management', 'lower_management'];
+    }
+
+    // Managerial recipient lookup for notification workflows (agent → manager alerts).
+    function userDocIsManagerial(userDocId) {
+      return exists(/databases/$(database)/documents/users/$(userDocId)) &&
+        (
+          isManagerialRoleCode(get(/databases/$(database)/documents/users/$(userDocId)).data.role) ||
+          (
+            exists(/databases/$(database)/documents/customRoles/$(get(/databases/$(database)/documents/users/$(userDocId)).data.role)) &&
+            get(/databases/$(database)/documents/customRoles/$(get(/databases/$(database)/documents/users/$(userDocId)).data.role)).data.isManagerial == true
+          )
+        );
+    }
+
+    function leadDataAssignedToCaller(leadData) {
+      return leadData != null &&
+        'assignedTo' in leadData &&
+        leadData.assignedTo != null &&
+        leadData.assignedTo != "" &&
+        userDocUidMatchesAuth(leadData.assignedTo);
+    }
+
+    function leadOwnedByCaller() {
+      return resource != null && leadDataAssignedToCaller(resource.data);
+    }
+
+    function leadIdOwnedByCaller(leadId) {
+      return exists(/databases/$(database)/documents/leads/$(leadId)) &&
+        leadDataAssignedToCaller(get(/databases/$(database)/documents/leads/$(leadId)).data);
+    }
+
+    function leadIsUnassigned(leadData) {
+      return leadData == null ||
+        !('assignedTo' in leadData) ||
+        leadData.assignedTo == null ||
+        leadData.assignedTo == '' ||
+        leadData.assignedTo == 'Unassigned';
+    }
+
+    // SEC-1 CLOSED: managerial reads all; agents read own assignedToUid or unassigned pool.
+    function leadReadableByCaller() {
+      return isAdmin() ||
+        (resource != null && resource.data.assignedToUid == request.auth.uid) ||
+        (resource != null && leadIsUnassigned(resource.data));
+    }
+
+    function leadIdReadableByCaller(leadId) {
+      return isAdmin() ||
+        (
+          exists(/databases/$(database)/documents/leads/$(leadId)) &&
+          (
+            get(/databases/$(database)/documents/leads/$(leadId)).data.assignedToUid == request.auth.uid ||
+            leadIsUnassigned(get(/databases/$(database)/documents/leads/$(leadId)).data)
+          )
+        );
+    }
+
+    function attendanceOwnedByCaller() {
+      return resource != null &&
+        'userId' in resource.data &&
+        userDocUidMatchesAuth(resource.data.userId);
+    }
+
+    function conversationReadableByCaller() {
+      return isAdmin() ||
+        (
+          resource != null &&
+          'assignedTo' in resource.data &&
+          resource.data.assignedTo != null &&
+          resource.data.assignedTo != '' &&
+          userDocUidMatchesAuth(resource.data.assignedTo)
+        ) ||
+        (
+          resource != null &&
+          'leadId' in resource.data &&
+          resource.data.leadId is string &&
+          leadIdReadableByCaller(resource.data.leadId)
+        );
+    }
+
     // Default deny rule
     match /{document=**} {
       allow read, write: if false;
     }
 
     // Users collection:
-    // - Allow authenticated read/list for team view, or allow users to query/read profiles
+    // - Least-privilege read (SEC-1): managerial read all; everyone else reads only
+    //   their own profile. Self-match by linked uid, or by token email for the
+    //   login / JIT-link path where the uid field is not yet stamped.
     // - Only claim-holders (isAdmin) can create or delete users.
     // - Self-update: already-linked profile only; no uid/password/role/permission fields.
     // - password field: never creatable/updatable from clients (use Auth + Admin SDK).
     match /users/{userId} {
-      allow read: if isAuthenticated();
+      allow read: if isAdmin()
+        || (isAuthenticated() && 'uid' in resource.data && resource.data.uid == request.auth.uid)
+        || (isAuthenticated() && 'email' in resource.data && resource.data.email == request.auth.token.email);
       allow create: if isAdmin() && passwordFieldNotTouched();
       allow delete: if isAdmin();
       allow update: if passwordFieldNotTouched() && (
@@ -112,66 +205,114 @@ service cloud.firestore {
 
     // Audit Logs:
     // - Read allowed only for admins/managers
-    // - Create allowed for authenticated users
+    // - Create denied on client (SEC-1) — use logAuditEventCallable / Admin SDK
     // - Update/Delete disabled completely (immutable audit logs)
     match /auditLogs/{logId} {
       allow read: if isAdmin();
-      allow create: if isAuthenticated();
+      allow create: if false;
       allow update, delete: if false;
     }
 
     // Leads:
-    // - Read allowed for authenticated users
-    // - Write allowed for admin, or if authenticated and document is/was assigned to self or unassigned
+    // - Read (SEC-1 CLOSED): managerial OR assignedToUid == auth.uid OR unassigned pool.
+    //   Requires execution/backfill_assigned_to_uid.py before deploy.
+    // - Ownership for write: assigned leads only; unassigned is managerial-only update/delete.
     match /leads/{leadId} {
-      allow read: if isAuthenticated();
-      allow write: if isAdmin() || (
+      allow read: if leadReadableByCaller();
+
+      // Create: non-managerial may not pre-assign a lead to another user (SEC-5).
+      allow create: if isAdmin() || (
         isAuthenticated() && (
-          resource == null ||
-          resource.data.assignedTo == "" ||
-          (exists(/databases/$(database)/documents/users/$(resource.data.assignedTo)) &&
-           get(/databases/$(database)/documents/users/$(resource.data.assignedTo)).data.uid == request.auth.uid)
+          !('assignedTo' in request.resource.data) ||
+          request.resource.data.assignedTo == "" ||
+          userDocUidMatchesAuth(request.resource.data.assignedTo)
         )
       );
 
-      // Legacy WhatsApp messages (read-only compatibility; new writes go top-level)
+      // Update: must own the lead (assigned); unassigned leads are managerial-only.
+      // Non-managerial cannot reassign or mutate provenance fields (SEC-5).
+      allow update: if isAdmin() || (
+        isAuthenticated() &&
+        leadOwnedByCaller() &&
+        !request.resource.data.diff(resource.data).affectedKeys().hasAny([
+          'assignedTo', 'createdBy', 'createdAt', 'leadNumber', 'leadReference'
+        ])
+      );
+
+      allow delete: if isAdmin() || (isAuthenticated() && leadOwnedByCaller());
+
+      // Legacy WhatsApp messages (read-only compatibility; new writes are server-only)
       match /whatsappMessages/{messageId} {
-        allow read: if isAuthenticated();
-        allow create, update: if isAuthenticated();
+        allow read: if isAdmin() || (
+          isAuthenticated() &&
+          leadIdReadableByCaller(leadId)
+        );
+        allow create, update: if false;
         allow delete: if isAdmin();
       }
 
       match /whatsapp/{docId} {
-        allow read: if isAuthenticated();
-        allow write: if isAuthenticated();
+        allow read: if isAdmin() || (
+          isAuthenticated() &&
+          leadIdReadableByCaller(leadId)
+        );
+        allow write: if false;
       }
     }
 
-    // Canonical WhatsApp conversations (provider-agnostic)
+    // Canonical WhatsApp conversations — server-only writes (Admin SDK / Cloud Functions).
     match /whatsappConversations/{conversationId} {
-      allow read: if isAuthenticated();
-      allow create, update: if isAuthenticated();
+      allow read: if conversationReadableByCaller();
+      allow create, update: if false;
       allow delete: if isAdmin();
     }
 
-    // Canonical WhatsApp messages (full bodies; not embedded on Lead)
+    // Canonical WhatsApp messages — server-only writes (Admin SDK / Cloud Functions).
     match /whatsappMessages/{messageId} {
-      allow read: if isAuthenticated();
-      allow create, update: if isAuthenticated();
+      allow read: if isAdmin() || (
+        isAuthenticated() &&
+        'leadId' in resource.data &&
+        resource.data.leadId is string &&
+        leadIdReadableByCaller(resource.data.leadId)
+      );
+      allow create, update: if false;
       allow delete: if isAdmin();
     }
 
     // Canonical CRM activity stream — immutable after create
     match /timelineEvents/{eventId} {
-      allow read: if isAuthenticated();
+      allow read: if isAdmin() || (
+        isAuthenticated() &&
+        'leadId' in resource.data &&
+        resource.data.leadId is string &&
+        leadIdReadableByCaller(resource.data.leadId)
+      );
       allow create: if isAuthenticated();
       allow update, delete: if false;
     }
 
     // Phase C — top-level call log events (not embedded on Lead)
     match /callLogs/{callLogId} {
-      allow read: if isAuthenticated();
-      allow create, update: if isAuthenticated();
+      allow read: if isAdmin() || (
+        isAuthenticated() &&
+        resource != null &&
+        'leadId' in resource.data &&
+        resource.data.leadId is string &&
+        leadIdReadableByCaller(resource.data.leadId)
+      );
+      allow create: if isAdmin() || (
+        isAuthenticated() &&
+        'leadId' in request.resource.data &&
+        request.resource.data.leadId is string &&
+        leadIdOwnedByCaller(request.resource.data.leadId)
+      );
+      allow update: if isAdmin() || (
+        isAuthenticated() &&
+        resource != null &&
+        'leadId' in resource.data &&
+        leadIdOwnedByCaller(resource.data.leadId) &&
+        request.resource.data.leadId == resource.data.leadId
+      );
       allow delete: if isAdmin();
     }
 
@@ -214,10 +355,10 @@ service cloud.firestore {
     }
 
     // Attendance:
-    // - Reads allowed by authenticated users
+    // - Reads: managerial all; agents own records only (H2)
     // - Writes allowed for the user matching the record's userId or admin
     match /attendance/{attId} {
-      allow read: if isAuthenticated();
+      allow read: if isAdmin() || attendanceOwnedByCaller();
       allow write: if isAdmin() || (
         isAuthenticated() &&
         exists(/databases/$(database)/documents/users/$(request.resource.data.userId)) &&
@@ -240,7 +381,8 @@ service cloud.firestore {
 
     // Notifications:
     // - Reads allowed for recipient (or global broadcasts)
-    // - Create allowed for authenticated users
+    // - Create (SEC-6R): managerial claim OR self-target OR managerial recipient
+    //   (blocks peer telecaller spam; preserves agent→manager workflow alerts).
     // - Update restricted to marking own notifications as read
     // - Delete allowed only for admins
     match /notifications/{notifId} {
@@ -249,15 +391,26 @@ service cloud.firestore {
         resource.data.userId == null ||
         resource.data.userId == "" ||
         resource.data.userId == request.auth.uid ||
-        (exists(/databases/$(database)/documents/users/$(resource.data.userId)) &&
-         get(/databases/$(database)/documents/users/$(resource.data.userId)).data.uid == request.auth.uid)
+        userDocUidMatchesAuth(resource.data.userId)
       );
-      allow create: if isAuthenticated();
+      allow create: if isAuthenticated()
+        && (!('read' in request.resource.data) || request.resource.data.read == false)
+        && (
+          isAdmin() ||
+          (
+            'userId' in request.resource.data &&
+            request.resource.data.userId != null &&
+            request.resource.data.userId != "" &&
+            (
+              userDocUidMatchesAuth(request.resource.data.userId) ||
+              userDocIsManagerial(request.resource.data.userId)
+            )
+          )
+        );
       allow delete: if isAdmin();
       allow update: if isAuthenticated() && (
         resource.data.userId == request.auth.uid ||
-        (exists(/databases/$(database)/documents/users/$(resource.data.userId)) &&
-         get(/databases/$(database)/documents/users/$(resource.data.userId)).data.uid == request.auth.uid) ||
+        userDocUidMatchesAuth(resource.data.userId) ||
         isAdmin()
       ) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read']);
     }

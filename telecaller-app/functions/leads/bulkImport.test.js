@@ -26,11 +26,24 @@ test("buildBulkImportLog emits structured bulk_import fields", () => {
   );
 });
 
-function makeFakeDb(existingByPhone = {}) {
+function makeFakeDb(existingByPhone = {}, usersById = {}) {
   const created = [];
   return {
     created,
     collection(name) {
+      if (name === "users") {
+        return {
+          doc(id) {
+            return {
+              async get() {
+                const data = usersById[id];
+                if (!data) return { exists: false };
+                return { exists: true, data: () => data };
+              },
+            };
+          },
+        };
+      }
       if (name === "leads") {
         return {
           where(field, _op, value) {
@@ -86,9 +99,14 @@ function makeFakeDb(existingByPhone = {}) {
 }
 
 test("processBulkImportChunk creates, merges, and reports failures by index", async () => {
-  const db = makeFakeDb({
-    "+919999999999": { id: "existing1", data: { status: "new", phone: "+919999999999" } },
-  });
+  const db = makeFakeDb(
+    {
+      "+919999999999": { id: "existing1", data: { status: "new", phone: "+919999999999" } },
+    },
+    {
+      agent1: { uid: "auth-agent-1", username: "Agent One" },
+    },
+  );
   const callLogs = [];
   const notifications = [];
 

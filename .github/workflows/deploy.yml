@@ -1,27 +1,102 @@
-name: Deploy (manual)
+name: Deploy Firebase
 
-# Firebase deploy needs a CI token / service account. Keep this as an explicit
-# manual stub so accidental pushes never deploy. Prefer local/agent deploy via
-# directives/deploy_ota_and_firebase.md until secrets are wired.
+# Manual, gated deploy for Firestore rules, Storage rules, Cloud Functions, and
+# optionally Hosting. Requires repo secret FIREBASE_SERVICE_ACCOUNT_JSON.
+#
+# Optional hardening (recommended for production):
+#   1. Create a GitHub Environment named "production" with required reviewers.
+#   2. Uncomment `environment: production` on the deploy job below.
+#
+# Workload Identity Federation (preferred long-term; no JSON key in GitHub):
+#   - Create a GCP Workload Identity Pool + Provider for GitHub Actions.
+#   - Grant the target SA roles: Firebase Admin, Cloud Functions Admin, etc.
+#   - Add repo secrets/vars:
+#       WIF_PROVIDER: projects/PROJECT/locations/global/workloadIdentityPools/POOL/providers/PROVIDER
+#       WIF_SERVICE_ACCOUNT: deploy-sa@PROJECT.iam.gserviceaccount.com
+#   - Replace google-github-actions/auth step with:
+#       - uses: google-github-actions/auth@v2
+#         with:
+#           workload_identity_provider: ${{ secrets.WIF_PROVIDER }}
+#           service_account: ${{ secrets.WIF_SERVICE_ACCOUNT }}
 
 on:
   workflow_dispatch:
     inputs:
       targets:
-        description: "Firebase deploy targets (e.g. hosting,functions)"
+        description: "Firebase deploy targets (comma-separated)"
         required: false
-        default: "hosting,functions"
+        default: "firestore:rules,storage,functions"
+      include_hosting:
+        description: "Also deploy Hosting (requires a production Vite build)"
+        type: boolean
+        required: false
+        default: false
 
 jobs:
-  deploy-stub:
+  deploy:
+    name: Deploy to Firebase
     runs-on: ubuntu-latest
+    # Gates manual deploy behind GitHub Environment protection. Before first run:
+    #   Settings → Environments → production → Required reviewers (+ optional wait timer).
+    # If "production" does not exist yet, GitHub creates it on first dispatch (no reviewers
+    # until you configure them). See telecaller-app/DEPLOYMENTS.md § Environment protection.
+    environment: production
+    defaults:
+      run:
+        working-directory: telecaller-app
     steps:
       - uses: actions/checkout@v4
 
-      - name: Deferred deploy notice
+      - name: Require Firebase service account secret
+        env:
+          SA_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON }}
         run: |
-          echo "Deploy is deferred until FIREBASE_TOKEN (or WIF) is configured."
-          echo "Requested targets: ${{ inputs.targets }}"
-          echo "Use locally: python execution/deploy_ota_and_firebase.py --only ${{ inputs.targets }}"
-          echo "See directives/deploy_ota_and_firebase.md (including rollback notes)."
-          exit 0
+          if [ -z "$SA_JSON" ]; then
+            echo "::error::FIREBASE_SERVICE_ACCOUNT_JSON is not configured."
+            echo "Add the raw JSON key for a Firebase/GCP deploy service account."
+            echo "See telecaller-app/DEPLOYMENTS.md for required roles and setup."
+            exit 1
+          fi
+
+      - uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON }}
+
+      - uses: google-github-actions/setup-gcloud@v2
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: |
+            telecaller-app/package-lock.json
+            telecaller-app/functions/package-lock.json
+
+      - name: Install Firebase CLI
+        run: npm install -g firebase-tools@latest
+
+      - name: Install Cloud Functions dependencies
+        run: npm ci
+        working-directory: telecaller-app/functions
+
+      - name: Build web assets for Hosting
+        if: inputs.include_hosting == true
+        run: |
+          npm ci
+          npm run build
+        env:
+          VITE_FIREBASE_API_KEY: ${{ secrets.VITE_FIREBASE_API_KEY }}
+          VITE_FIREBASE_AUTH_DOMAIN: ${{ secrets.VITE_FIREBASE_AUTH_DOMAIN }}
+          VITE_FIREBASE_PROJECT_ID: golden-acres-projects
+          VITE_FIREBASE_STORAGE_BUCKET: ${{ secrets.VITE_FIREBASE_STORAGE_BUCKET }}
+          VITE_FIREBASE_MESSAGING_SENDER_ID: ${{ secrets.VITE_FIREBASE_MESSAGING_SENDER_ID }}
+          VITE_FIREBASE_APP_ID: ${{ secrets.VITE_FIREBASE_APP_ID }}
+
+      - name: Deploy Firebase
+        run: |
+          TARGETS="${{ inputs.targets }}"
+          if [ "${{ inputs.include_hosting }}" = "true" ]; then
+            TARGETS="${TARGETS},hosting"
+          fi
+          echo "Deploying: ${TARGETS}"
+          firebase deploy --only "${TARGETS}" --project golden-acres-projects --non-interactive

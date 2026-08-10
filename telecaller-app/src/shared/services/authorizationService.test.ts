@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { AuthorizationService } from "./authorizationService";
-import { User, Lead } from "@/shared/types";
+import { AI_ENABLED } from "@/shared/ai/types";
+import { User, Lead, CustomRole } from "@/shared/types";
 
 describe("AuthorizationService", () => {
   const managerUser: User = {
@@ -113,6 +114,106 @@ describe("AuthorizationService", () => {
 
     it("allows assignment proposals for managers on owned projects", () => {
       expect(AuthorizationService.canExecuteProposal(managerUser, "RECOMMEND_ASSIGNMENT", leadA)).toBe(true);
+    });
+
+    it("denies any proposal when the user is null (safe-closed)", () => {
+      expect(AuthorizationService.canExecuteProposal(null, "STATUS_CHANGE", leadA)).toBe(false);
+    });
+  });
+
+  const adminUser: User = {
+    id: "user-admin",
+    username: "admin",
+    role: "admin",
+    email: "admin@example.com",
+    allowedProjects: ["project-a"],
+  };
+
+  describe("canManageUsers (admin-only RBAC gate)", () => {
+    it("allows only the admin role", () => {
+      expect(AuthorizationService.canManageUsers(adminUser)).toBe(true);
+    });
+
+    it("denies managers who are not admins", () => {
+      expect(AuthorizationService.canManageUsers(managerUser)).toBe(false);
+    });
+
+    it("denies agents", () => {
+      expect(AuthorizationService.canManageUsers(agentUser)).toBe(false);
+    });
+
+    it("denies a null user (safe-closed)", () => {
+      expect(AuthorizationService.canManageUsers(null)).toBe(false);
+    });
+  });
+
+  describe("canViewAnalytics", () => {
+    it("allows managerial roles", () => {
+      expect(AuthorizationService.canViewAnalytics(managerUser)).toBe(true);
+      expect(AuthorizationService.canViewAnalytics(adminUser)).toBe(true);
+    });
+
+    it("denies telecallers by default", () => {
+      expect(AuthorizationService.canViewAnalytics(agentUser)).toBe(false);
+    });
+
+    it("respects custom managerial roles", () => {
+      const customRoles: CustomRole[] = [
+        { id: "telecaller", name: "Promoted Agent", isManagerial: true },
+      ];
+      expect(AuthorizationService.canViewAnalytics(agentUser, customRoles)).toBe(true);
+    });
+
+    it("denies a null user (safe-closed)", () => {
+      expect(AuthorizationService.canViewAnalytics(null)).toBe(false);
+    });
+  });
+
+  describe("canUseCopilot layered feature-flag gates", () => {
+    // Layer 1 is a compile-time global kill switch. These assertions are
+    // deterministic across either state of the flag so the test never depends
+    // on the build-time value.
+    it("denies everything while the global AI kill switch is off", () => {
+      if (AI_ENABLED) return; // covered by the enabled-path block below
+      expect(AuthorizationService.canUseCopilot(agentUser, "lead-brief-v1", "project-a")).toBe(false);
+      expect(AuthorizationService.canUseCopilot(adminUser, "confirm-write", "project-a")).toBe(false);
+    });
+
+    it("denies a null user", () => {
+      expect(AuthorizationService.canUseCopilot(null)).toBe(false);
+    });
+
+    it("denies inactive users regardless of role", () => {
+      const inactive: User = { ...agentUser, status: "inactive" };
+      expect(AuthorizationService.canUseCopilot(inactive)).toBe(false);
+    });
+
+    it("applies role/capability/project layers when AI is enabled", () => {
+      if (!AI_ENABLED) return; // kill switch off — asserted above
+      const inactive: User = { ...agentUser, status: "inactive" };
+      expect(AuthorizationService.canUseCopilot(inactive)).toBe(false);
+      expect(AuthorizationService.canUseCopilot(agentUser, "unknown-capability")).toBe(false);
+      expect(AuthorizationService.canUseCopilot(agentUser, "lead-brief-v1", "project-c")).toBe(false);
+      expect(AuthorizationService.canUseCopilot(agentUser, "lead-brief-v1", "project-a")).toBe(true);
+      expect(AuthorizationService.canUseCopilot(agentUser, "confirm-write", "project-b")).toBe(true);
+    });
+  });
+
+  describe("isProjectAuthorized edge cases", () => {
+    it("allows access when no projectId is supplied", () => {
+      expect(AuthorizationService.isProjectAuthorized(agentUser)).toBe(true);
+    });
+
+    it("allows access when allowedProjects is an empty array (legacy)", () => {
+      const openUser: User = { ...agentUser, allowedProjects: [] };
+      expect(AuthorizationService.isProjectAuthorized(openUser, "any-project")).toBe(true);
+    });
+  });
+
+  describe("canUpdateLead mirrors canReadLead", () => {
+    it("allows updates on readable leads and denies otherwise", () => {
+      expect(AuthorizationService.canUpdateLead(agentUser, leadA)).toBe(true);
+      expect(AuthorizationService.canUpdateLead(agentUser, leadB)).toBe(false);
     });
   });
 });

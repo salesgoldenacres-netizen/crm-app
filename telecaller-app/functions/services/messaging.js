@@ -6,6 +6,14 @@ const {
   UnsupportedCapabilityError,
   webhookUrlForProject,
 } = require('../messaging');
+const {
+  assertCallerCanContactLead,
+  tokenIsManagerial,
+} = require('../helpers/leadAccess');
+
+// enforceAppCheck: client initializes App Check (ReCaptcha v3); require a valid
+// App Check token on every messaging callable (SEC-7).
+const CALLABLE_OPTS = { region: 'us-central1', enforceAppCheck: true };
 
 // Use lazy initialization or dynamic getter to ensure admin.initializeApp() is run before calling this
 let providerInstance = null;
@@ -16,23 +24,37 @@ function getMessagingProvider() {
   return providerInstance;
 }
 
-const messagingStatus = onCall({ region: 'us-central1' }, async (request) => {
+const messagingStatus = onCall(CALLABLE_OPTS, async (request) => {
   if (!request.auth) {
     throw new HttpsError('unauthenticated', 'Sign in required');
   }
   return getMessagingProvider().getStatus();
 });
 
-const messagingTestConnection = onCall({ region: 'us-central1' }, async (request) => {
+const messagingTestConnection = onCall(CALLABLE_OPTS, async (request) => {
   if (!request.auth) {
     throw new HttpsError('unauthenticated', 'Sign in required');
+  }
+  // SEC-MSG-R: provider credential probe is admin-only (fail closed).
+  if (!tokenIsManagerial(request.auth)) {
+    throw new HttpsError(
+      'permission-denied',
+      'Only managerial users can test messaging connections.',
+    );
   }
   return getMessagingProvider().testConnection();
 });
 
-const messagingInstanceAction = onCall({ region: 'us-central1' }, async (request) => {
+const messagingInstanceAction = onCall(CALLABLE_OPTS, async (request) => {
   if (!request.auth) {
     throw new HttpsError('unauthenticated', 'Sign in required');
+  }
+  // SEC-MSG-1: instance lifecycle (QR / connect / disconnect) is admin-only.
+  if (!tokenIsManagerial(request.auth)) {
+    throw new HttpsError(
+      'permission-denied',
+      'Only managerial users can manage messaging instances.',
+    );
   }
   const action = request.data?.action;
   const provider = getMessagingProvider();
@@ -68,7 +90,7 @@ const messagingInstanceAction = onCall({ region: 'us-central1' }, async (request
   }
 });
 
-const messagingSend = onCall({ region: 'us-central1' }, async (request) => {
+const messagingSend = onCall(CALLABLE_OPTS, async (request) => {
   if (!request.auth) {
     throw new HttpsError('unauthenticated', 'Sign in required');
   }
@@ -93,6 +115,10 @@ const messagingSend = onCall({ region: 'us-central1' }, async (request) => {
     throw new HttpsError('not-found', 'Lead not found');
   }
   const lead = leadSnap.data();
+
+  // Authorize: caller must own the lead or be managerial (SEC-3 IDOR).
+  await assertCallerCanContactLead({ db, auth: request.auth, lead });
+
   const provider = getMessagingProvider();
   const providerId = provider.id || 'evolution';
   const leadHints = {

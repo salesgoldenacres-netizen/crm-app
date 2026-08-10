@@ -6,7 +6,7 @@
  * prompt construction, model selection, response mode, and proposal safety.
  */
 
-const { HttpsError } = require('firebase-functions/v2/https')
+const { onCall, HttpsError } = require('firebase-functions/v2/https')
 const admin = require('firebase-admin')
 const axios = require('axios')
 const crypto = require('crypto')
@@ -1015,7 +1015,15 @@ function isPlainObject(value) {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
 }
 
+// Callable wrapper. enforceAppCheck: client initializes App Check
+// (ReCaptcha v3), so require a valid App Check token (SEC-7).
+const aiComplete = onCall(
+  { region: 'us-central1', enforceAppCheck: true },
+  (request) => handleAiComplete(request),
+)
+
 module.exports = {
+  aiComplete,
   handleAiComplete,
   callGemini,
   getApiKey,

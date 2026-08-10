@@ -1,7 +1,13 @@
 /**
- * Returns Tailwind css classes for badge styling based on lead status.
+ * Shared lead-status styling helpers.
+ *
+ * Extracted to @/shared/utils (audit A-1) because these are consumed across
+ * feature domains (leads, calls). Cross-feature logic must live in shared/.
+ *
  * Uses DLS semantic tokens (no raw purple/blue islands).
  */
+
+/** Returns Tailwind css classes for badge styling based on lead status. */
 export function getLeadStatusColor(status: string): string {
   switch (status?.toLowerCase()) {
     case "new":

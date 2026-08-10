@@ -1,8 +1,8 @@
 import { Monitor, Moon, Sun } from "lucide-react";
 import {
   useAppearanceStore,
-  type Appearance,
 } from "@/features/settings/hooks/useThemeStore";
+import type { Appearance } from "@/shared/types/theme";
 
 interface ThemeToggleProps {
   /** Compact icon-only control for tight headers */

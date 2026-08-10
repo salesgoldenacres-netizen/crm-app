@@ -1,7 +1,8 @@
-export * from "@/features/plots/types";
-export * from "@/features/employees/types";
-export * from "@/features/leads/types";
-export * from "@/features/attendance/types";
-export * from "@/features/admin/types";
-
-
+export * from "./leads";
+export * from "./admin";
+export * from "./employees";
+export * from "./attendance";
+export * from "./plots";
+export * from "./timeline";
+export * from "./ivr";
+export * from "./theme";

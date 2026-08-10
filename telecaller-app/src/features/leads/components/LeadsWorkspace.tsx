@@ -65,7 +65,7 @@ interface LeadsWorkspaceProps {
 
   handleTouchStart: (e: React.TouchEvent) => void;
   handleTouchEnd: (e: React.TouchEvent, lead: Lead) => void;
-  setCallLogForm: (form: any) => void;
+  setCallLogForm: (form: Record<string, unknown>) => void;
   onAddLeadClick: () => void;
   setActiveLead: (lead: Lead) => void;
   bulkUpdateLeads: (ids: string[], updates: Partial<Lead>) => Promise<void>;

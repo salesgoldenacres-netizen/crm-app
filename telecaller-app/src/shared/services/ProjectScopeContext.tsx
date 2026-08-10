@@ -1,4 +1,4 @@
-import { createContext, useContext, ReactNode, useState, useMemo, useEffect } from "react";
+import { createContext, useContext, ReactNode, useState, useMemo } from "react";
 import { User } from "@/shared/types";
 import { AuthorizationService } from "./authorizationService";
 
@@ -23,12 +23,15 @@ export function ProjectScopeProvider({
   children,
 }: ProjectScopeProviderProps) {
   const [activeProjectId, setActiveProjectId] = useState<string | null>(null);
+  const [prevUser, setPrevUser] = useState(user);
 
-  // Sync activeProjectId to null or default if user changes
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
+  // Reset the active project whenever the user identity changes. Adjusting state
+  // during render is React's recommended pattern for deriving from a changed
+  // prop — it avoids the set-state-in-effect render cascade.
+  if (user !== prevUser) {
+    setPrevUser(user);
     setActiveProjectId(null);
-  }, [user]);
+  }
 
   const allowedProjects = useMemo(() => {
     if (!user) return [];

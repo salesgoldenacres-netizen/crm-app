@@ -1,4 +1,12 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode, useMemo } from "react";
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  useCallback,
+  ReactNode,
+  useMemo,
+} from "react";
 import {
   doc,
   getDoc,
@@ -15,7 +23,6 @@ import { projectsRef, usersRef } from "@/shared/services/firebase/converters";
 import { buildRoleScopedLeadsQuery } from "@/shared/contracts";
 import { ProjectScopeProvider, useProjectScope } from "./ProjectScopeContext";
 import { AuthorizationProvider } from "./AuthorizationContext";
-import { AnalyticsProvider } from "./analytics/AnalyticsContext";
 import { PerformanceProvider } from "./performance/PerformanceContext";
 import { isManagerial } from "@/shared/utils/roleUtils";
 import { AGENT_OPEN_LEADS_REALTIME_BOUND } from "@/shared/services/leads/leadQueryConstants";
@@ -35,6 +42,10 @@ interface DatabaseContextType {
   isProjectsLoaded: boolean;
   users: User[];
   isUsersLoaded: boolean;
+  /** Merge a project into the in-memory cache (projects are one-time fetched, not realtime). */
+  upsertLocalProject: (project: Project) => void;
+  /** Remove a project from the in-memory cache. */
+  removeLocalProject: (projectId: string) => void;
 }
 
 const DatabaseContext = createContext<DatabaseContextType | null>(null);
@@ -206,6 +217,21 @@ export function DatabaseProvider({
     };
   }, [userId, currentUserDoc, customRoles]);
 
+  const upsertLocalProject = useCallback((project: Project) => {
+    if (!project?.id) return;
+    setProjects((prev) => ({ ...prev, [project.id]: project }));
+  }, []);
+
+  const removeLocalProject = useCallback((projectId: string) => {
+    if (!projectId) return;
+    setProjects((prev) => {
+      if (!(projectId in prev)) return prev;
+      const next = { ...prev };
+      delete next[projectId];
+      return next;
+    });
+  }, []);
+
   const value = useMemo(
     () => ({
       leads,
@@ -214,8 +240,19 @@ export function DatabaseProvider({
       isProjectsLoaded,
       users,
       isUsersLoaded,
+      upsertLocalProject,
+      removeLocalProject,
     }),
-    [leads, isLeadsLoaded, projects, isProjectsLoaded, users, isUsersLoaded],
+    [
+      leads,
+      isLeadsLoaded,
+      projects,
+      isProjectsLoaded,
+      users,
+      isUsersLoaded,
+      upsertLocalProject,
+      removeLocalProject,
+    ],
   );
 
   return (
@@ -230,14 +267,12 @@ export function DatabaseProvider({
             setIsLeadsLoaded={setIsLeadsLoaded}
           />
           <PerformanceProvider>
-            <AnalyticsProvider>
-              {children}
-              {import.meta.env.DEV && PerformanceOverlay && (
-                <React.Suspense fallback={null}>
-                  <PerformanceOverlay />
-                </React.Suspense>
-              )}
-            </AnalyticsProvider>
+            {children}
+            {import.meta.env.DEV && PerformanceOverlay && (
+              <React.Suspense fallback={null}>
+                <PerformanceOverlay />
+              </React.Suspense>
+            )}
           </PerformanceProvider>
         </AuthorizationProvider>
       </ProjectScopeProvider>

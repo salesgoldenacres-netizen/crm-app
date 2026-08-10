@@ -1,5 +1,6 @@
 import { logEvent } from "firebase/analytics";
 import { analytics } from "@/shared/services/firebase";
+import { logger } from "@/shared/utils/logger";
 
 /**
  * Safely logs a custom event to Firebase Analytics.
@@ -12,12 +13,12 @@ export const logAnalyticsEvent = (eventName: string, eventParams: Record<string,
   if (analytics) {
     try {
       logEvent(analytics, eventName, eventParams);
-      console.log(`[Analytics] Logged: ${eventName}`, eventParams);
+      logger.debug("Analytics", `Logged: ${eventName}`, eventParams);
     } catch (err) {
-      console.error(`[Analytics] Error logging event "${eventName}":`, err);
+      logger.error("Analytics", `Error logging event "${eventName}":`, err);
     }
   } else {
     // Development fallback or unsupported browsers (e.g. Chrome iframe without cookie access)
-    console.log(`[Analytics - Mock] Logged: ${eventName}`, eventParams);
+    logger.debug("Analytics", `[Mock] Logged: ${eventName}`, eventParams);
   }
 };

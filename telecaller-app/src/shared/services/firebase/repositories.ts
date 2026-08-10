@@ -73,9 +73,10 @@ import {
   CustomField,
 } from "@/shared/types";
 import { CallLogsRepository } from "./CallLogsRepository";
-import type { Appearance } from "@/features/settings/hooks/useThemeStore";
-import type { IVRActiveCall } from "@/features/calls/hooks/useIVRStore";
-import type { TimelineEvent } from "@/features/messaging/timelineTypes";
+import { fetchLeadsByPhone } from "@/shared/services/leads/leadsSec1Api";
+import type { Appearance } from "@/shared/types/theme";
+import type { IVRActiveCall } from "@/shared/types/ivr";
+import type { TimelineEvent } from "@/shared/types/timeline";
 
 /**
  * Identity-based lead mutations (Production Hardening Phase F).
@@ -98,24 +99,23 @@ export const LeadRepository = {
     return { ...snap.data(), id: snap.id } as Lead;
   },
   /**
-   * Indexed phone lookup for dedup. Phones must already be normalized
-   * the same way create/import stores them (see normalizePhone).
+   * Indexed phone lookup for dedup via SEC-1 callable (no cross-owner client scan).
+   * Phones must already be normalized the same way create/import stores them.
    */
   async findByPhone(phone: string, max = 10): Promise<Lead[]> {
     if (!phone) return [];
-    const snap = await getDocs(
-      query(leadsRef, where("phone", "==", phone), limit(max)),
-    );
-    return snap.docs.map((d) => ({ ...d.data(), id: d.id }) as Lead);
+    return fetchLeadsByPhone(phone, max);
   },
   async assign(
     id: string,
     assignedTo: string,
     assignedToName: string,
+    assignedToUid = "",
   ): Promise<void> {
     await updateDoc(doc(leadsRef, id), {
       assignedTo,
       assignedToName,
+      assignedToUid,
       updatedAt: new Date().toISOString(),
     });
   },
@@ -386,6 +386,7 @@ export const UsersRepository = {
       batch.update(doc(leadsRef, leadId), {
         assignedTo: "",
         assignedToName: "Unassigned",
+        assignedToUid: "",
         updatedAt: new Date().toISOString(),
       });
     }
@@ -722,12 +723,21 @@ export const AttendanceRepository = {
   async update(id: string, updates: Partial<AttendanceRecord>): Promise<void> {
     await updateDoc(doc(attendanceRef, id), updates);
   },
-  subscribeRange(startDate: string, endDate: string, callback: (records: AttendanceRecord[]) => void): () => void {
-    const key = `attendance_range_${startDate}_${endDate}`;
+  subscribeRange(
+    startDate: string,
+    endDate: string,
+    callback: (records: AttendanceRecord[]) => void,
+    userId?: string,
+  ): () => void {
+    const key = `attendance_range_${startDate}_${endDate}_${userId || "all"}`;
     return ListenerManager.subscribe<AttendanceRecord[]>(
       key,
       (dispatch) => {
-        const rangeQuery = buildAttendanceDateRangeQuery({ startDate, endDate });
+        const rangeQuery = buildAttendanceDateRangeQuery({
+          startDate,
+          endDate,
+          userId,
+        });
         return onSnapshot(rangeQuery, (snapshot) => {
           const records: AttendanceRecord[] = [];
           snapshot.forEach((d) => {
@@ -1234,19 +1244,32 @@ export const WhatsAppMessagesRepository = {
 
 // 22. WhatsApp Conversations Repository
 export const WhatsAppConversationsRepository = {
-  subscribe(max: number, callback: (snapshot: QuerySnapshot<DocumentData>) => void, onError: (err: Error) => void): () => void {
-    const key = `whatsappConversations_max_${max}`;
+  subscribe(
+    max: number,
+    callback: (snapshot: QuerySnapshot<DocumentData>) => void,
+    onError: (err: Error) => void,
+    scope?: { managerial?: boolean; assignedTo?: string },
+  ): () => void {
+    const scopeKey = scope?.managerial
+      ? "managerial"
+      : scope?.assignedTo || "unscoped";
+    const key = `whatsappConversations_max_${max}_${scopeKey}`;
     return ListenerManager.subscribe<QuerySnapshot<DocumentData>>(
       key,
       (dispatch) => {
-        const q = query(
-          collection(db, "whatsappConversations"),
-          orderBy("lastMessageAt", "desc"),
-          limit(max)
-        );
+        const constraints = [orderBy("lastMessageAt", "desc"), limit(max)];
+        const base = collection(db, "whatsappConversations");
+        const q =
+          !scope?.managerial && scope?.assignedTo
+            ? query(
+                base,
+                where("assignedTo", "==", scope.assignedTo),
+                ...constraints,
+              )
+            : query(base, ...constraints);
         return onSnapshot(q, dispatch, onError);
       },
-      callback
+      callback,
     );
-  }
+  },
 };

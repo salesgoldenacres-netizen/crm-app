@@ -1,12 +1,20 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
+const crypto = require('crypto');
 const {
   timingSafeEqualString,
   normalizePresentedSecret,
   isSecretConfigured,
   assertWebhookSecret,
   resolveWhatsAppWebhookSecret,
+  verifyMetaSignature,
 } = require('./secrets');
+
+function signMeta(body, secret) {
+  const buf = Buffer.from(body, 'utf8');
+  const hex = crypto.createHmac('sha256', secret).update(buf).digest('hex');
+  return { buf, header: `sha256=${hex}` };
+}
 
 test('timingSafeEqualString matches equal secrets', () => {
   assert.equal(timingSafeEqualString('abc123', 'abc123'), true);
@@ -57,6 +65,66 @@ test('isSecretConfigured rejects empty', () => {
   assert.equal(isSecretConfigured(''), false);
   assert.equal(isSecretConfigured('  '), false);
   assert.equal(isSecretConfigured('ok'), true);
+});
+
+test('verifyMetaSignature accepts a correct sha256 HMAC', () => {
+  const { buf, header } = signMeta('{"object":"page"}', 'app-secret');
+  const r = verifyMetaSignature({
+    rawBody: buf,
+    signature: header,
+    appSecret: 'app-secret',
+  });
+  assert.equal(r.ok, true);
+});
+
+test('verifyMetaSignature fails closed without app secret', () => {
+  const { buf, header } = signMeta('{"object":"page"}', 'app-secret');
+  const r = verifyMetaSignature({ rawBody: buf, signature: header, appSecret: '' });
+  assert.equal(r.ok, false);
+  assert.equal(r.reason, 'app_secret_not_configured');
+});
+
+test('verifyMetaSignature rejects missing / malformed / mismatched signatures', () => {
+  const { buf } = signMeta('{"object":"page"}', 'app-secret');
+  assert.equal(
+    verifyMetaSignature({ rawBody: buf, signature: '', appSecret: 'app-secret' }).reason,
+    'missing_signature',
+  );
+  assert.equal(
+    verifyMetaSignature({ rawBody: buf, signature: 'deadbeef', appSecret: 'app-secret' })
+      .reason,
+    'malformed_signature',
+  );
+  assert.equal(
+    verifyMetaSignature({
+      rawBody: buf,
+      signature: 'sha256=00ff',
+      appSecret: 'app-secret',
+    }).reason,
+    'signature_mismatch',
+  );
+});
+
+test('verifyMetaSignature rejects when raw body is unavailable', () => {
+  const { header } = signMeta('{"object":"page"}', 'app-secret');
+  const r = verifyMetaSignature({
+    rawBody: undefined,
+    signature: header,
+    appSecret: 'app-secret',
+  });
+  assert.equal(r.ok, false);
+  assert.equal(r.reason, 'missing_raw_body');
+});
+
+test('verifyMetaSignature is body-sensitive (tamper detection)', () => {
+  const { header } = signMeta('{"object":"page"}', 'app-secret');
+  const tampered = Buffer.from('{"object":"page","evil":true}', 'utf8');
+  const r = verifyMetaSignature({
+    rawBody: tampered,
+    signature: header,
+    appSecret: 'app-secret',
+  });
+  assert.equal(r.ok, false);
 });
 
 test('resolveWhatsAppWebhookSecret prefers evolution secret', () => {

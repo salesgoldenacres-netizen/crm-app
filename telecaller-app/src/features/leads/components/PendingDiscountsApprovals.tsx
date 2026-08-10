@@ -1,4 +1,4 @@
-﻿import { useState } from "react";
+import { useState } from "react";
 import { Briefcase } from "lucide-react";
 import { Lead, Project, User } from "@/shared/types";
 import {
@@ -10,8 +10,8 @@ import Dialog from "@/shared/components/ui/Dialog";
 interface PendingDiscountsApprovalsProps {
   leads: Lead[];
   projects: Record<string, Project>;
-  updateLead: (id: string, values: any) => Promise<any>;
-  logAuditEvent: (event: any) => Promise<any>;
+  updateLead: (id: string, values: Partial<Lead>) => Promise<unknown>;
+  logAuditEvent: (event: { action: string; details: string; user: string }) => Promise<unknown>;
   user: User;
 }
 
@@ -98,16 +98,24 @@ export default function PendingDiscountsApprovals({
                             confirmLabel: "Approve",
                             confirmVariant: "success",
                             onConfirm: async () => {
+                              if (l.discountRequest?.status !== "pending") {
+                                setFeedback({
+                                  mode: "alert",
+                                  title: "Resolution Conflict",
+                                  description: "This discount request has already been resolved by another manager.",
+                                });
+                                return;
+                              }
                               const updatedRequest = {
                                 ...request,
-                                status: "approved",
+                                status: "approved" as const,
                               };
                               await updateLead(l.id, {
                                 discountRequest: updatedRequest,
                               });
                               void publishDiscountApproved({
                                 leadId: l.id,
-                                amount: request.requestedAmt,
+                                amount: String(request.requestedAmt),
                                 actorName: `Admin (${user.username})`,
                                 sourceId: `discount:${l.id}:approved`,
                                 idempotencyKey: `discount_approved_${l.id}_${request.requestedAmt}`,
@@ -141,9 +149,17 @@ export default function PendingDiscountsApprovals({
                             confirmLabel: "Reject",
                             confirmVariant: "danger",
                             onConfirm: async () => {
+                              if (l.discountRequest?.status !== "pending") {
+                                setFeedback({
+                                  mode: "alert",
+                                  title: "Resolution Conflict",
+                                  description: "This discount request has already been resolved by another manager.",
+                                });
+                                return;
+                              }
                               const updatedRequest = {
                                 ...request,
-                                status: "rejected",
+                                status: "rejected" as const,
                               };
                               await updateLead(l.id, {
                                 discountRequest: updatedRequest,
@@ -168,7 +184,7 @@ export default function PendingDiscountsApprovals({
                             },
                           });
                         }}
-                        className="bg-red-650 hover:bg-red-700 text-white font-bold px-2 py-1 rounded text-[10px] cursor-pointer"
+                        className="bg-red-600 hover:bg-red-700 text-white font-bold px-2 py-1 rounded text-[10px] cursor-pointer"
                       >
                         Reject
                       </button>

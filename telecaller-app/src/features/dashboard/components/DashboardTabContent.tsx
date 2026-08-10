@@ -1,20 +1,7 @@
-import React, { Suspense, lazy } from "react";
-import {
-  User,
-  Lead,
-  Project,
-  AuditLog,
-  AttendanceRecord,
-  LeaveRequest,
-  NotificationItem,
-  CallTarget,
-  Goals,
-  Roster,
-  EventLog,
-  TaskItem,
-} from "@/shared/types";
-import { Widget } from "@/features/dashboard/hooks/useDashboardWidgets";
-import { AgentStats } from "@/features/dashboard/utils/agentStats";
+import { Suspense, lazy } from "react";
+import { Lead } from "@/shared/types";
+import { useDashboardContext } from "@/features/dashboard/context/DashboardContext";
+import { useAnalytics } from "@/shared/services/analytics/AnalyticsContext";
 
 // Lazy loaded feature views
 const AdminDashboard = lazy(() => import("@/features/admin/pages/AdminDashboard"));
@@ -26,165 +13,82 @@ const TrainingHQView = lazy(() => import("../components/TrainingHQView"));
 const AgentProfileView = lazy(() => import("../components/AgentProfileView"));
 const WidgetGrid = lazy(() => import("../components/WidgetGrid"));
 
-interface DashboardTabContentProps {
-  activeTab: string;
-  user: User;
-  users: User[];
-  leads: Lead[];
-  myLeads: Lead[];
-  projects: Record<string, Project>;
-  isManagerial: (role?: string) => boolean;
+export default function DashboardTabContent() {
+  const {
+    activeTab,
+    user,
+    users,
+    leads,
+    projects,
+    isManagerial,
+    totalAssigned,
+    rawCount,
+    hotCount,
+    overdueCount,
+    followupsToday,
+    newCount,
+    notAttemptedCount,
+    bookedCount,
+    contactedCount,
+    interestedCount,
+    notInterestedCount,
+    siteVisitCompletedCount,
+    siteVisitConfirmed,
+    rnrCount,
+    reEngagedCount,
+    addNotification,
+    targets,
+    goals,
+    rosters,
+    coachingTip,
+    todaysEvents,
+    latestAnnouncement,
+    markAsRead,
+    followUpAlertLeads,
+    setLeadStatusFilter,
+    backendTasks,
+    addTask,
+    toggleTask,
+    deleteTask,
+    clearCompletedTasks,
+    leaveRequests,
+    submitLeaveRequest,
+    todayAttendance,
+    allAttendance,
+    clockIn,
+    startBreak,
+    endBreak,
+    clockOut,
+    widgets,
+    setWidgets,
+    updateWidgets,
+    widgetStyle,
+    updateWidgetStyle,
+    widgetDensity,
+    updateWidgetDensity,
+    isCustomizerOpen,
+    setIsCustomizerOpen,
+    logAuditEvent,
+    agentStats,
+    resetPreferences,
+    setActiveLead,
+    leadsSubTab,
+    setLeadsSubTab,
+    handleStartCall,
+    setSimulatedWaLeadId,
+    setCallsSubTab,
+    setActiveTab,
+    projectSearchQuery,
+    setProjectSearchQuery,
+    mapSelectedProject,
+    setMapSelectedProject,
+    callsSubTab,
+    simulatedWaLeadId,
+    trainingData,
+  } = useDashboardContext();
 
-  // Counts & Stats
-  totalAssigned: number;
-  rawCount: number;
-  hotCount: number;
-  overdueCount: number;
-  followupsToday: number;
-  newCount: number;
-  notAttemptedCount: number;
-  bookedCount: number;
-  contactedCount: number;
-  interestedCount: number;
-  notInterestedCount: number;
-  siteVisitCompletedCount: number;
-  siteVisitConfirmed: number;
-  rnrCount: number;
-  reEngagedCount: number;
+  const { refreshToken } = useAnalytics();
 
-  // Dashboard Preferences & State
-  addNotification: (title: string, message: string, type?: "info" | "success" | "warning" | "error") => Promise<void>;
-  targets: Record<string, CallTarget>;
-  goals: Goals;
-  rosters: Record<string, Roster>;
-  coachingTip: string;
-  todaysEvents: EventLog[];
-  latestAnnouncement: NotificationItem | undefined;
-  markAsRead: (id: string) => Promise<void>;
-  followUpAlertLeads: Lead[];
-  setLeadStatusFilter: (status: string) => void;
-  backendTasks: TaskItem[];
-  addTask: (text: string) => Promise<void>;
-  toggleTask: (id: string) => Promise<void>;
-  deleteTask: (id: string) => Promise<void>;
-  clearCompletedTasks: () => Promise<void>;
-  leaveRequests: LeaveRequest[];
-  submitLeaveRequest: (req: Omit<LeaveRequest, "id">) => Promise<void>;
-  todayAttendance: AttendanceRecord | null;
-  allAttendance: AttendanceRecord[];
-  clockIn: () => Promise<void>;
-  startBreak: () => Promise<void>;
-  endBreak: () => Promise<void>;
-  clockOut: () => Promise<void>;
-  elapsedWorkSeconds: number;
-  elapsedBreakSeconds: number;
-  widgets: Widget[];
-  setWidgets: React.Dispatch<React.SetStateAction<Widget[]>>;
-  updateWidgets: (widgets: Widget[]) => Promise<void>;
-  widgetStyle: string;
-  updateWidgetStyle: (style: string) => Promise<void>;
-  widgetDensity: string;
-  updateWidgetDensity: (density: string) => Promise<void>;
-  isCustomizerOpen: boolean;
-  setIsCustomizerOpen: React.Dispatch<React.SetStateAction<boolean>>;
-  logAuditEvent: (event: Partial<AuditLog>) => Promise<void>;
-  agentStats: AgentStats;
-  resetPreferences: () => Promise<void>;
-
-  // Tabs state & Callbacks
-  leadsSubTab: string;
-  setLeadsSubTab: (tab: string) => void;
-  handleStartCall: (lead: Lead) => void;
-  setSimulatedWaLeadId: (id: string) => void;
-  setCallsSubTab: (tab: string) => void;
-  setActiveTab: (tab: string) => void;
-
-  // Projects state
-  projectSearchQuery: string;
-  setProjectSearchQuery: (q: string) => void;
-  mapSelectedProject: string;
-  setMapSelectedProject: (p: string) => void;
-
-  // Calls state
-  callsSubTab: string;
-  simulatedWaLeadId: string;
-  trainingData: any;
-}
-
-export default function DashboardTabContent({
-  activeTab,
-  user,
-  users,
-  leads,
-  myLeads: _myLeads,
-  projects,
-  isManagerial,
-  totalAssigned,
-  rawCount,
-  hotCount,
-  overdueCount,
-  followupsToday,
-  newCount,
-  notAttemptedCount,
-  bookedCount,
-  contactedCount,
-  interestedCount,
-  notInterestedCount,
-  siteVisitCompletedCount,
-  siteVisitConfirmed,
-  rnrCount,
-  reEngagedCount,
-  addNotification,
-  targets,
-  goals,
-  rosters,
-  coachingTip,
-  todaysEvents,
-  latestAnnouncement,
-  markAsRead,
-  followUpAlertLeads,
-  setLeadStatusFilter,
-  backendTasks,
-  addTask,
-  toggleTask,
-  deleteTask,
-  clearCompletedTasks,
-  leaveRequests,
-  submitLeaveRequest,
-  todayAttendance,
-  allAttendance,
-  clockIn,
-  startBreak,
-  endBreak,
-  clockOut,
-  elapsedWorkSeconds,
-  elapsedBreakSeconds,
-  widgets,
-  setWidgets,
-  updateWidgets,
-  widgetStyle,
-  updateWidgetStyle,
-  widgetDensity,
-  updateWidgetDensity,
-  isCustomizerOpen,
-  setIsCustomizerOpen,
-  logAuditEvent,
-  agentStats,
-  resetPreferences,
-  leadsSubTab,
-  setLeadsSubTab,
-  handleStartCall,
-  setSimulatedWaLeadId,
-  setCallsSubTab,
-  setActiveTab,
-  projectSearchQuery,
-  setProjectSearchQuery,
-  mapSelectedProject,
-  setMapSelectedProject,
-  callsSubTab,
-  simulatedWaLeadId,
-  trainingData,
-}: DashboardTabContentProps) {
   const safeFormatTime = (secs: number) => {
     const h = Math.floor(secs / 3600);
     const m = Math.floor((secs % 3600) / 60);
@@ -213,6 +117,7 @@ export default function DashboardTabContent({
               users={users}
               leads={leads}
               projects={projects}
+              refreshToken={refreshToken}
               totalAssigned={totalAssigned}
               rawCount={rawCount}
               hotCount={hotCount}
@@ -251,8 +156,6 @@ export default function DashboardTabContent({
               startBreak={startBreak}
               endBreak={endBreak}
               clockOut={clockOut}
-              elapsedWorkSeconds={elapsedWorkSeconds}
-              elapsedBreakSeconds={elapsedBreakSeconds}
               widgets={widgets}
               setWidgets={setWidgets}
               updateWidgets={updateWidgets}
@@ -266,7 +169,7 @@ export default function DashboardTabContent({
               safeFormatTime={safeFormatTime}
               setLeadsSubTab={setLeadsSubTab}
               setLeadSearchQuery={() => {}}
-              setActiveLead={() => {}}
+              setActiveLead={setActiveLead}
               logAuditEvent={logAuditEvent}
               agentStats={agentStats}
               getWidgetColSpan={(w) => {

@@ -12,6 +12,7 @@
  */
 
 const { runTransactionWithRetry } = require("../helpers/retry");
+const { resolveAssignedToUid } = require("../helpers/leadAssignment");
 
 /**
  * Filter telecallers to the configured activeAgents pool (or all if empty).
@@ -34,7 +35,7 @@ function buildAgentPool(telecallers, activeAgents) {
  * @param {Array<{ id: string, username?: string }>} opts.pool
  * @param {Set<string>|string[]} opts.activeAgentIds - available / WFH agent ids
  * @param {string} [opts.lastAgentId]
- * @returns {{ assignedTo: string, assignedToName: string }}
+ * @returns {{ assignedTo: string, assignedToName: string, assignedToUid: string }}
  */
 function pickNextRoundRobinAgent(opts) {
   const pool = (opts && opts.pool) || [];
@@ -48,7 +49,7 @@ function pickNextRoundRobinAgent(opts) {
     .slice()
     .sort((a, b) => String(a.id).localeCompare(String(b.id)));
   if (activePool.length === 0) {
-    return { assignedTo: "", assignedToName: "Unassigned" };
+    return { assignedTo: "", assignedToName: "Unassigned", assignedToUid: "" };
   }
 
   const lastIndex = activePool.findIndex((tc) => tc.id === lastAgentId);
@@ -57,6 +58,7 @@ function pickNextRoundRobinAgent(opts) {
   return {
     assignedTo: targetAgent.id,
     assignedToName: targetAgent.username || targetAgent.id,
+    assignedToUid: resolveAssignedToUid(targetAgent.id, targetAgent),
   };
 }
 

@@ -1,4 +1,4 @@
-﻿import { Map } from "lucide-react";
+import { Map } from "lucide-react";
 import { Project, Lead } from "@/shared/types";
 
 interface PlotLocatorProps {
@@ -20,15 +20,17 @@ export default function PlotLocator({ activeProj, activeLead }: PlotLocatorProps
   let vb: string;
   const padding = 15;
 
+  type PlotPoint = [number, number] | { x: number; y: number };
+
   try {
-    pointsStr = plotObj.points.map((pt: any) => {
+    pointsStr = plotObj.points.map((pt: PlotPoint) => {
       if (Array.isArray(pt)) return pt.join(",");
       if (pt.x !== undefined && pt.y !== undefined) return `${pt.x},${pt.y}`;
       return "";
     }).join(" ");
 
-    const xCoords = plotObj.points.map((p: any) => (Array.isArray(p) ? p[0] : p.x || 0));
-    const yCoords = plotObj.points.map((p: any) => (Array.isArray(p) ? p[1] : p.y || 0));
+    const xCoords = plotObj.points.map((p: PlotPoint) => (Array.isArray(p) ? p[0] : p.x || 0));
+    const yCoords = plotObj.points.map((p: PlotPoint) => (Array.isArray(p) ? p[1] : p.y || 0));
 
     minX = Math.min(...xCoords);
     maxX = Math.max(...xCoords);

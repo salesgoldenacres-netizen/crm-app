@@ -1,13 +1,15 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import { MessageCircle, PhoneCall } from "lucide-react";
 
-import { useLeadsStore } from "@/features/leads/hooks/useLeadsStore";
+
+import { useDashboardContext } from "@/features/dashboard/context/DashboardContext";
 import { useAgentOpenLeads } from "@/features/leads/hooks/useAgentOpenLeads";
 import { useNotificationsStore } from "@/features/dashboard/hooks/useNotificationsStore";
 import { useProjectsStore } from "@/features/plots/hooks/useProjectsStore";
 import { useAppShell } from "@/shared/layouts/AppShell";
 import { useCustomRolesStore } from "@/features/admin/hooks/adminStores";
 import { isManagerial } from "@/shared/utils/roleUtils";
+import { logger } from "@/shared/utils/logger";
 
 import { usePowerDialer } from "@/features/calls/hooks/usePowerDialer";
 import PowerDialerWidget from "@/features/calls/components/PowerDialerWidget";
@@ -41,7 +43,7 @@ export default function CallsTab({
   setSimulatedWaLeadId,
   onOpenCallLogModal,
 }: CallsTabProps) {
-  const { logCall } = useLeadsStore();
+  const { logCall } = useDashboardContext();
   const { openLeads: leads } = useAgentOpenLeads();
   const { notifications, addNotification } = useNotificationsStore();
   const { projects } = useProjectsStore();
@@ -110,7 +112,7 @@ export default function CallsTab({
         osc.stop();
         ctx.close();
       } catch (error) {
-        console.debug("Oscillator stop/close ignored:", error);
+        logger.debug("CallsTab", "Oscillator stop/close ignored:", error);
       }
       voiceNoteAudioNodesRef.current = null;
     }

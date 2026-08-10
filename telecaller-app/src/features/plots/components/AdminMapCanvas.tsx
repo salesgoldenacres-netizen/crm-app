@@ -1,4 +1,9 @@
 import { Project, Plot } from "@/shared/types";
+import {
+  areaSqFt,
+  formatPlotLabel,
+} from "@/features/plots/utils/adminMapMetrics";
+import type { GeometryPreviewState } from "@/features/plots/utils/adminMapEditorPrecision";
 
 interface AdminMapCanvasProps {
   project: Project;
@@ -11,8 +16,9 @@ interface AdminMapCanvasProps {
   drawingPoints: [number, number][];
   slicePoints: [number, number][];
   calibrationPoints: [number, number][];
+  roadCutPoints?: [number, number][];
+  geometryPreview?: GeometryPreviewState | null;
   mousePos: [number, number] | null;
-  snappedPoint: [number, number] | null;
   draggedPointIdx: number | null;
   setDraggedPointIdx: (val: number | null) => void;
   draggedLabelId: string | null;
@@ -23,17 +29,18 @@ interface AdminMapCanvasProps {
   setSelectedPlotIds: React.Dispatch<React.SetStateAction<string[]>>;
   svgRef: React.RefObject<SVGSVGElement | null>;
   mapElementRef: React.RefObject<HTMLDivElement | null>;
-  handlePlotClick: (plot: Plot, e: any) => void;
-  handlePlotDoubleClick: (plot: Plot, e: any) => void;
-  handleSvgClick: (e: any) => void;
-  handleMouseMove: (e: any) => void;
+  handlePlotClick: (plot: Plot, e: React.MouseEvent) => void;
+  handlePlotDoubleClick: (plot: Plot, e: React.MouseEvent) => void;
+  handleSvgClick: (e: React.MouseEvent) => void;
+  handleMouseMove: (e: React.MouseEvent) => void;
   handleMouseUp: () => void;
   handleMouseLeave: () => void;
-  startTransform: (action: string, e: any) => void;
-  insertPoint: (plotId: string, idx: number, e: any) => void;
-  startDragLabel: (plot: Plot, e: any) => void;
+  startTransform: (action: string, e: React.MouseEvent) => void;
+  startDragVertex?: (idx: number, e: React.MouseEvent) => void;
+  insertPoint: (plotId: string, idx: number, e: React.MouseEvent) => void;
+  startDragLabel: (plot: Plot, e: React.MouseEvent) => void;
   getCenter: (pts: [number, number][]) => { x: number; y: number };
-  getBoundingBox: (pts: [number, number][]) => any;
+  getBoundingBox: (pts: [number, number][]) => { minX: number; maxX: number; minY: number; maxY: number; width: number; height: number; cx: number; cy: number };
   getPlotLayer: (status: string) => string;
 }
 
@@ -48,8 +55,9 @@ export default function AdminMapCanvas({
   drawingPoints,
   slicePoints,
   calibrationPoints,
+  roadCutPoints = [],
+  geometryPreview = null,
   mousePos,
-  snappedPoint,
   draggedPointIdx,
   setDraggedPointIdx,
   draggedLabelId,
@@ -67,6 +75,7 @@ export default function AdminMapCanvas({
   handleMouseUp,
   handleMouseLeave,
   startTransform,
+  startDragVertex,
   insertPoint,
   startDragLabel,
   getCenter,
@@ -74,11 +83,48 @@ export default function AdminMapCanvas({
   getPlotLayer,
 }: AdminMapCanvasProps) {
   const getCursor = () => {
-    if (mode === "draw" || mode === "slice" || mode === "calibrate") return "cursor-crosshair";
+    if (
+      mode === "draw" ||
+      mode === "slice" ||
+      mode === "calibrate" ||
+      mode === "roadCut"
+    )
+      return "cursor-crosshair";
     if (mode === "bulk") return freeSelectActive ? "cursor-cell" : "cursor-pointer";
     if (mode === "editLabels") return "cursor-move";
+    if (mode === "view") return "cursor-grab";
     return "cursor-default";
   };
+
+  const scale = project.scaleRatio || 0;
+  const labelMode = project.labelContentMode || "number";
+
+  // Area-only / calibrate distance HUD — no edge ft dimension labels.
+  const hudText = (() => {
+    if (!scale || !mousePos) return null;
+
+    if (mode === "draw" && drawingPoints.length >= 2) {
+      const pts = [...drawingPoints, mousePos] as [number, number][];
+      const area = Math.round(
+        areaSqFt(pts.length >= 3 ? pts : drawingPoints, scale)
+      );
+      return area > 0 ? `${area} sq ft` : null;
+    }
+    if (mode === "calibrate" && calibrationPoints.length === 1) {
+      const a = calibrationPoints[0];
+      const dist = Math.round(
+        Math.hypot(mousePos[0] - a[0], mousePos[1] - a[1]) * scale
+      );
+      return `${dist} ft`;
+    }
+    if (mode === "editShape" && draggedPointIdx !== null && activePlotId) {
+      const plot = project.plots.find((p) => p.id === activePlotId);
+      if (plot?.points && plot.points.length >= 3) {
+        return `${Math.round(areaSqFt(plot.points, scale))} sq ft`;
+      }
+    }
+    return null;
+  })();
 
   const getColorConfig = (
     status: string,
@@ -130,36 +176,6 @@ export default function AdminMapCanvas({
     return { fill, stroke };
   };
 
-  const getDimensionOffsetPoint = (
-    p1: [number, number],
-    p2: [number, number],
-    cx: number,
-    cy: number,
-    distance = 1.0
-  ): [number, number] => {
-    const mx = (p1[0] + p2[0]) / 2;
-    const my = (p1[1] + p2[1]) / 2;
-
-    const dx = p2[0] - p1[0];
-    const dy = p2[1] - p1[1];
-    const len = Math.sqrt(dx * dx + dy * dy);
-
-    if (len < 0.0001) return [mx, my];
-
-    let nx = -dy / len;
-    let ny = dx / len;
-
-    const vx = mx - cx;
-    const vy = my - cy;
-
-    if (nx * vx + ny * vy < 0) {
-      nx = -nx;
-      ny = -ny;
-    }
-
-    return [mx + nx * distance, my + ny * distance];
-  };
-
   return (
     <div
       ref={mapElementRef}
@@ -175,11 +191,13 @@ export default function AdminMapCanvas({
             : "transform 0.4s ease-in-out",
       }}
     >
-      {/* Background Image layout layer */}
-      {project.image && (
+      {/* Background Image layout layer — placeholder keeps size when image is cleared */}
+      {project.image ? (
         <img
           src={project.image}
           alt="Layout"
+          loading="lazy"
+          decoding="async"
           className="block w-[1200px] max-w-none pointer-events-none"
           style={{
             transform: `translate(${project.bgX || 0}px, ${project.bgY || 0}px) scale(${project.bgScale || 1}) rotate(${project.bgRotate || 0}deg)`,
@@ -187,6 +205,11 @@ export default function AdminMapCanvas({
             opacity: project.bgOpacity !== undefined ? project.bgOpacity : 1,
             transition: "opacity 0.2s",
           }}
+        />
+      ) : (
+        <div
+          className="block w-[1200px] aspect-[3/2] max-w-none bg-slate-100 dark:bg-slate-900 pointer-events-none"
+          aria-hidden="true"
         />
       )}
 
@@ -227,7 +250,7 @@ export default function AdminMapCanvas({
           return (
             <g key={plot.id}>
               <polygon
-                points={pts.map((p: any) => `${p[0]},${p[1]}`).join(" ")}
+                points={pts.map((p: [number, number]) => `${p[0]},${p[1]}`).join(" ")}
                 fill={colors.fill}
                 stroke={isFlashed ? "#eab308" : colors.stroke}
                 strokeWidth={
@@ -272,56 +295,6 @@ export default function AdminMapCanvas({
                 }}
               />
 
-              {/* Dimension Labels */}
-              {isEditing && project.scaleRatio && (
-                <g className="pointer-events-none opacity-90">
-                  {pts.map((pt: any, i: number) => {
-                    const nextPt = pts[(i + 1) % pts.length] as [number, number];
-                    const dx = nextPt[0] - pt[0];
-                    const dy = nextPt[1] - pt[1];
-                    const edgeLen = Math.sqrt(dx * dx + dy * dy) * (project.scaleRatio || 1);
-                    const lenText = `${Math.round(edgeLen)} ft`;
-
-                    const labelPos = getDimensionOffsetPoint(
-                      pt as [number, number],
-                      nextPt,
-                      center.x,
-                      center.y,
-                      0.9
-                    );
-                    const badgeW = lenText.length * 0.45 + 0.4;
-                    const badgeH = 1.1;
-                    return (
-                      <g key={`dim-${i}`}>
-                        <rect
-                          x={labelPos[0] - badgeW / 2}
-                          y={labelPos[1] - badgeH / 2}
-                          width={badgeW}
-                          height={badgeH}
-                          rx="0.2"
-                          ry="0.2"
-                          fill="white"
-                          stroke="#6366f1"
-                          strokeWidth="0.04"
-                          className="shadow-sm"
-                        />
-                        <text
-                          x={labelPos[0]}
-                          y={labelPos[1] + 0.05}
-                          fill="#4f46e5"
-                          fontSize="0.65"
-                          fontWeight="black"
-                          textAnchor="middle"
-                          alignmentBaseline="middle"
-                        >
-                          {lenText}
-                        </text>
-                      </g>
-                    );
-                  })}
-                </g>
-              )}
-
               {/* Text Label overlay */}
               {(layers.labels?.visible || mode === "editLabels") && plot.status !== "road" && (
                 <g
@@ -342,30 +315,36 @@ export default function AdminMapCanvas({
                       strokeWidth="0.05"
                     />
                   )}
-                  <text
-                    x={labelX}
-                    y={labelY}
-                    transform={`rotate(${labelRot}, ${labelX}, ${labelY})`}
-                    fill="white"
-                    fontSize="1.1"
-                    fontWeight="bold"
-                    textAnchor="middle"
-                    alignmentBaseline="middle"
-                    className="select-none"
-                    style={{
-                      textShadow: "0 0 3px rgba(0,0,0,0.8)",
-                      pointerEvents: "none",
-                    }}
-                  >
-                    {plot.number}
-                  </text>
+                  {formatPlotLabel(plot, pts, scale, labelMode)
+                    .split("\n")
+                    .filter(Boolean)
+                    .map((line, li, arr) => (
+                      <text
+                        key={`lbl-${li}`}
+                        x={labelX}
+                        y={labelY + (li - (arr.length - 1) / 2) * 1.15}
+                        transform={`rotate(${labelRot}, ${labelX}, ${labelY})`}
+                        fill="white"
+                        fontSize={li === 0 ? "1.1" : "0.75"}
+                        fontWeight="bold"
+                        textAnchor="middle"
+                        alignmentBaseline="middle"
+                        className="select-none"
+                        style={{
+                          textShadow: "0 0 3px rgba(0,0,0,0.8)",
+                          pointerEvents: "none",
+                        }}
+                      >
+                        {line}
+                      </text>
+                    ))}
                 </g>
               )}
 
               {/* Interactive Corner Vertex handles */}
               {isEditing && editSubMode === "vertices" && (
                 <>
-                  {pts.map((pt: any, i: number) => {
+                  {pts.map((pt: [number, number], i: number) => {
                     const nextPt = pts[(i + 1) % pts.length] as [number, number];
                     return (
                       <line
@@ -383,7 +362,7 @@ export default function AdminMapCanvas({
                       />
                     );
                   })}
-                  {pts.map((pt: any, i: number) => (
+                  {pts.map((pt: [number, number], i: number) => (
                     <g key={`pt-${i}`} className="group cursor-move">
                       <circle
                         cx={pt[0]}
@@ -404,8 +383,12 @@ export default function AdminMapCanvas({
                         className="group-hover:fill-indigo-50 transition-all duration-150"
                         vectorEffect="non-scaling-stroke"
                         onMouseDown={(e) => {
-                          e.stopPropagation();
-                          setDraggedPointIdx(i);
+                          if (startDragVertex) {
+                            startDragVertex(i, e);
+                          } else {
+                            e.stopPropagation();
+                            setDraggedPointIdx(i);
+                          }
                         }}
                       />
                     </g>
@@ -502,6 +485,53 @@ export default function AdminMapCanvas({
           );
         })}
 
+        {/* Geometry confirm preview fills */}
+        {geometryPreview &&
+          geometryPreview.rings.map((ring, idx) => {
+            const c = getCenter(ring);
+            const areaTxt =
+              geometryPreview.areasFt[idx] > 0
+                ? `${geometryPreview.areasFt[idx]} sq ft`
+                : "";
+            return (
+              <g key={`preview-${idx}`} className="pointer-events-none">
+                <polygon
+                  points={ring.map((p) => `${p[0]},${p[1]}`).join(" ")}
+                  fill="rgba(244, 63, 94, 0.2)"
+                  stroke="#f43f5e"
+                  strokeWidth="0.12"
+                  strokeDasharray="0.3 0.3"
+                  vectorEffect="non-scaling-stroke"
+                />
+                {areaTxt && (
+                  <text
+                    x={c.x}
+                    y={c.y}
+                    fill="#4f46e5"
+                    fontSize="0.65"
+                    fontWeight="black"
+                    textAnchor="middle"
+                    alignmentBaseline="middle"
+                  >
+                    {areaTxt}
+                  </text>
+                )}
+              </g>
+            );
+          })}
+        {geometryPreview?.roadRing && (
+          <polygon
+            points={geometryPreview.roadRing
+              .map((p) => `${p[0]},${p[1]}`)
+              .join(" ")}
+            fill="rgba(107, 114, 128, 0.35)"
+            stroke="#4b5563"
+            strokeWidth="0.12"
+            className="pointer-events-none"
+            vectorEffect="non-scaling-stroke"
+          />
+        )}
+
         {/* Dynamic drawing preview lines */}
         {drawingPoints.length > 0 && (
           <>
@@ -524,6 +554,18 @@ export default function AdminMapCanvas({
                 vectorEffect="non-scaling-stroke"
               />
             ))}
+            {mode === "draw" && mousePos && drawingPoints.length > 0 && (
+              <line
+                x1={drawingPoints[drawingPoints.length - 1][0]}
+                y1={drawingPoints[drawingPoints.length - 1][1]}
+                x2={mousePos[0]}
+                y2={mousePos[1]}
+                stroke="#10b981"
+                strokeWidth="0.1"
+                strokeDasharray="0.3 0.3"
+                vectorEffect="non-scaling-stroke"
+              />
+            )}
           </>
         )}
 
@@ -557,6 +599,39 @@ export default function AdminMapCanvas({
           </>
         )}
 
+        {/* Road cut centerline */}
+        {mode === "roadCut" && (
+          <>
+            {roadCutPoints.length > 0 && (
+              <polyline
+                points={[
+                  ...roadCutPoints,
+                  ...(mousePos ? [mousePos] : []),
+                ]
+                  .map((p) => `${p[0]},${p[1]}`)
+                  .join(" ")}
+                fill="none"
+                stroke="#4b5563"
+                strokeWidth="0.14"
+                strokeDasharray="0.3 0.3"
+                vectorEffect="non-scaling-stroke"
+              />
+            )}
+            {roadCutPoints.map((pt, i) => (
+              <circle
+                key={`r-${i}`}
+                cx={pt[0]}
+                cy={pt[1]}
+                r="0.18"
+                fill="white"
+                stroke="#4b5563"
+                strokeWidth="0.06"
+                vectorEffect="non-scaling-stroke"
+              />
+            ))}
+          </>
+        )}
+
         {/* Calibration line preview */}
         {mode === "calibrate" && calibrationPoints.length === 1 && mousePos && (
           <>
@@ -582,18 +657,42 @@ export default function AdminMapCanvas({
           </>
         )}
 
-        {/* Snapping Circle marker indicator */}
-        {snappedPoint && (
-          <circle
-            cx={snappedPoint[0]}
-            cy={snappedPoint[1]}
-            r="0.4"
-            fill="none"
-            stroke="#6366f1"
-            strokeWidth="0.06"
-            className="animate-ping"
-            vectorEffect="non-scaling-stroke"
-          />
+        {/* Live area / calibrate HUD near cursor */}
+        {hudText && mousePos && (
+          <g className="pointer-events-none opacity-90">
+            {(() => {
+              const badgeW = hudText.length * 0.42 + 0.5;
+              const badgeH = 1.1;
+              const x = mousePos[0] + 1.2;
+              const y = mousePos[1] - 1.2;
+              return (
+                <>
+                  <rect
+                    x={x - badgeW / 2}
+                    y={y - badgeH / 2}
+                    width={badgeW}
+                    height={badgeH}
+                    rx="0.2"
+                    ry="0.2"
+                    fill="white"
+                    stroke="#6366f1"
+                    strokeWidth="0.04"
+                  />
+                  <text
+                    x={x}
+                    y={y + 0.05}
+                    fill="#4f46e5"
+                    fontSize="0.65"
+                    fontWeight="black"
+                    textAnchor="middle"
+                    alignmentBaseline="middle"
+                  >
+                    {hudText}
+                  </text>
+                </>
+              );
+            })()}
+          </g>
         )}
       </svg>
     </div>

@@ -42,6 +42,7 @@ import LeaveRequestsWidget from "./widgets/LeaveRequestsWidget";
 import WeeklyRosterWidget from "./widgets/WeeklyRosterWidget";
 import TelecallerMetricsWidget from "./widgets/TelecallerMetricsWidget";
 import WidgetHeader from "@/shared/components/ui/WidgetHeader";
+import { safeFormatTime as formatCallLogTime } from "@/shared/utils/dateUtils";
 
 interface ThemeConfig {
   accentText: string;
@@ -140,7 +141,7 @@ interface WidgetGridProps {
 
   backendTasks: TaskItem[];
   addTask: (text: string) => Promise<void>;
-  toggleTask: (id: string) => Promise<void>;
+  toggleTask: (id: string, done: boolean) => Promise<void>;
   deleteTask: (id: string) => Promise<void>;
   clearCompletedTasks: () => Promise<void>;
   leaveRequests: LeaveRequest[];
@@ -151,8 +152,6 @@ interface WidgetGridProps {
   startBreak: () => Promise<void>;
   endBreak: () => Promise<void>;
   clockOut: () => Promise<void>;
-  elapsedWorkSeconds: number;
-  elapsedBreakSeconds: number;
   widgets: WidgetDef[];
   setWidgets: React.Dispatch<React.SetStateAction<WidgetDef[]>>;
   updateWidgets: (widgets: WidgetDef[]) => Promise<void>;
@@ -171,6 +170,9 @@ interface WidgetGridProps {
   getWidgetColSpan: (w: number) => string;
   resetPreferences: () => Promise<void>;
   setActiveLead: (lead: Lead | null) => void;
+  /** Monotonically increasing token from AnalyticsContext. Increments on each
+   * successful mutation that affects dashboard data, triggering a re-fetch. */
+  refreshToken: number;
 }
 
 export default function WidgetGrid({
@@ -216,8 +218,6 @@ export default function WidgetGrid({
   startBreak: _startBreak,
   endBreak: _endBreak,
   clockOut: _clockOut,
-  elapsedWorkSeconds: _elapsedWorkSeconds,
-  elapsedBreakSeconds: _elapsedBreakSeconds,
   widgets,
   setWidgets: _setWidgets,
   updateWidgets: _updateWidgets,
@@ -226,7 +226,7 @@ export default function WidgetGrid({
   isCustomizerOpen,
   setIsCustomizerOpen,
   isManagerial,
-  safeFormatTime,
+  safeFormatTime: _safeFormatTime,
   setLeadsSubTab: _setLeadsSubTab,
   setLeadSearchQuery: _setLeadSearchQuery,
   setActiveLead,
@@ -234,27 +234,97 @@ export default function WidgetGrid({
   agentStats,
   getWidgetColSpan,
   resetPreferences: _resetPreferences,
+  refreshToken,
 }: WidgetGridProps) {
   const activeThemeConfig = SEMANTIC_THEME;
-  const analytics = useAnalytics();
+  const { service: analyticsService } = useAnalytics();
   const { activeProjectId } = useProjectScope();
-  const [metrics, setMetrics] = useState<any>(null);
-  const [teamMetrics, setTeamMetrics] = useState<any>(null);
 
+  // Typed analytics state — null means first load not yet complete.
+  const [metrics, setMetrics] = useState<import("../../../shared/services/analytics/analyticsTypes").DashboardMetrics | null>(null);
+  const [teamMetrics, setTeamMetrics] = useState<import("../../../shared/services/analytics/analyticsTypes").TeamMetrics | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  /**
+   * Generation ref for race-condition protection.
+   * Each call to refreshMetrics increments it. The async callback checks
+   * whether its generation is still current before committing state —
+   * this prevents a slow Request A from overwriting a faster Request B.
+   */
+  const generationRef = useRef(0);
+
+  /**
+   * The single authoritative function for loading / refreshing metrics.
+   * Background refreshes retain existing data; only the very first load
+   * sets isLoading = true.
+   */
+  const refreshMetrics = useCallback(async () => {
+    const generation = ++generationRef.current;
+
+    try {
+      const [dashboardRes, teamRes] = await Promise.all([
+        analyticsService.getDashboardMetrics(activeProjectId ?? undefined),
+        analyticsService.getTeamMetrics(activeProjectId ?? undefined),
+      ]);
+
+      // Discard if a newer request has already finished.
+      if (generation !== generationRef.current) return;
+
+      setMetrics(dashboardRes);
+      setTeamMetrics(teamRes);
+    } catch (e) {
+      // Retain last-known-good data; only log the error.
+      console.error("WidgetGrid: failed to refresh analytics metrics", e);
+    } finally {
+      if (generation === generationRef.current) {
+        setIsLoading(false);
+      }
+    }
+  }, [analyticsService, activeProjectId]);
+
+  /**
+   * Primary metrics effect.
+   * Fires on: initial mount, project change, explicit mutation refresh (refreshToken).
+   * Does NOT own the polling timer — that lives in a separate effect.
+   */
   useEffect(() => {
-    let active = true;
-    analytics.getDashboardMetrics(activeProjectId ?? undefined).then((res) => {
-      if (active) setMetrics(res);
-    }).catch((e) => console.error("Failed to load dashboard metrics", e));
-
-    analytics.getTeamMetrics(activeProjectId ?? undefined).then((res) => {
-      if (active) setTeamMetrics(res);
-    }).catch((e) => console.error("Failed to load team metrics", e));
-
-    return () => {
-      active = false;
+    const runRefresh = async () => {
+      await refreshMetrics();
     };
-  }, [analytics, activeProjectId]);
+    void runRefresh();
+  }, [refreshMetrics, refreshToken]);
+
+  /**
+   * Polling effect — 60-second fallback freshness.
+   * Independent from the primary effect so project/token changes don't
+   * create duplicate intervals. Resets cleanly when activeProjectId changes.
+   */
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (document.visibilityState === "visible") {
+        void refreshMetrics();
+      }
+    }, 60_000);
+    return () => clearInterval(interval);
+  }, [refreshMetrics]);
+
+  /**
+   * Visibility-aware refresh.
+   * When the user returns to the tab, immediately re-fetch so they don't
+   * see stale metrics from while the tab was hidden.
+   */
+  useEffect(() => {
+    function handleVisibilityChange() {
+      if (document.visibilityState === "visible") {
+        void refreshMetrics();
+      }
+    }
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, [refreshMetrics]);
+
 
   const nowIST = new Date(new Date().getTime() + 5.5 * 60 * 60 * 1000);
   const monthStartIST = new Date(nowIST.getFullYear(), nowIST.getMonth(), 1);
@@ -341,8 +411,14 @@ export default function WidgetGrid({
     <div className="space-y-3">
       <div className="flex items-center justify-between gap-3 rounded-theme border border-theme-border bg-theme-card px-3 py-2.5 shadow-elevation-sm">
         <div className="min-w-0">
-          <h2 className="type-section-title text-sm tracking-tight">
+          <h2 className="type-section-title text-sm tracking-tight flex items-center gap-2">
             Operations Overview
+            {isLoading && (
+              <span className="inline-flex items-center gap-1 text-[10px] font-medium text-theme-muted animate-pulse">
+                <span className="w-1.5 h-1.5 rounded-full bg-theme-accent animate-pulse" />
+                Loading
+              </span>
+            )}
           </h2>
           <p className="type-secondary text-[11px] font-medium">
             Live team metrics, targets, and activity at a glance
@@ -548,7 +624,9 @@ export default function WidgetGrid({
                               const lead = leads.find((l) => l.id === id) ?? null;
                               setActiveLead(lead);
                             }}
-                            safeFormatTime={(dateVal) => typeof dateVal === "number" ? safeFormatTime(dateVal) : ""}
+                            safeFormatTime={(dateVal, options) =>
+                              formatCallLogTime(dateVal, options)
+                            }
                           />
                         );
 

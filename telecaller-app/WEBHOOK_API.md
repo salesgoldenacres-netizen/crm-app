@@ -68,15 +68,79 @@ Legacy short paths and `/api/webhooks/*` aliases both work.
 
 ## Callable functions (not HTTP Express routes)
 
-Invoked via Firebase Callable SDK (Auth required where enforced in handlers), including:
+Invoked via the Firebase Callable SDK (`httpsCallable`), region `us-central1`. All callables below
+require an authenticated caller (`request.auth`); some add role checks. Shapes are derived from the
+handler source (`functions/ai/complete.js`, `functions/auth/claims.js`, `functions/services/*.js`) —
+keep this section in sync when those handlers change. Errors are thrown as Firebase `HttpsError`
+(the `code` values are listed per function).
 
-- `aiComplete`
-- `setManagerialClaim` / `linkUserProfile`
-- `messagingStatus` / `messagingTestConnection` / `messagingInstanceAction` / `messagingSend`
-- `sendFcmNotification`
-- `triggerOutboundCall`
+### `aiComplete`
 
-Firestore triggers and schedulers (`onLeadCreated`, follow-up reminders, SLA jobs, etc.) are internal — not public HTTP.
+Hardened Gemini boundary. The **server** owns prompt/model/response mode; the client may only send a
+registered capability + structured context. No CRM writes, no AI persistence.
+
+- **Request:** `{ capabilityId: string, context: object, leadId?: string }`
+  - Only these keys are accepted. Transport-control keys (`system`, `messages`, `responseFormat`,
+    `jsonSchema`, `maxTokens`, `temperature`, `model`) are rejected.
+  - `context` fields are constrained per capability. Registered capability `lead-brief-v1` accepts:
+    `statusLabel`, `scoreBand`, `health`, `nextActionType`, `nextActionReason`, `timelineSummary`, `facts`.
+    PII is redacted server-side; forbidden write/intelligence keys are stripped.
+- **Response** (JSON capability): `{ text: string, json: { brief: string, bullets?: string[], proposals?: AiActionProposal[] }, model: string, providerId: "gemini", latencyMs: number, finishReason: string, usage: { inputTokens?: number, outputTokens?: number } }`
+  - `AiActionProposal` is confirm-to-write only (`status: "PENDING_CONFIRMATION"`), `type` ∈
+    `STATUS_CHANGE | PRIORITY_CHANGE | FOLLOW_UP | ADD_NOTE | RECOMMEND_ASSIGNMENT`, with a
+    type-specific `payload`. Proposals are inert until a human confirms them.
+- **Errors:** `unauthenticated`, `invalid-argument`, `permission-denied`, `failed-precondition`,
+  `resource-exhausted`, `internal`.
+
+### `setManagerialClaim`
+
+Sets/clears the `{ managerial: true }` custom claim (and optional `role`). Caller must already be
+managerial (token claim or Firestore `userRoles` + `customRoles`).
+
+- **Request:** `{ uid: string, managerial: boolean, role?: string }`
+- **Response:** `{ success: true, uid: string, managerial: boolean, role: string | null }`
+- **Errors:** `unauthenticated`, `permission-denied`, `invalid-argument`.
+
+### `linkUserProfile`
+
+Links the caller's Auth UID to an existing `users` doc (matched by token email, then username).
+
+- **Request:** `{}` (no body; identity comes from `request.auth.token`)
+- **Response:** `{ success: true, userId: string, uid: string, role: string }`
+- **Errors:** `unauthenticated`, `failed-precondition` (no email), `not-found`, `already-exists`.
+
+### `sendFcmNotification`
+
+Sends an FCM push to a target user (prunes invalid tokens).
+
+- **Request:** `{ targetUserId: string, title: string, body: string, extraData?: Record<string, string> }`
+- **Response:** `{ success: true }`
+- **Errors:** `unauthenticated`, `invalid-argument`.
+
+### `triggerOutboundCall`
+
+Initiates an IVR outbound call for a lead using the configured provider (`settings/integrations`).
+
+- **Request:** `{ leadId: string }`
+- **Response** (mock provider): `{ success: true, message: string }`. Custom/HTTP providers return a
+  success object after dispatch.
+- **Errors:** `unauthenticated`, `not-found`, `invalid-argument`, `failed-precondition`.
+
+### Messaging callables (WhatsApp / Evolution)
+
+| Function | Request | Response |
+|----------|---------|----------|
+| `messagingStatus` | `{}` | Provider status, e.g. `{ connected: boolean, message?: string, ... }` |
+| `messagingTestConnection` | `{}` | Provider `testConnection()` result |
+| `messagingInstanceAction` | `{ action: "qr" \| "reconnect" \| "disconnect" \| "createInstance", instanceName?: string }` | Provider action result (e.g. QR payload / instance info) |
+| `messagingSend` | `{ leadId: string, type?: "text" \| "image" \| "document" \| "audio", text?: string, mediaUrl?: string, mediaMimeType?: string, mediaFileName?: string, templateId?: string }` | See below |
+
+`messagingSend` responses:
+- **Sent:** `{ ok: true, connected: true, messageId: string, conversationId: string, status: "sent", providerMessageId: string \| null }`
+- **Not connected:** `{ ok: false, connected: false, messageId: string, conversationId: string, status: "failed", error: string, webhookUrl: string }`
+- **Errors:** `unauthenticated`, `invalid-argument` (missing `leadId`), `not-found` (lead), `failed-precondition`, `unimplemented` (e.g. audio), `internal`.
+
+Firestore triggers and schedulers (`onLeadCreated`, `onCallLogCreated`, follow-up reminders, SLA jobs, etc.) are internal — not public HTTP or callable.
 
 ---
 

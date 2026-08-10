@@ -340,7 +340,9 @@ function applyBrandingToDom(branding: Branding) {
     styleTag.id = "custom-brand-css";
     document.head.appendChild(styleTag);
   }
-  styleTag.innerHTML = customCss;
+  // SEC-10: assign as text (not innerHTML) so the admin-supplied CSS is treated
+  // strictly as stylesheet content and never parsed as HTML markup.
+  styleTag.textContent = customCss;
 
   if (branding.logoUrl) {
     let link = document.querySelector("link[rel*='icon']") as HTMLLinkElement;

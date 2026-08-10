@@ -1,0 +1,38 @@
+# Dependabot — npm ecosystems for app + Cloud Functions.
+# Opens weekly PRs; CI (ci.yml) must pass before merge.
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /telecaller-app
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    groups:
+      vite-vitest:
+        patterns:
+          - vite
+          - vitest
+          - "@vitejs/*"
+          - "@vitest/*"
+      react:
+        patterns:
+          - react
+          - react-dom
+          - "@types/react*"
+      firebase-client:
+        patterns:
+          - firebase
+          - "@firebase/*"
+
+  - package-ecosystem: npm
+    directory: /telecaller-app/functions
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    groups:
+      firebase-admin:
+        patterns:
+          - firebase-admin
+          - firebase-functions

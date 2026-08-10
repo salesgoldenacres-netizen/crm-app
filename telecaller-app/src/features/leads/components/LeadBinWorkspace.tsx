@@ -22,6 +22,7 @@ import {
   matchLeadBinFilters,
 } from "@/features/leads/config/leadBinFilterConfig";
 import { User, Project } from "@/shared/types";
+import { buildAssignmentFields } from "@/shared/utils/leadAssignment";
 import Modal from "@/shared/components/ui/Modal";
 import Dialog from "@/shared/components/ui/Dialog";
 import Button from "@/shared/components/ui/Button";
@@ -128,8 +129,7 @@ export default function LeadBinWorkspace({
 
     try {
       await restoreLeads(selectedLeadIds, {
-        assignedTo: assigneeId,
-        assignedToName: agent.username,
+        ...buildAssignmentFields(assigneeId, agent.username, agent),
         status: restoreStatus,
       });
       toast(

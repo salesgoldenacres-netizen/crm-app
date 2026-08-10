@@ -79,7 +79,11 @@ export function useDashboardPreferencesStore(userId?: string) {
         return;
       }
       if (Array.isArray(data.widgets)) {
-        setWidgets(data.widgets as WidgetPreference[]);
+        const loaded = data.widgets as WidgetPreference[];
+        const knownIds = new Set(loaded.map((w) => w.id));
+        // Append any newly registered defaults missing from older saved layouts.
+        const missing = DEFAULT_WIDGETS.filter((w) => !knownIds.has(w.id));
+        setWidgets(missing.length > 0 ? [...loaded, ...missing] : loaded);
       }
       if (typeof data.widgetStyle === "string") {
         setWidgetStyle(data.widgetStyle);
