@@ -41,6 +41,9 @@ export const navIconColor = {
   branding: "text-fuchsia-500 dark:text-fuchsia-400",
   integrations: "text-cyan-600 dark:text-cyan-400",
   audit: "text-rose-500 dark:text-rose-400",
+  // Deals & Calendar
+  dealsPipeline: "text-indigo-500 dark:text-indigo-400",
+  calendar: "text-blue-500 dark:text-blue-400",
 } as const;
 
 export type NavIconTone = keyof typeof navIconColor;

@@ -595,7 +595,7 @@ export default function Dashboard({ user, onLogout: _onLogout }: DashboardProps)
             <div className="w-24 h-8 rounded-theme bg-theme-surface animate-pulse" />
           </div>
         </div>
-        <main id="main-content" className="flex-1 p-6 max-w-7xl mx-auto w-full space-y-6">
+        <main id="main-content" className="flex-1 p-4 md:p-6 w-full max-w-none space-y-6">
           <div className="flex gap-3 flex-wrap">
             {Array.from({ length: 6 }).map((_, i) => (
               <div key={i} className="h-9 w-28 rounded-full bg-theme-surface animate-pulse" />

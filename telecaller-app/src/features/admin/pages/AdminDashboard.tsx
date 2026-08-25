@@ -25,7 +25,10 @@ import ApprovalsCenter from "../components/ApprovalsCenter";
 import ProductivityTelemetry from "../components/ProductivityTelemetry";
 import AdminDashboardHeader from "../components/AdminDashboardHeader";
 import AdminDashboardKPICards from "../components/AdminDashboardKPICards";
-import AggregateUnavailable from "../components/AggregateUnavailable";
+import AcquisitionChannelMix from "../components/AcquisitionChannelMix";
+import PipelineFunnelWidget from "../components/PipelineFunnelWidget";
+import TeamBookingGoalsWidget from "../components/TeamBookingGoalsWidget";
+import GoogleSheetsSyncWidget from "../components/GoogleSheetsSyncWidget";
 
 type ConfirmDialog = {
   title: string;
@@ -184,6 +187,8 @@ export default function AdminDashboard({ user }: { user: import("@/shared/types"
         pendingCount={pendingCount}
       />
 
+      <GoogleSheetsSyncWidget />
+
       <AdminDashboardKPICards
         totalRevenue={totalRevenue}
         targetPercent={targetPercent}
@@ -231,18 +236,9 @@ export default function AdminDashboard({ user }: { user: import("@/shared/types"
       />
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
-        <AggregateUnavailable
-          title="Acquisition channel mix unavailable"
-          detail="Channel rollups need summary counters — not an empty leads store."
-        />
-        <AggregateUnavailable
-          title="Pipeline funnel unavailable"
-          detail="Funnel stages require bounded LeadQueryService windows or Reports."
-        />
-        <AggregateUnavailable
-          title="Team booking goals unavailable"
-          detail="Team booking counts from global leads are retired. See Reports."
-        />
+        <AcquisitionChannelMix />
+        <PipelineFunnelWidget />
+        <TeamBookingGoalsWidget />
       </div>
 
       <Dialog

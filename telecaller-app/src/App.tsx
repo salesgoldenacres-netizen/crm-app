@@ -76,6 +76,8 @@ const PublicProjectLayout = lazy(
   () => import("./features/plots/pages/PublicProjectLayout")
 );
 const LeadDetailsPage = lazy(() => import("./features/leads/pages/LeadDetailsPage"));
+const DealsPage = lazy(() => import("./features/deals/pages/DealsPage"));
+const CalendarPage = lazy(() => import("./features/calendar/pages/CalendarPage"));
 const NotFound = lazy(() => import("./shared/components/NotFound"));
 
 function App() {
@@ -160,6 +162,30 @@ function App() {
                 user ? (
                   <AuthenticatedShell user={user}>
                     <LeadDetailsPage user={user} />
+                  </AuthenticatedShell>
+                ) : (
+                  <Navigate to="/login" />
+                )
+              }
+            />
+            <Route
+              path="/deals"
+              element={
+                user ? (
+                  <AuthenticatedShell user={user}>
+                    <DealsPage user={user} />
+                  </AuthenticatedShell>
+                ) : (
+                  <Navigate to="/login" />
+                )
+              }
+            />
+            <Route
+              path="/calendar"
+              element={
+                user ? (
+                  <AuthenticatedShell user={user}>
+                    <CalendarPage user={user} />
                   </AuthenticatedShell>
                 ) : (
                   <Navigate to="/login" />

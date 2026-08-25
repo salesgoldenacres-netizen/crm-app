@@ -10,7 +10,7 @@ export default function Container({ children, className, clean = false, ...props
   return (
     <div
       className={twMerge(
-        clean ? "" : "max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full",
+        clean ? "" : "w-full max-w-none px-3 sm:px-5 lg:px-6",
         className
       )}
       {...props}

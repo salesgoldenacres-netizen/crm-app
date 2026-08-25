@@ -25,6 +25,7 @@ import {
   AgentStatusRecord,
   NotificationItem,
   CallLogDocument,
+  Deal,
 } from "@/shared/types";
 import {
   deserializeProjectPlotsForApp,
@@ -94,3 +95,4 @@ export const smartListsRef = getCollectionRef<SmartList>(COLLECTIONS.SMART_LISTS
 export const deletedUsersRef = getCollectionRef<DeletedUserRecord>(COLLECTIONS.DELETED_USERS);
 export const agentStatusRef = getCollectionRef<AgentStatusRecord>(COLLECTIONS.AGENT_STATUS);
 export const notificationsRef = getCollectionRef<NotificationItem>(COLLECTIONS.NOTIFICATIONS);
+export const dealsRef = getCollectionRef<Deal>(COLLECTIONS.DEALS);

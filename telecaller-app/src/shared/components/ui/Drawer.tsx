@@ -82,9 +82,9 @@ export default function Drawer({
 
   return (
     <div className="fixed inset-0 z-50 overflow-hidden">
-      {/* Backdrop */}
+      {/* Backdrop — Full Page Cover with Consistent Blur */}
       <div
-        className="fixed inset-0 bg-theme-overlay backdrop-blur-sm transition-opacity duration-300"
+        className="fixed inset-0 w-screen h-screen min-h-[100dvh] bg-theme-overlay backdrop-blur-md transition-opacity duration-300"
         onClick={closeOnBackdrop ? onClose : undefined}
         aria-hidden="true"
       />
@@ -120,7 +120,7 @@ export default function Drawer({
           )}
 
           {/* Header */}
-          <div className="px-6 py-4 border-b border-theme-border flex items-center justify-between gap-3">
+          <div className="px-6 py-4 border-b border-theme-border flex items-center justify-between gap-3 shrink-0">
             <h3
               id={titleId}
               className="text-base font-semibold text-theme-text truncate"
@@ -144,7 +144,7 @@ export default function Drawer({
           <div
             className={twMerge(
               clsx(
-                "flex-1 overflow-y-auto px-6 py-5 text-theme-text text-xs sm:text-sm leading-relaxed",
+                "flex-1 min-h-0 overflow-y-auto px-6 py-5 text-theme-text text-xs sm:text-sm leading-relaxed",
                 !footer && "pb-[calc(1.25rem+env(safe-area-inset-bottom))] md:pb-5"
               )
             )}
@@ -154,7 +154,7 @@ export default function Drawer({
 
           {/* Footer */}
           {footer && (
-            <div className="px-6 py-4 pb-[calc(1rem+env(safe-area-inset-bottom))] md:pb-4 border-t border-theme-border bg-theme-surface/50 flex justify-end items-center gap-3 flex-wrap">
+            <div className="px-6 py-4 pb-[calc(1rem+env(safe-area-inset-bottom))] md:pb-4 border-t border-theme-border bg-theme-surface/50 flex justify-end items-center gap-3 flex-wrap shrink-0">
               {footer}
             </div>
           )}

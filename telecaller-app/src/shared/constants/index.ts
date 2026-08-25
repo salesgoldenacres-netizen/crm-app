@@ -29,4 +29,5 @@ export const COLLECTIONS = {
   TASKS: "tasks",
   TEAMS: "teams",
   SMART_LISTS: "smartLists",
+  DEALS: "deals",
 } as const;

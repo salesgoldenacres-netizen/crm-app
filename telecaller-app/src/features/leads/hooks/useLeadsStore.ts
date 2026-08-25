@@ -461,21 +461,37 @@ export function useLeadsStore() {
       await LeadRepository.bulkAddLeads(newLeadsToDb, updatedDuplicatesToDb);
     }
 
+    const callLogPromises: Promise<void>[] = [];
     for (const lead of newLeadsToDb) {
-      await CallLogsRepository.create(lead.id, {
-        date: new Date().toISOString(),
-        note: lead.notes || "Initial import of lead.",
-        status: lead.status || "new",
-        agent: "system",
-      });
+      callLogPromises.push(
+        CallLogsRepository.create(lead.id, {
+          date: new Date().toISOString(),
+          note: lead.notes || "Initial import of lead.",
+          status: lead.status || "new",
+          agent: "system",
+        })
+          .then(() => {})
+          .catch((err) => {
+            logger.error(`Failed to create call log for imported lead ${lead.id}:`, err);
+          })
+      );
     }
     for (const lead of updatedDuplicatesToDb) {
-      await CallLogsRepository.create(lead.id, {
-        date: new Date().toISOString(),
-        note: `Duplicate lead attempt merged. Source: Bulk Upload. Notes: ${lead.notes || "No description provided."}`,
-        status: lead.status || "new",
-        agent: "system",
-      });
+      callLogPromises.push(
+        CallLogsRepository.create(lead.id, {
+          date: new Date().toISOString(),
+          note: `Duplicate lead attempt merged. Source: Bulk Upload. Notes: ${lead.notes || "No description provided."}`,
+          status: lead.status || "new",
+          agent: "system",
+        })
+          .then(() => {})
+          .catch((err) => {
+            logger.error(`Failed to create call log for duplicate lead ${lead.id}:`, err);
+          })
+      );
+    }
+    if (callLogPromises.length > 0) {
+      await Promise.all(callLogPromises);
     }
 
     return { successCount, duplicateCount };

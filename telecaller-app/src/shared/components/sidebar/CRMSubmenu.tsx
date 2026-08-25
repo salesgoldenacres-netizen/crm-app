@@ -8,6 +8,7 @@ import {
   PlusCircle,
   LayoutGrid,
   Trash2,
+  Briefcase,
 } from "lucide-react";
 import {
   sidebarChevronClass,
@@ -93,6 +94,12 @@ export default function CRMSubmenu({
               label: "Kanban Board",
               icon: <LayoutGrid className={sidebarSubIcon("leadsKanban")} />,
               key: "kanban",
+            },
+            {
+              to: "/deals",
+              label: "Deals Pipeline",
+              icon: <Briefcase className={sidebarSubIcon("dealsPipeline")} />,
+              key: "deals",
             },
             ...(userRole === "admin" || userRole === "manager"
               ? [

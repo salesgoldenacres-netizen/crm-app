@@ -52,7 +52,7 @@ export default function MobileDrawer({
   return (
     <>
       <div
-        className="fixed inset-0 bg-theme-overlay backdrop-blur-sm z-55 animate-fadeIn"
+        className="fixed inset-0 w-screen h-screen min-h-[100dvh] bg-theme-overlay backdrop-blur-md z-55 animate-fadeIn"
         onClick={onClose}
       />
       <div className="fixed inset-y-0 left-0 w-72 bg-theme-card border-r border-theme-border shadow-2xl z-55 flex flex-col transform transition-transform duration-300 animate-slideInLeft">

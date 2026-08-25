@@ -88,6 +88,7 @@ export default function SidebarNavigationMenu({
   const isProjectsTabActive = isDashboardRoute && activeTab === "projects";
   const isMapActive = locationPathname.startsWith("/project/") || isProjectsTabActive;
   const isAttendanceActive = isDashboardRoute && activeTab === "attendance";
+  const isCalendarActive = locationPathname.startsWith("/calendar");
   const isTrainingActive = isDashboardRoute && activeTab === "training";
   const isProfileActive = isDashboardRoute && activeTab === "profile";
   const isAdminActive = locationPathname.startsWith("/admin");
@@ -144,6 +145,16 @@ export default function SidebarNavigationMenu({
           locationPathname={locationPathname}
           projectList={projectList}
         />
+
+        <Link
+          to="/calendar"
+          className={sidebarNavItem(isCalendarActive, isSidebarCollapsed)}
+          title="Schedule Calendar"
+          aria-label={isSidebarCollapsed ? "Schedule Calendar" : undefined}
+        >
+          <Calendar className={sidebarIcon("calendar")} aria-hidden="true" />
+          {!isSidebarCollapsed && <span className="truncate">Schedule Calendar</span>}
+        </Link>
 
         <Link
           to="/?tab=attendance"

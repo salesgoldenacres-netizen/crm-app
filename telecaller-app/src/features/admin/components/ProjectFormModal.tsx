@@ -132,7 +132,7 @@ export default function ProjectFormModal({
       isOpen={isOpen}
       onClose={onClose}
       title={editingProject ? "Edit Project Details" : "Add New Project"}
-      variant="sheet"
+      variant="center"
       size="xl"
       className="max-w-2xl"
       footer={

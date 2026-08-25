@@ -175,52 +175,53 @@ export default function Modal({
   };
 
   return (
-    <div
-      className={clsx(
-        "fixed inset-0 z-50 flex justify-center",
-        isSheet
-          ? "items-end p-0 sm:items-center sm:p-4"
-          : "items-center p-4"
-      )}
-    >
-      {/* Backdrop */}
+    <div className="fixed inset-0 z-50 overflow-hidden">
+      {/* Backdrop — Full Page Cover with Consistent Blur */}
       <div
-        className="fixed inset-0 bg-theme-overlay backdrop-blur-sm transition-opacity duration-300"
+        className="fixed inset-0 w-screen h-screen min-h-[100dvh] bg-theme-overlay backdrop-blur-md transition-opacity duration-300"
         onClick={closeOnBackdrop ? onClose : undefined}
         aria-hidden="true"
       />
 
-      {/* Modal Dialog */}
+      {/* Modal Dialog Container */}
       <div
-        ref={panelRef}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby={titleId}
-        aria-describedby={descriptionId}
-        tabIndex={-1}
-        className={twMerge(
-          clsx(
-            "relative w-full bg-theme-card shadow-2xl overflow-hidden flex flex-col outline-none",
-            sizes[size],
-            isSheet
-              ? [
-                  // Mobile (under sm): bottom sheet layout, safe area aware
-                  "h-[100dvh] max-h-none rounded-t-theme border-t border-x-0 border-b-0 border-theme-border animate-sheetSlideUp",
-                  // Tablet/Desktop (sm and up): centered dialog layout
-                  "sm:h-auto sm:max-h-[90vh] sm:rounded-theme sm:border sm:animate-none sm:scale-100 sm:border-b",
-                ]
-              : [
-                  // Center: dialog at all breakpoints
-                  "max-h-[90vh] rounded-theme border border-theme-border",
-                ],
-            className
-          )
+        className={clsx(
+          "fixed inset-0 z-10 flex justify-center overflow-y-auto pointer-events-none",
+          isSheet
+            ? "items-end p-0 sm:items-center sm:p-4"
+            : "items-center p-3 sm:p-4"
         )}
       >
+        <div
+          ref={panelRef}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby={titleId}
+          aria-describedby={descriptionId}
+          tabIndex={-1}
+          className={twMerge(
+            clsx(
+              "relative w-full bg-theme-card shadow-2xl overflow-hidden flex flex-col outline-none my-auto shrink-0 pointer-events-auto",
+              sizes[size],
+              isSheet
+                ? [
+                    // Mobile (under sm): bottom sheet layout, safe area aware
+                    "h-[100dvh] max-h-[100dvh] rounded-t-theme border-t border-x-0 border-b-0 border-theme-border animate-sheetSlideUp",
+                    // Tablet/Desktop (sm and up): centered dialog layout with constrained scroll body
+                    "sm:h-auto sm:max-h-[min(85vh,calc(100dvh-3rem))] sm:rounded-theme sm:border sm:animate-none sm:scale-100 sm:border-b sm:my-auto",
+                  ]
+                : [
+                    // Center: dialog at all breakpoints
+                    "max-h-[min(85vh,calc(100dvh-2rem))] rounded-theme border border-theme-border animate-fadeIn",
+                  ],
+              className
+            )
+          )}
+        >
         {/* Notch swipe handle — sheet variant, mobile only */}
         {isSheet && (
           <div
-            className="sm:hidden flex justify-center pt-2 pb-0"
+            className="sm:hidden flex justify-center pt-2 pb-0 shrink-0"
             aria-hidden="true"
           >
             <div className="h-1 w-10 rounded-full bg-theme-border" />
@@ -230,7 +231,7 @@ export default function Modal({
         {/* Header */}
         <div
           className={clsx(
-            "px-6 py-4 border-b border-theme-border flex items-center justify-between gap-3",
+            "px-6 py-4 border-b border-theme-border flex items-center justify-between gap-3 shrink-0",
             isSheet && "pt-[calc(1rem+env(safe-area-inset-top))] sm:pt-4"
           )}
         >
@@ -255,7 +256,7 @@ export default function Modal({
 
         {/* Body */}
         <div className={clsx(
-          "flex-1 overflow-y-auto px-6 py-5 text-theme-text text-xs sm:text-sm leading-relaxed",
+          "flex-1 min-h-0 overflow-y-auto px-6 py-5 text-theme-text text-xs sm:text-sm leading-relaxed",
           !footer && (isSheet
             ? "pb-[calc(1.25rem+env(safe-area-inset-bottom))] sm:pb-5"
             : "pb-5")
@@ -267,7 +268,7 @@ export default function Modal({
         {footer && (
           <div
             className={clsx(
-              "px-6 py-4 border-t border-theme-border bg-theme-surface/50 flex justify-end items-center gap-3 flex-wrap",
+              "px-6 py-4 border-t border-theme-border bg-theme-surface/50 flex justify-end items-center gap-3 flex-wrap shrink-0",
               isSheet
                 ? "pb-[calc(1rem+env(safe-area-inset-bottom))] sm:pb-4"
                 : "pb-4"
@@ -278,5 +279,6 @@ export default function Modal({
         )}
       </div>
     </div>
-  );
+  </div>
+);
 }

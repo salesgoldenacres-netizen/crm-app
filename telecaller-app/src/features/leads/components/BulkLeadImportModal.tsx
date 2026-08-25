@@ -73,12 +73,32 @@ export default function BulkLeadImportModal({
       setCsvRows(parsed.slice(1));
       setIsCsvUploaded(true);
 
+      // Smart column auto-detection based on header name AND first 5 data rows
+      let autoPhone = headers.find((h) => /phone|mobile|contact|tel|number/i.test(h)) || "";
+      const autoName = headers.find((h) => /name|customer|client/i.test(h)) || "";
+
+      const sampleRows = parsed.slice(1, 6);
+      if (!autoPhone && sampleRows.length > 0) {
+        // Find column index containing numeric digits resembling phone numbers
+        for (let colIdx = 0; colIdx < headers.length; colIdx++) {
+          const hasPhoneLikeCell = sampleRows.some((r) => {
+            const val = r[colIdx] || "";
+            const digits = val.replace(/\D/g, "");
+            return digits.length >= 7 && digits.length <= 13;
+          });
+          if (hasPhoneLikeCell) {
+            autoPhone = headers[colIdx];
+            break;
+          }
+        }
+      }
+
       const mappings: FieldMappings = {
-        name: headers.find((h) => /name|customer/i.test(h)) || "",
-        phone: headers.find((h) => /phone|mobile/i.test(h)) || "",
+        name: autoName || headers[0] || "",
+        phone: autoPhone,
         email: headers.find((h) => /email|mail/i.test(h)) || "",
         projectId: headers.find((h) => /project|location/i.test(h)) || "",
-        plotId: headers.find((h) => /plot|number/i.test(h)) || "",
+        plotId: headers.find((h) => /plot/i.test(h)) || "",
         status: headers.find((h) => /status|stage/i.test(h)) || "",
         notes: headers.find((h) => /note|comment|desc/i.test(h)) || "",
         createdTime:
@@ -95,10 +115,10 @@ export default function BulkLeadImportModal({
           ) || "",
         assignedTo:
           headers.find((h) =>
-            /assigned to|assigned_to|agent|assignee/i.test(h)
+            /assigned to|assigned_to|agent|assignee|telecaller|s\.m/i.test(h)
           ) || "",
         leadNumber:
-          headers.find((h) => /lead number|lead_number|id|number/i.test(h)) ||
+          headers.find((h) => /lead number|lead_number|lead id|lead_id/i.test(h)) ||
           "",
         createdBy:
           headers.find((h) => /created by|created_by|creator/i.test(h)) || "",
@@ -115,6 +135,14 @@ export default function BulkLeadImportModal({
   const handleFileUpload = (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    if (file.name.endsWith(".xlsx") || file.name.endsWith(".xls")) {
+      setFeedback({
+        title: "Excel File Upload",
+        message:
+          "Please save your Excel workbook as CSV (.csv format) before uploading, or copy and paste the rows directly into the text area.",
+      });
+      return;
+    }
     const reader = new FileReader();
     reader.onload = (event) => {
       const text = event.target?.result as string;
@@ -130,84 +158,29 @@ export default function BulkLeadImportModal({
       const leadsToUpload: any[] = [];
       let errorCount = 0;
 
-      for (const line of lines) {
-        if (!line.trim()) continue;
+      lines.forEach((line, rowIdx) => {
+        if (!line.trim()) return;
         const parts = line.split(",").map((p) => p.trim());
-        if (parts.length >= 2) {
-          let createdTime = new Date().toISOString();
-          let name: string;
-          let phone: string;
-          let email: string;
-          let leadSource: string;
-          let leadMedium: string;
-          let status: string;
-          let followUpOn: string;
-          let assignedToUsername: string;
-          let leadNumber: string;
-          let createdBy: string;
-          let projectId: string;
-          let plotId: string;
-          let notes: string;
-
-          if (parts.length >= 11) {
-            createdTime = parts[0] || new Date().toISOString();
-            name = parts[1];
-            phone = parts[2];
-            email = parts[3] || "";
-            leadSource = parts[4] || "";
-            leadMedium = parts[5] || "";
-            status = parts[6] || "new";
-            followUpOn = parts[7] || "";
-            assignedToUsername = parts[8] || "";
-            leadNumber = parts[9] || "";
-            createdBy = parts[10] || "system";
-            projectId = "";
-            plotId = "";
-            notes = "Bulk imported lead.";
-          } else {
-            name = parts[0];
-            phone = parts[1];
-            email = parts[2] || "";
-            leadSource = "";
-            leadMedium = "";
-            status = parts[6] || "new";
-            followUpOn = "";
-            leadNumber = "";
-            createdBy = "system";
-            projectId = parts[3] || "";
-            plotId = parts[4] || "";
-            assignedToUsername = parts[5] || "";
-            notes = parts[7] || "Bulk imported lead.";
-          }
-
-          const foundTC = users.find(
-            (u) =>
-              u.username.toLowerCase() === assignedToUsername.toLowerCase()
-          );
-          const assignedTo = foundTC ? foundTC.id : "";
-          const assignedToName = foundTC ? foundTC.username : "Unassigned";
+        if (parts.length >= 1) {
+          const name = parts[0] || `Lead ${rowIdx + 1}`;
+          const rawPhone = parts[1] || "";
+          const cleanPhone = rawPhone.replace(/[^\d+]/g, "").trim();
+          const phone = cleanPhone.length >= 7 ? cleanPhone : `+91000${String(1000000 + rowIdx)}`;
 
           leadsToUpload.push({
             name,
             phone,
-            email,
-            projectId,
-            plotId,
-            notes,
-            status,
-            assignedTo,
-            assignedToName,
-            createdTime,
-            leadSource,
-            leadMedium,
-            followUpOn,
-            leadNumber,
-            createdBy,
+            email: parts[2] || "",
+            projectId: parts[3] || "",
+            plotId: parts[4] || "",
+            status: parts[6] || "new",
+            notes: parts[7] || "Bulk imported lead.",
+            assignedTo: "",
+            assignedToName: "Unassigned",
+            createdTime: new Date().toISOString(),
           });
-        } else {
-          errorCount++;
         }
-      }
+      });
 
       let successCount = 0;
       let duplicateCount = 0;
@@ -255,22 +228,22 @@ export default function BulkLeadImportModal({
     const leadNumberIdx = csvHeaders.indexOf(fieldMappings.leadNumber);
     const createdByIdx = csvHeaders.indexOf(fieldMappings.createdBy);
 
-    if (phoneIdx === -1) {
-      setFeedback({
-        title: "Mapping Required",
-        message: "Phone number field mapping is required.",
-      });
-      return;
-    }
-
-    for (const row of csvRows) {
-      if (row.length <= 1 && !row[0]) continue;
+    csvRows.forEach((row, rowIdx) => {
+      if (row.length === 0 || (row.length === 1 && !row[0].trim())) return;
 
       const name =
-        nameIdx !== -1
-          ? row[nameIdx] || "Imported Customer"
-          : "Imported Customer";
-      const phone = row[phoneIdx];
+        nameIdx !== -1 && row[nameIdx]
+          ? row[nameIdx].trim()
+          : `Customer ${rowIdx + 1}`;
+
+      const rawPhone = phoneIdx !== -1 ? row[phoneIdx] || "" : "";
+      const digitsOnly = rawPhone.replace(/[^\d+]/g, "").trim();
+      // If phone is missing or incomplete, auto-generate fallback ID so lead row is NOT discarded
+      const phone =
+        digitsOnly.length >= 7
+          ? digitsOnly
+          : `+91000${String(1000000 + (rowIdx % 900000))}`;
+
       const email = emailIdx !== -1 ? row[emailIdx] || "" : "";
       const projectId = projectIdx !== -1 ? row[projectIdx] || "" : "";
       const plotId = plotIdx !== -1 ? row[plotIdx] || "" : "";
@@ -280,7 +253,9 @@ export default function BulkLeadImportModal({
           ? row[notesIdx] || "CSV Imported Lead"
           : "CSV Imported Lead";
       const createdTime =
-        createdTimeIdx !== -1 ? row[createdTimeIdx] || "" : "";
+        createdTimeIdx !== -1 && row[createdTimeIdx]
+          ? row[createdTimeIdx]
+          : new Date().toISOString();
       const leadSource = leadSourceIdx !== -1 ? row[leadSourceIdx] || "" : "";
       const leadMedium = leadMediumIdx !== -1 ? row[leadMediumIdx] || "" : "";
       const followUpOn = followUpOnIdx !== -1 ? row[followUpOnIdx] || "" : "";
@@ -294,11 +269,6 @@ export default function BulkLeadImportModal({
       );
       const assignedTo = foundTC ? foundTC.id : "";
       const assignedToName = foundTC ? foundTC.username : "Unassigned";
-
-      if (!phone) {
-        errorCount++;
-        continue;
-      }
 
       leadsToUpload.push({
         name,
@@ -317,7 +287,7 @@ export default function BulkLeadImportModal({
         leadNumber,
         createdBy,
       });
-    }
+    });
 
     let successCount = 0;
     let duplicateCount = 0;
@@ -459,6 +429,51 @@ export default function BulkLeadImportModal({
                 setFieldMappings={setFieldMappings}
                 csvHeaders={csvHeaders}
               />
+
+              {/* Sample Row Preview */}
+              {csvRows.length > 0 && (
+                <div className="space-y-2 pt-2 border-t border-theme-border">
+                  <span className="type-label font-semibold text-theme-muted uppercase tracking-wider block">
+                    Sample Mapped Preview (First 3 Rows out of {csvRows.length})
+                  </span>
+                  <div className="overflow-x-auto rounded-theme border border-theme-border">
+                    <table className="w-full text-xs text-left">
+                      <thead className="bg-theme-surface text-theme-muted border-b border-theme-border font-medium">
+                        <tr>
+                          <th className="p-2">Name</th>
+                          <th className="p-2">Phone</th>
+                          <th className="p-2">Plot Number</th>
+                          <th className="p-2">Status</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-theme-border text-theme-text">
+                        {csvRows.slice(0, 3).map((r, i) => {
+                          const nIdx = csvHeaders.indexOf(fieldMappings.name);
+                          const pIdx = csvHeaders.indexOf(fieldMappings.phone);
+                          const plIdx = csvHeaders.indexOf(fieldMappings.plotId);
+                          const stIdx = csvHeaders.indexOf(fieldMappings.status);
+
+                          const nameVal = nIdx !== -1 && r[nIdx] ? r[nIdx] : `Customer ${i + 1}`;
+                          const rawP = pIdx !== -1 ? r[pIdx] || "" : "";
+                          const cleanP = rawP.replace(/[^\d+]/g, "").trim();
+                          const phoneVal = cleanP.length >= 7 ? cleanP : `Auto-ID (+91000...)`;
+                          const plotVal = plIdx !== -1 && r[plIdx] ? r[plIdx] : "—";
+                          const statusVal = stIdx !== -1 && r[stIdx] ? r[stIdx] : "new";
+
+                          return (
+                            <tr key={i} className="hover:bg-theme-surface/50">
+                              <td className="p-2 font-medium">{nameVal}</td>
+                              <td className="p-2 font-mono text-theme-muted">{phoneVal}</td>
+                              <td className="p-2">{plotVal}</td>
+                              <td className="p-2 uppercase text-[10px] tracking-wider font-semibold">{statusVal}</td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </form>
